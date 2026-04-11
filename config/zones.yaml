@@ -1,0 +1,95 @@
+# Zonas geográficas monitorizadas por Qilin
+# Formato: lat_min, lat_max, lon_min, lon_max
+
+zones:
+  north_america:
+    label: "América del Norte"
+    lat: [15, 72]
+    lon: [-170, -50]
+
+  europe:
+    label: "Europa"
+    lat: [35, 72]
+    lon: [-25, 45]
+
+  china:
+    label: "China / Taiwan"
+    lat: [18, 54]
+    lon: [73, 135]
+
+  korea:
+    label: "Península de Corea"
+    lat: [33, 43]
+    lon: [124, 132]
+
+  iran:
+    label: "Irán"
+    lat: [25, 40]
+    lon: [44, 64]
+
+  gulf_ormuz:
+    label: "Golfo Pérsico / Estrecho de Ormuz"
+    lat: [22, 27]
+    lon: [51, 60]
+
+  iraq_syria:
+    label: "Iraq / Siria"
+    lat: [29, 38]
+    lon: [38, 48]
+
+  yemen:
+    label: "Yemen"
+    lat: [12, 19]
+    lon: [42, 54]
+
+  levante:
+    label: "Levante (Israel / Líbano / Gaza)"
+    lat: [29, 34]
+    lon: [34, 38]
+
+  libya:
+    label: "Libia"
+    lat: [20, 33]
+    lon: [9, 25]
+
+# Chokepoints estratégicos (marcadores fijos en el mapa)
+chokepoints:
+  gibraltar:
+    label: "Estrecho de Gibraltar"
+    lat: 35.9922
+    lon: -5.6037
+
+  suez:
+    label: "Canal de Suez"
+    lat: 30.4564
+    lon: 32.5498
+
+  ormuz:
+    label: "Estrecho de Ormuz"
+    lat: 26.5946
+    lon: 56.2619
+
+  bab_el_mandeb:
+    label: "Bab-el-Mandeb"
+    lat: 12.5833
+    lon: 43.3167
+
+  taiwan_strait:
+    label: "Estrecho de Taiwán"
+    lat: 24.5000
+    lon: 119.5000
+
+  malacca:
+    label: "Estrecho de Malaca"
+    lat: 2.5000
+    lon: 101.5000
+
+  bosphorus:
+    label: "Estrecho del Bósforo"
+    lat: 41.1167
+    lon: 29.0667
+
+  panama:
+    label: "Canal de Panamá"
+    lat: 9.0800
+    lon: -79.6800

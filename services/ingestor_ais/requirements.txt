@@ -1,0 +1,6 @@
+httpx==0.27.*
+pyais==2.9.*
+asyncpg==0.29.*
+redis==5.0.*
+pyyaml==6.0.*
+python-dotenv==1.0.*

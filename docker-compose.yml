@@ -1,0 +1,89 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: qilin_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: qilin_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: qilin
+      POSTGRES_USER: ${DB_USER:-qilin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  ingestor-adsb:
+    build: ./services/ingestor_adsb
+    container_name: qilin_ingestor_adsb
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      OPENSKY_USER: ${OPENSKY_USER:-}
+      OPENSKY_PASS: ${OPENSKY_PASS:-}
+      POLL_INTERVAL: ${ADSB_POLL_INTERVAL:-15}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
+  ingestor-ais:
+    build: ./services/ingestor_ais
+    container_name: qilin_ingestor_ais
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      AISHUB_USER: ${AISHUB_USER:-}
+      POLL_INTERVAL: ${AIS_POLL_INTERVAL:-60}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
+  alert-engine:
+    build: ./services/alert_engine
+    container_name: qilin_alert_engine
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
+  api:
+    build: ./services/api
+    container_name: qilin_api
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
+volumes:
+  redis_data:
+  timescale_data:
