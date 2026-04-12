@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QILIN — Geopolitical Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-0:      #030811;
+  --bg-1:      #070e1c;
+  --bg-2:      #0b1628;
+  --bg-3:      #101d33;
+  --border:    rgba(0, 200, 255, 0.10);
+  --border-md: rgba(0, 200, 255, 0.22);
+  --border-hi: rgba(0, 200, 255, 0.45);
+  --cyan:      #00c8ff;
+  --cyan-dim:  rgba(0, 200, 255, 0.55);
+  --green:     #00e5a0;
+  --amber:     #ffb020;
+  --red:       #ff3b4a;
+  --red-dim:   rgba(255, 59, 74, 0.4);
+  --purple:    #b06dff;
+  --txt-1:     #c8d8e8;
+  --txt-2:     #5d7490;
+  --txt-3:     #3a4d62;
+  --mono:      'IBM Plex Mono', monospace;
+  --ui:        'Barlow Condensed', sans-serif;
+}
+
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-0); color: var(--txt-1); font-family: var(--ui); }
+
+/* ── LAYOUT ─────────────────────────────────────────── */
+#app {
+  display: grid;
+  grid-template-rows: 44px 1fr 36px;
+  grid-template-columns: 1fr 340px;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ── TOP BAR ─────────────────────────────────────────── */
+#topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border-md);
+  position: relative;
+  z-index: 10;
+}
+
+#logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 28px;
+}
+
+.logo-icon {
+  width: 26px; height: 26px;
+  position: relative;
+  flex-shrink: 0;
+}
+.logo-icon svg { width: 100%; height: 100%; }
+
+#logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+
+.topbar-sep {
+  width: 1px; height: 24px;
+  background: var(--border-md);
+  margin: 0 16px;
+}
+
+.status-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--txt-2);
+  font-family: var(--mono);
+  margin-right: 20px;
+}
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: blink 2.4s ease-in-out infinite;
+}
+.status-dot.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+#topbar-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 16px;
+}
+
+#alert-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,59,74,0.12);
+  border: 1px solid rgba(255,59,74,0.35);
+  border-radius: 3px;
+  padding: 3px 10px;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--red);
+  font-family: var(--mono);
+}
+.alert-badge-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 5px var(--red);
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+#clock {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--txt-2);
+  letter-spacing: 0.08em;
+}
+#clock span { color: var(--cyan-dim); }
+
+/* ── MAP AREA ─────────────────────────────────────────── */
+#map-area {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-0);
+}
+
+#map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Scanline overlay */
+#map-area::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.04) 2px,
+    rgba(0,0,0,0.04) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Corner labels */
+.map-corner {
+  position: absolute;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--txt-3);
+  letter-spacing: 0.05em;
+  z-index: 3;
+  pointer-events: none;
+}
+#corner-tl { top: 8px; left: 10px; }
+#corner-tr { top: 8px; right: 10px; text-align: right; }
+#corner-bl { bottom: 8px; left: 10px; }
+#corner-br { bottom: 8px; right: 10px; text-align: right; }
+
+/* Map label: mode */
+#map-mode {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--cyan);
+  opacity: 0.5;
+  text-transform: uppercase;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Zoom controls */
+#map-controls {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.map-btn {
+  width: 24px; height: 24px;
+  background: rgba(11,22,40,0.85);
+  border: 1px solid var(--border-md);
+  color: var(--txt-2);
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: var(--mono);
+  border-radius: 2px;
+}
+.map-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* Legend */
+#legend {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 4;
+  background: rgba(7,14,28,0.85);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--txt-2);
+  text-transform: uppercase;
+}
+.legend-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Hover tooltip */
+#entity-tooltip {
+  position: absolute;
+  background: rgba(7,14,28,0.95);
+  border: 1px solid var(--border-hi);
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--txt-1);
+  pointer-events: none;
+  z-index: 10;
+  display: none;
+  min-width: 160px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+.tooltip-label { color: var(--txt-2); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+.tooltip-value { color: var(--cyan); font-size: 11px; font-weight: 500; }
+.tooltip-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 3px; }
+
+/* ── SIDEBAR ─────────────────────────────────────────── */
+#sidebar {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--bg-1);
+  border-left: 1px solid var(--border-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 10px 14px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-title {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--txt-2);
+}
+.panel-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--border-md);
+  border-radius: 2px;
+  padding: 1px 7px;
+  color: var(--cyan);
+}
+
+#alerts-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-md) transparent;
+}
+#alerts-list::-webkit-scrollbar { width: 3px; }
+#alerts-list::-webkit-scrollbar-track { background: transparent; }
+#alerts-list::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 2px; }
+
+.alert-card {
+  margin: 4px 8px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+  overflow: hidden;
+}
+.alert-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.alert-card:hover { background: var(--bg-3); }
+.alert-card:hover::before { opacity: 1; }
+
+.alert-card.high  { border-left-color: var(--red); }
+.alert-card.high::before  { background: linear-gradient(90deg, rgba(255,59,74,0.06) 0%, transparent 100%); }
+.alert-card.medium { border-left-color: var(--amber); }
+.alert-card.medium::before { background: linear-gradient(90deg, rgba(255,176,32,0.06) 0%, transparent 100%); }
+.alert-card.low   { border-left-color: var(--green); }
+.alert-card.low::before   { background: linear-gradient(90deg, rgba(0,229,160,0.06) 0%, transparent 100%); }
+
+.alert-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+}
+.sev-badge {
+  font-size: 8px; font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+.sev-badge.high   { background: rgba(255,59,74,0.15);  color: var(--red);  border: 1px solid rgba(255,59,74,0.3); }
+.sev-badge.medium { background: rgba(255,176,32,0.12); color: var(--amber); border: 1px solid rgba(255,176,32,0.3); }
+.sev-badge.low    { background: rgba(0,229,160,0.10);  color: var(--green); border: 1px solid rgba(0,229,160,0.25); }
+
+.alert-zone {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--txt-2);
+  font-family: var(--mono);
+}
+.alert-time {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--txt-3);
+  font-family: var(--mono);
+}
+
+.alert-title {
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--txt-1);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+.alert-desc {
+  font-size: 10px;
+  color: var(--txt-2);
+  line-height: 1.5;
+}
+
+/* Pulse animation for high severity */
+.alert-card.high { animation: alertPulse 3s ease-in-out infinite; }
+@keyframes alertPulse {
+  0%,100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 8px 1px rgba(255,59,74,0.15); }
+}
+
+/* ── STATS SECTION ─────────────────────────────────── */
+#stats-section {
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+}
+.stat-cell {
+  background: var(--bg-1);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-label {
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--txt-3);
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size: 22px; font-weight: 500;
+  line-height: 1;
+}
+.stat-value.cyan  { color: var(--cyan); }
+.stat-value.green { color: var(--green); }
+.stat-value.red   { color: var(--red); }
+.stat-value.amber { color: var(--amber); }
+.stat-sub {
+  font-size: 9px;
+  color: var(--txt-3);
+  font-family: var(--mono);
+  margin-top: 1px;
+}
+
+/* ── BOTTOM BAR ──────────────────────────────────── */
+#bottombar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border-md);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+.bottom-item {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono);
+  color: var(--txt-2);
+  padding: 0 14px;
+  height: 100%;
+  border-right: 1px solid var(--border);
+}
+.bottom-item:first-child { padding-left: 0; }
+.bottom-item .val { color: var(--txt-1); font-weight: 500; }
+.bottom-item .icon { font-size: 9px; }
+
+.bottom-live {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.live-ring {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 0 rgba(0,229,160,0.4);
+  animation: liveRing 1.5s ease-out infinite;
+}
+@keyframes liveRing {
+  0%  { box-shadow: 0 0 0 0 rgba(0,229,160,0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(0,229,160,0); }
+  100%{ box-shadow: 0 0 0 0 rgba(0,229,160,0); }
+}
+
+/* ── COORD OVERLAY ────────────────────────────── */
+#coord-display {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--txt-3);
+  z-index: 5;
+  text-align: right;
+  pointer-events: none;
+  line-height: 1.8;
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOP BAR -->
+  <header id="topbar">
+    <div id="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="13" cy="13" r="11" stroke="#00c8ff" stroke-width="1.2" opacity="0.4"/>
+          <circle cx="13" cy="13" r="7"  stroke="#00c8ff" stroke-width="1.2" opacity="0.6"/>
+          <circle cx="13" cy="13" r="3"  fill="#00c8ff" opacity="0.9"/>
+          <line x1="13" y1="2"  x2="13" y2="6"  stroke="#00c8ff" stroke-width="1" opacity="0.5"/>
+          <line x1="13" y1="20" x2="13" y2="24" stroke="#00c8ff" stroke-width="1" opacity="0.5"/>
+          <line x1="2"  y1="13" x2="6"  y2="13" stroke="#00c8ff" stroke-width="1" opacity="0.5"/>
+          <line x1="20" y1="13" x2="24" y2="13" stroke="#00c8ff" stroke-width="1" opacity="0.5"/>
+        </svg>
+      </div>
+      <div id="logo-text">Qilin</div>
+    </div>
+
+    <div class="topbar-sep"></div>
+
+    <div class="status-item"><div class="status-dot"></div>ADS-B LIVE</div>
+    <div class="status-item"><div class="status-dot"></div>AIS LIVE</div>
+    <div class="status-item"><div class="status-dot amber"></div>NEWS FEED</div>
+
+    <div class="topbar-sep"></div>
+    <div class="status-item" style="color:var(--txt-3)">10 ZONAS · 8 CHOKEPOINTS</div>
+
+    <div id="topbar-right">
+      <div id="alert-badge">
+        <div class="alert-badge-dot"></div>
+        <span id="alert-count">5</span> ALERTAS ACTIVAS
+      </div>
+      <div id="clock">UTC <span id="utc-time">--:--:--</span></div>
+    </div>
+  </header>
+
+  <!-- MAP -->
+  <main id="map-area">
+    <canvas id="map-canvas"></canvas>
+
+    <div id="map-mode">TACTICAL DISPLAY · EQUIRECTANGULAR</div>
+
+    <div class="map-corner" id="corner-tl">90°N · 180°W</div>
+    <div class="map-corner" id="corner-tr">90°N · 180°E</div>
+    <div class="map-corner" id="corner-bl">90°S · 180°W</div>
+    <div class="map-corner" id="corner-br">90°S · 180°E</div>
+
+    <div id="coord-display">
+      <div id="mouse-lat">LAT —</div>
+      <div id="mouse-lon">LON —</div>
+    </div>
+
+    <div id="map-controls">
+      <div class="map-btn">+</div>
+      <div class="map-btn">−</div>
+    </div>
+
+    <div id="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#00c8ff"></div>Aeronave civil</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff3b4a"></div>Aeronave militar</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00e5a0"></div>Embarcación</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#b06dff"></div>Naval militar</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffb020; border-radius:0"></div>Chokepoint</div>
+    </div>
+
+    <div id="entity-tooltip">
+      <div class="tooltip-row">
+        <div>
+          <div class="tooltip-label">ID</div>
+          <div class="tooltip-value" id="tt-id">—</div>
+        </div>
+        <div>
+          <div class="tooltip-label">Tipo</div>
+          <div class="tooltip-value" id="tt-type">—</div>
+        </div>
+      </div>
+      <div class="tooltip-row" style="margin-top:6px">
+        <div>
+          <div class="tooltip-label">Lat</div>
+          <div class="tooltip-value" id="tt-lat">—</div>
+        </div>
+        <div>
+          <div class="tooltip-label">Lon</div>
+          <div class="tooltip-value" id="tt-lon">—</div>
+        </div>
+      </div>
+      <div class="tooltip-row" style="margin-top:6px">
+        <div>
+          <div class="tooltip-label">Zona</div>
+          <div class="tooltip-value" id="tt-zone">—</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="panel-header">
+      <div class="panel-title">Alertas activas</div>
+      <div class="panel-badge" id="sidebar-alert-count">5</div>
+    </div>
+
+    <div id="alerts-list">
+      <!-- Rendered by JS -->
+    </div>
+
+    <div id="stats-section">
+      <div class="panel-header" style="padding-top:8px; padding-bottom:8px;">
+        <div class="panel-title">Actividad actual</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-cell">
+          <div class="stat-label">Aeronaves</div>
+          <div class="stat-value cyan" id="stat-aircraft">—</div>
+          <div class="stat-sub" id="stat-aircraft-mil">— militares</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Embarcaciones</div>
+          <div class="stat-value green" id="stat-vessels">—</div>
+          <div class="stat-sub" id="stat-vessels-mil">— militares</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Alertas high</div>
+          <div class="stat-value red" id="stat-high">—</div>
+          <div class="stat-sub">últimas 6h</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Alertas med</div>
+          <div class="stat-value amber" id="stat-med">—</div>
+          <div class="stat-sub">últimas 6h</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- BOTTOM BAR -->
+  <footer id="bottombar">
+    <div class="bottom-item"><span class="icon" style="color:var(--cyan)">▲</span><span id="b-aircraft">—</span> <span class="val">aeronaves</span></div>
+    <div class="bottom-item"><span class="icon" style="color:var(--green)">■</span><span id="b-vessels">—</span> <span class="val">embarcaciones</span></div>
+    <div class="bottom-item"><span style="color:var(--red)">●</span><span id="b-high">—</span> <span class="val">high</span></div>
+    <div class="bottom-item"><span style="color:var(--amber)">●</span><span id="b-med">—</span> <span class="val">medium</span></div>
+    <div class="bottom-item" style="border-right:none; color:var(--txt-3); font-size:9px;">
+      LAST UPDATE <span id="b-update" style="color:var(--txt-2)">—</span>
+    </div>
+    <div class="bottom-live">
+      <div class="live-ring"></div>
+      LIVE
+    </div>
+  </footer>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const ZONES = [
+  { name:'north_america', label:'N. AMERICA', lat:[15,72], lon:[-170,-50], color:'rgba(0,200,255,0.07)', border:'rgba(0,200,255,0.25)' },
+  { name:'europe',        label:'EUROPE',    lat:[35,72], lon:[-25,45],   color:'rgba(0,200,255,0.07)', border:'rgba(0,200,255,0.25)' },
+  { name:'china',         label:'CHINA',     lat:[18,54], lon:[73,135],   color:'rgba(0,200,255,0.07)', border:'rgba(0,200,255,0.25)' },
+  { name:'korea',         label:'KOREA',     lat:[33,43], lon:[124,132],  color:'rgba(255,176,32,0.08)', border:'rgba(255,176,32,0.3)' },
+  { name:'iran',          label:'IRAN',      lat:[25,40], lon:[44,64],    color:'rgba(255,59,74,0.07)',  border:'rgba(255,59,74,0.28)' },
+  { name:'gulf_ormuz',    label:'ORMUZ',     lat:[22,27], lon:[51,60],    color:'rgba(255,59,74,0.09)',  border:'rgba(255,59,74,0.35)' },
+  { name:'iraq_syria',    label:'IRAQ/SYR',  lat:[29,38], lon:[38,48],    color:'rgba(255,59,74,0.07)',  border:'rgba(255,59,74,0.28)' },
+  { name:'yemen',         label:'YEMEN',     lat:[12,19], lon:[42,54],    color:'rgba(255,59,74,0.07)',  border:'rgba(255,59,74,0.28)' },
+  { name:'levante',       label:'LEVANTE',   lat:[29,34], lon:[34,38],    color:'rgba(255,59,74,0.09)',  border:'rgba(255,59,74,0.35)' },
+  { name:'libya',         label:'LIBIA',     lat:[20,33], lon:[9,25],     color:'rgba(255,176,32,0.07)', border:'rgba(255,176,32,0.28)' },
+];
+
+const CHOKEPOINTS = [
+  { label:'Gibraltar', lat:35.99, lon:-5.60 },
+  { label:'Suez',      lat:30.46, lon:32.55 },
+  { label:'Ormuz',     lat:26.59, lon:56.26 },
+  { label:'Bab-el-M.', lat:12.58, lon:43.32 },
+  { label:'Taiwan',    lat:24.50, lon:119.50 },
+  { label:'Malacca',   lat: 2.50, lon:101.50 },
+  { label:'Bósforo',   lat:41.12, lon:29.07 },
+  { label:'Panamá',    lat: 9.08, lon:-79.68 },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// MOCK DATA
+// ═══════════════════════════════════════════════════════════════
+function rand(min, max) { return min + Math.random() * (max - min); }
+function randItem(arr)  { return arr[Math.floor(Math.random() * arr.length)]; }
+
+const CIVIL_CALLSIGNS  = ['IBE','VLG','RYR','EZY','AFR','BAW','DLH','AAL','UAL','DAL','SWR','KLM','TK','EK','QR','SQ','CX','NH'];
+const MIL_CALLSIGNS    = ['RCH','JAKE','MANTA','POSEI','JATO','TRTN','USAF','NAVY','DUKE','COPE','IRON','ATLAS'];
+const VESSEL_NAMES     = ['PACIFIC MARINER','ATLANTIC SPIRIT','GULF EAGLE','SEA PIONEER','OCEAN MASTER','IRON HAWK','LIBERTY STAR','NORTHERN STAR','SILVER DAWN','GOLDEN GATE'];
+const NAVAL_NAMES      = ['USS GERALD R. FORD','USS NIMITZ','HMS PRINCE OF WALES','FNS CHARLES DE GAULLE','ARLEIGH BURKE','USS BAINBRIDGE','HMAS HOBART','JS ATAGO'];
+
+const aircraft = [];
+// Civil traffic
+for(let i=0;i<40;i++){
+  const zone = randItem(ZONES.filter(z=>['north_america','europe','china'].includes(z.name)));
+  aircraft.push({
+    id: 'A'+i, type:'civil',
+    callsign: randItem(CIVIL_CALLSIGNS)+(100+Math.floor(Math.random()*899)),
+    lat: rand(zone.lat[0]+2, zone.lat[1]-2),
+    lon: rand(zone.lon[0]+2, zone.lon[1]-2),
+    heading: rand(0,360),
+    speed: rand(200,550),
+    altitude: Math.floor(rand(8000,12000)),
+    zone: zone.name,
+    vx: (Math.random()-.5)*0.02,
+    vy: (Math.random()-.5)*0.01,
+  });
+}
+// Military aircraft
+const milConfigs = [
+  {lat:23.1,lon:58.6,zone:'gulf_ormuz'},{lat:23.4,lon:57.9,zone:'gulf_ormuz'},{lat:22.8,lon:59.1,zone:'gulf_ormuz'},
+  {lat:29.5,lon:52.2,zone:'iran'},{lat:31.0,lon:48.5,zone:'iraq_syria'},
+  {lat:37.8,lon:127.0,zone:'korea'},{lat:38.2,lon:126.4,zone:'korea'},
+  {lat:24.1,lon:119.8,zone:'china'},{lat:23.6,lon:120.2,zone:'china'},
+];
+milConfigs.forEach((c,i)=>{
+  aircraft.push({
+    id:'M'+i, type:'military',
+    callsign: randItem(MIL_CALLSIGNS)+(10+Math.floor(Math.random()*89)),
+    lat:c.lat+rand(-.3,.3), lon:c.lon+rand(-.3,.3),
+    heading:rand(0,360), speed:rand(400,900), altitude:Math.floor(rand(5000,15000)),
+    zone:c.zone,
+    vx:(Math.random()-.5)*0.015, vy:(Math.random()-.5)*0.01,
+  });
+});
+
+const vessels = [];
+// Cargo/tanker vessels
+const shipZones = [
+  {zone:'gulf_ormuz',lat:[22,27],lon:[51,60]},
+  {zone:'levante',lat:[31,36],lon:[28,36]},
+  {zone:'europe',lat:[37,46],lon:[-6,15]},
+  {zone:'china',lat:[20,30],lon:[110,125]},
+];
+for(let i=0;i<22;i++){
+  const sz = randItem(shipZones);
+  vessels.push({
+    id:'V'+i, type: Math.random()<0.15?'tanker':'cargo',
+    name: randItem(VESSEL_NAMES)+' '+(i+1),
+    lat:rand(sz.lat[0],sz.lat[1]), lon:rand(sz.lon[0],sz.lon[1]),
+    heading:rand(0,360), speed:rand(8,22),
+    zone:sz.zone,
+    vx:(Math.random()-.5)*0.006, vy:(Math.random()-.5)*0.004,
+  });
+}
+// Naval military
+const navalConfigs = [
+  {lat:35.9,lon:-5.7,zone:'europe'},{lat:25.5,lon:55.2,zone:'gulf_ormuz'},
+  {lat:37.5,lon:24.8,zone:'europe'},{lat:24.3,lon:119.6,zone:'china'},
+];
+navalConfigs.forEach((c,i)=>{
+  vessels.push({
+    id:'N'+i, type:'military',
+    name:NAVAL_NAMES[i%NAVAL_NAMES.length],
+    lat:c.lat, lon:c.lon, heading:rand(0,360), speed:rand(10,28),
+    zone:c.zone,
+    vx:(Math.random()-.5)*0.005, vy:(Math.random()-.5)*0.004,
+  });
+});
+
+const alerts = [
+  {
+    id:1, severity:'high', zone:'GULF ORMUZ', rule:'asw_patrol_activity',
+    title:'Actividad ASW detectada — Golfo de Omán',
+    desc:'3× P-8 Poseidon + grupo de combate USS Gerald R. Ford en área. Posible actividad submarina.',
+    time:'14:32',
+    lat:23.5, lon:58.2,
+  },
+  {
+    id:2, severity:'high', zone:'TAIWAN STRAIT', rule:'naval_group_detected',
+    title:'Grupo naval — Estrecho de Taiwán',
+    desc:'4 buques PLAN tipo 052D en formación. Ejercicios navales no anunciados.',
+    time:'13:58',
+    lat:24.2, lon:119.9,
+  },
+  {
+    id:3, severity:'medium', zone:'ORMUZ', rule:'ais_dark_vessel',
+    title:'AIS desactivado — Estrecho de Ormuz',
+    desc:'Petrolero MMSI:636018261 perdido en radar. Última posición: 26.4°N 56.8°E.',
+    time:'12:14',
+    lat:26.4, lon:56.8,
+  },
+  {
+    id:4, severity:'medium', zone:'KOREA', rule:'military_aircraft_surge',
+    title:'Concentración aérea militar — Corea',
+    desc:'+180% aeronaves militares vs. media 7d. Posibles ejercicios DPRK o respuesta ROK.',
+    time:'11:47',
+    lat:37.8, lon:127.2,
+  },
+  {
+    id:5, severity:'low', zone:'MEDITERRANEAN', rule:'unusual_routing',
+    title:'Ruta inusual — Mediterráneo Oriental',
+    desc:'3 cargueros con destino declarado incoherente con ruta real. Monitorización activa.',
+    time:'10:03',
+    lat:34.0, lon:26.0,
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// CANVAS MAP
+// ═══════════════════════════════════════════════════════════════
+const canvas  = document.getElementById('map-canvas');
+const ctx     = canvas.getContext('2d');
+const mapArea = document.getElementById('map-area');
+
+let scanY = 0;
+let frame = 0;
+
+function resize() {
+  canvas.width  = mapArea.clientWidth;
+  canvas.height = mapArea.clientHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function latLonToXY(lat, lon) {
+  const x = (lon + 180) / 360 * canvas.width;
+  const y = (90  - lat) / 180 * canvas.height;
+  return { x, y };
+}
+
+function xyToLatLon(x, y) {
+  const lon = (x / canvas.width)  * 360 - 180;
+  const lat =  90 - (y / canvas.height) * 180;
+  return { lat, lon };
+}
+
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(0,200,255,0.045)';
+  ctx.lineWidth = 0.5;
+  // Lat lines every 30°
+  for(let lat=-90; lat<=90; lat+=30) {
+    const {y} = latLonToXY(lat,0);
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+  // Lon lines every 30°
+  for(let lon=-180; lon<=180; lon+=30) {
+    const {x} = latLonToXY(0,lon);
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  // Equator and prime meridian brighter
+  ctx.strokeStyle = 'rgba(0,200,255,0.10)';
+  ctx.lineWidth = 0.8;
+  const {y: eq} = latLonToXY(0,0);
+  ctx.beginPath(); ctx.moveTo(0,eq); ctx.lineTo(canvas.width,eq); ctx.stroke();
+  const {x: pm} = latLonToXY(0,0);
+  ctx.beginPath(); ctx.moveTo(pm,0); ctx.lineTo(pm,canvas.height); ctx.stroke();
+}
+
+function drawZones() {
+  ZONES.forEach(zone => {
+    const p1 = latLonToXY(zone.lat[1], zone.lon[0]);
+    const p2 = latLonToXY(zone.lat[0], zone.lon[1]);
+    const w = p2.x - p1.x, h = p2.y - p1.y;
+    ctx.fillStyle = zone.color;
+    ctx.fillRect(p1.x, p1.y, w, h);
+    ctx.strokeStyle = zone.border;
+    ctx.lineWidth = 0.7;
+    ctx.strokeRect(p1.x, p1.y, w, h);
+    // Zone label
+    ctx.fillStyle = zone.border;
+    ctx.font = '500 8px "Barlow Condensed", sans-serif';
+    ctx.letterSpacing = '0.15em';
+    ctx.fillText(zone.label, p1.x + 4, p1.y + 11);
+  });
+}
+
+function drawChokepoints() {
+  CHOKEPOINTS.forEach(cp => {
+    const {x,y} = latLonToXY(cp.lat, cp.lon);
+    // Diamond shape
+    const s = 4;
+    ctx.fillStyle = 'rgba(255,176,32,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(x, y-s); ctx.lineTo(x+s, y);
+    ctx.lineTo(x, y+s); ctx.lineTo(x-s, y);
+    ctx.closePath(); ctx.fill();
+    // Label
+    ctx.fillStyle = 'rgba(255,176,32,0.7)';
+    ctx.font = '500 7.5px "IBM Plex Mono", monospace';
+    ctx.fillText(cp.label, x+7, y+3);
+  });
+}
+
+function drawAlertRings() {
+  alerts.forEach(a => {
+    const {x,y} = latLonToXY(a.lat, a.lon);
+    const color = a.severity==='high'?'255,59,74': a.severity==='medium'?'255,176,32':'0,229,160';
+    const pulse = (Math.sin(frame * 0.04) + 1) / 2;
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(x, y, 18 + pulse*8, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(${color},${0.15 + pulse*0.15})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Inner ring
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(${color},0.6)`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${color},0.9)`;
+    ctx.fill();
+  });
+}
+
+function drawAircraft(ac) {
+  const {x,y} = latLonToXY(ac.lat, ac.lon);
+  const isMil  = ac.type==='military';
+  const color  = isMil ? '#ff3b4a' : '#00c8ff';
+  const size   = isMil ? 5 : 3.5;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ac.heading * Math.PI/180);
+
+  // Triangle pointing up (heading direction)
+  ctx.beginPath();
+  ctx.moveTo(0, -size*2);
+  ctx.lineTo(size, size);
+  ctx.lineTo(-size, size);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.globalAlpha = isMil ? 0.95 : 0.7;
+  ctx.fill();
+
+  if(isMil) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.8;
+    ctx.globalAlpha = 0.4;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawVessel(v) {
+  const {x,y} = latLonToXY(v.lat, v.lon);
+  const isMil = v.type==='military';
+  const color = isMil ? '#b06dff' : '#00e5a0';
+  const size  = isMil ? 5 : 3;
+
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(v.heading * Math.PI/180);
+  // Rectangle (ship top-down)
+  ctx.fillStyle = color;
+  ctx.globalAlpha = isMil ? 0.9 : 0.65;
+  ctx.fillRect(-size/2, -size, size, size*2.2);
+  // Bow indicator
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.moveTo(0,-size*1.5); ctx.lineTo(size/2,-size); ctx.lineTo(-size/2,-size);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawScanLine() {
+  scanY = (scanY + 0.5) % canvas.height;
+  const grad = ctx.createLinearGradient(0, scanY-20, 0, scanY+20);
+  grad.addColorStop(0,'rgba(0,200,255,0)');
+  grad.addColorStop(0.5,'rgba(0,200,255,0.04)');
+  grad.addColorStop(1,'rgba(0,200,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, scanY-20, canvas.width, 40);
+}
+
+function updatePositions() {
+  aircraft.forEach(a => {
+    a.lat += a.vy; a.lon += a.vx;
+    // Bounce within zone bounds
+    const zone = ZONES.find(z=>z.name===a.zone);
+    if(zone) {
+      if(a.lat < zone.lat[0]+1 || a.lat > zone.lat[1]-1) a.vy *= -1;
+      if(a.lon < zone.lon[0]+1 || a.lon > zone.lon[1]-1) a.vx *= -1;
+    }
+  });
+  vessels.forEach(v => {
+    v.lat += v.vy; v.lon += v.vx;
+    const zone = ZONES.find(z=>z.name===v.zone);
+    if(!zone) return;
+    if(v.lat < zone.lat[0]+0.5 || v.lat > zone.lat[1]-0.5) v.vy *= -1;
+    if(v.lon < zone.lon[0]+0.5 || v.lon > zone.lon[1]-0.5) v.vx *= -1;
+  });
+}
+
+function draw() {
+  frame++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // Background
+  ctx.fillStyle = '#030811';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Subtle vignette
+  const vignette = ctx.createRadialGradient(canvas.width/2,canvas.height/2,canvas.width*0.3,canvas.width/2,canvas.height/2,canvas.width*0.75);
+  vignette.addColorStop(0,'transparent'); vignette.addColorStop(1,'rgba(0,0,0,0.4)');
+  ctx.fillStyle = vignette; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  drawGrid();
+  drawZones();
+  drawChokepoints();
+  drawAlertRings();
+  vessels.forEach(drawVessel);
+  aircraft.forEach(drawAircraft);
+  drawScanLine();
+
+  if(frame%3===0) updatePositions();
+  requestAnimationFrame(draw);
+}
+draw();
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════════════════════
+const tooltip  = document.getElementById('entity-tooltip');
+const mouseLatEl = document.getElementById('mouse-lat');
+const mouseLonEl = document.getElementById('mouse-lon');
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const {lat,lon} = xyToLatLon(mx,my);
+  mouseLatEl.textContent = `LAT ${lat.toFixed(2)}°`;
+  mouseLonEl.textContent = `LON ${lon.toFixed(2)}°`;
+
+  // Check hover on entities
+  let hit = null;
+  const HIT_R = 12;
+  [...aircraft,...vessels].forEach(e => {
+    const {x,y} = latLonToXY(e.lat,e.lon);
+    if(Math.hypot(x-mx,y-my)<HIT_R) hit = e;
+  });
+  if(hit) {
+    document.getElementById('tt-id').textContent  = hit.callsign || hit.name || hit.id;
+    document.getElementById('tt-type').textContent = hit.type.toUpperCase();
+    document.getElementById('tt-lat').textContent  = hit.lat.toFixed(3)+'°';
+    document.getElementById('tt-lon').textContent  = hit.lon.toFixed(3)+'°';
+    document.getElementById('tt-zone').textContent = hit.zone.replace('_',' ').toUpperCase();
+    tooltip.style.display = 'block';
+    let tx = e.clientX+14, ty = e.clientY-10;
+    if(tx + 180 > window.innerWidth) tx = e.clientX - 180;
+    tooltip.style.left = tx+'px'; tooltip.style.top = ty+'px';
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+canvas.addEventListener('mouseleave', ()=>{ tooltip.style.display='none'; mouseLatEl.textContent='LAT —'; mouseLonEl.textContent='LON —'; });
+
+// ═══════════════════════════════════════════════════════════════
+// UI: RENDER ALERTS
+// ═══════════════════════════════════════════════════════════════
+function renderAlerts() {
+  const list = document.getElementById('alerts-list');
+  list.innerHTML = alerts.map(a => `
+    <div class="alert-card ${a.severity}">
+      <div class="alert-top">
+        <div class="sev-badge ${a.severity}">${a.severity.toUpperCase()}</div>
+        <div class="alert-zone">${a.zone}</div>
+        <div class="alert-time">${a.time} UTC</div>
+      </div>
+      <div class="alert-title">${a.title}</div>
+      <div class="alert-desc">${a.desc}</div>
+    </div>
+  `).join('');
+}
+renderAlerts();
+
+// ═══════════════════════════════════════════════════════════════
+// UI: STATS
+// ═══════════════════════════════════════════════════════════════
+function updateStats() {
+  const milAir = aircraft.filter(a=>a.type==='military').length;
+  const milSea = vessels.filter(v=>v.type==='military').length;
+  const high   = alerts.filter(a=>a.severity==='high').length;
+  const med    = alerts.filter(a=>a.severity==='medium').length;
+
+  document.getElementById('stat-aircraft').textContent = aircraft.length;
+  document.getElementById('stat-aircraft-mil').textContent = milAir+' militares';
+  document.getElementById('stat-vessels').textContent = vessels.length;
+  document.getElementById('stat-vessels-mil').textContent = milSea+' militares';
+  document.getElementById('stat-high').textContent = high;
+  document.getElementById('stat-med').textContent  = med;
+
+  document.getElementById('b-aircraft').textContent = aircraft.length;
+  document.getElementById('b-vessels').textContent  = vessels.length;
+  document.getElementById('b-high').textContent     = high;
+  document.getElementById('b-med').textContent      = med;
+  document.getElementById('alert-count').textContent     = alerts.length;
+  document.getElementById('sidebar-alert-count').textContent = alerts.length;
+}
+updateStats();
+
+// ═══════════════════════════════════════════════════════════════
+// UI: CLOCK
+// ═══════════════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getUTCHours()).padStart(2,'0');
+  const mm = String(now.getUTCMinutes()).padStart(2,'0');
+  const ss = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('utc-time').textContent = `${hh}:${mm}:${ss}`;
+  const ts = `${hh}:${mm}:${ss}`;
+  document.getElementById('b-update').textContent = ts;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Simulate occasional new data
+setInterval(()=>{
+  aircraft.forEach(a=>{ a.heading = (a.heading + rand(-5,5)+360)%360; });
+  vessels.forEach(v=>{ v.heading = (v.heading + rand(-2,2)+360)%360; });
+}, 3000);
+
+</script>
+</body>
+</html>
