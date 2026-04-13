@@ -17,14 +17,45 @@ import yaml
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [ADSB] %(message)s")
 log = logging.getLogger(__name__)
 
-OPENSKY_URL = "https://opensky-network.org/api/states/all"
-REDIS_URL   = os.getenv("REDIS_URL", "redis://localhost:6379")
-POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "15"))
+OPENSKY_URL      = "https://opensky-network.org/api/states/all"
+OPENSKY_TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+REDIS_URL        = os.getenv("REDIS_URL", "redis://localhost:6379")
+POLL_INTERVAL    = int(os.getenv("POLL_INTERVAL", "15"))
 
-# Credenciales opcionales (aumentan el rate limit de OpenSky)
-OPENSKY_AUTH = None
-if os.getenv("OPENSKY_USER") and os.getenv("OPENSKY_PASS"):
-    OPENSKY_AUTH = (os.getenv("OPENSKY_USER"), os.getenv("OPENSKY_PASS"))
+OPENSKY_CLIENT_ID     = os.getenv("OPENSKY_CLIENT_ID", "")
+OPENSKY_CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET", "")
+
+_access_token: str | None = None
+_token_expires_at: float  = 0.0
+
+
+async def get_access_token(client: httpx.AsyncClient) -> str | None:
+    """Obtiene o renueva el token OAuth2 de OpenSky."""
+    global _access_token, _token_expires_at
+    import time
+    if not OPENSKY_CLIENT_ID or not OPENSKY_CLIENT_SECRET:
+        return None
+    if _access_token and time.time() < _token_expires_at - 30:
+        return _access_token
+    try:
+        resp = await client.post(
+            OPENSKY_TOKEN_URL,
+            data={
+                "grant_type":    "client_credentials",
+                "client_id":     OPENSKY_CLIENT_ID,
+                "client_secret": OPENSKY_CLIENT_SECRET,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        _access_token    = data["access_token"]
+        _token_expires_at = time.time() + data.get("expires_in", 3600)
+        log.info("Token OAuth2 de OpenSky obtenido correctamente.")
+        return _access_token
+    except Exception as e:
+        log.warning(f"Error obteniendo token OpenSky: {e}")
+        return None
 
 
 def load_zones() -> list[dict]:
@@ -63,11 +94,11 @@ def parse_state(state: list) -> dict:
 
 async def fetch_states(client: httpx.AsyncClient) -> list:
     try:
-        params = {}
-        if OPENSKY_AUTH:
-            r = await client.get(OPENSKY_URL, params=params, auth=OPENSKY_AUTH, timeout=20)
-        else:
-            r = await client.get(OPENSKY_URL, params=params, timeout=20)
+        headers = {}
+        token = await get_access_token(client)
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        r = await client.get(OPENSKY_URL, headers=headers, timeout=20)
         r.raise_for_status()
         return r.json().get("states") or []
     except Exception as e:

@@ -3,23 +3,25 @@ const SEV_BG    = { high:'rgba(255,59,74,0.14)', medium:'rgba(255,176,32,0.11)',
 const SEV_BORDER= { high:'rgba(255,59,74,0.3)',  medium:'rgba(255,176,32,0.28)', low:'rgba(0,229,160,0.22)' }
 const SEV_LEFT  = { high:'var(--red)',            medium:'var(--amber)',          low:'var(--green)' }
 
-function AlertCard({ alert }) {
+function AlertCard({ alert, onClick }) {
   return (
-    <div style={{
-      margin:'4px 8px',
-      padding:'10px 12px',
-      background:'var(--bg-2)',
-      border:'1px solid var(--border)',
-      borderLeft:`3px solid ${SEV_LEFT[alert.severity]}`,
-      borderRadius:'2px',
-      cursor:'pointer',
-      position:'relative',
-      overflow:'hidden',
-      animation: alert.severity==='high' ? 'alertPulse 3s ease-in-out infinite' : 'none',
-      transition:'background .15s',
-    }}
-    onMouseEnter={e=>e.currentTarget.style.background='var(--bg-3)'}
-    onMouseLeave={e=>e.currentTarget.style.background='var(--bg-2)'}
+    <div
+      onClick={onClick}
+      style={{
+        margin:'4px 8px',
+        padding:'10px 12px',
+        background:'var(--bg-2)',
+        border:'1px solid var(--border)',
+        borderLeft:`3px solid ${SEV_LEFT[alert.severity]}`,
+        borderRadius:'2px',
+        cursor:'pointer',
+        position:'relative',
+        overflow:'hidden',
+        animation: alert.severity==='high' ? 'alertPulse 3s ease-in-out infinite' : 'none',
+        transition:'background .15s',
+      }}
+      onMouseEnter={e=>e.currentTarget.style.background='var(--bg-3)'}
+      onMouseLeave={e=>e.currentTarget.style.background='var(--bg-2)'}
     >
       {/* Left glow on hover done via pseudo — use a tint div instead */}
       <div style={{
@@ -58,7 +60,7 @@ function AlertCard({ alert }) {
   )
 }
 
-export default function AlertPanel({ alerts, stats }) {
+export default function AlertPanel({ alerts, stats, onAlertClick }) {
   return (
     <aside style={{
       gridColumn:2, gridRow:2,
@@ -85,7 +87,7 @@ export default function AlertPanel({ alerts, stats }) {
 
       {/* Alert list */}
       <div style={{ flex:1, overflowY:'auto', padding:'6px 0' }}>
-        {alerts.map(a => <AlertCard key={a.id} alert={a} />)}
+        {alerts.map(a => <AlertCard key={a.id} alert={a} onClick={() => onAlertClick?.(a)} />)}
       </div>
 
       {/* Stats */}

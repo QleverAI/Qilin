@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(docker ps)",
+      "Bash(docker logs *)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(pip install *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(uvicorn *)"
+    ],
+    "deny": [
+      "Bash(docker compose down -v)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)"
+    ]
+  }
+}

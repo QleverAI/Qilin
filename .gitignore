@@ -9,3 +9,7 @@ dist/
 build/
 *.log
 .DS_Store
+
+# Claude Code — archivos locales (no compartir)
+CLAUDE.local.md
+.claude/settings.local.json
