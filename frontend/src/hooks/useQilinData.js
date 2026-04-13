@@ -20,16 +20,17 @@ async function apiFetch(path) {
 
 function normalizeAircraft(raw) {
   return {
-    id:             raw.icao24,
-    callsign:       raw.callsign || null,
-    type:           raw.category === 'military' ? 'military' : 'civil',
-    lat:            raw.lat,
-    lon:            raw.lon,
-    altitude:       raw.altitude,
-    speed:          raw.velocity,
-    heading:        raw.heading ?? 0,
-    zone:           raw.zone,
-    origin_country: raw.origin_country,
+    id:           raw.icao24,
+    callsign:     raw.callsign || null,
+    type:         raw.category === 'military' ? 'military' : 'civil',
+    lat:          raw.lat,
+    lon:          raw.lon,
+    altitude:     raw.altitude,
+    speed:        raw.velocity,
+    heading:      raw.heading ?? 0,
+    zone:         raw.zone,
+    registration: raw.registration || null,
+    type_code:    raw.type_code   || null,
   }
 }
 

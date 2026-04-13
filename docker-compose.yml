@@ -30,9 +30,7 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
-      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
-      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
-      POLL_INTERVAL: ${ADSB_POLL_INTERVAL:-15}
+      POLL_INTERVAL: ${ADSB_POLL_INTERVAL:-5}
     volumes:
       - ./config:/app/config
     depends_on:

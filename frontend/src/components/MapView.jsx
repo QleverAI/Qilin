@@ -345,14 +345,14 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
                   <div style={{ fontSize:'15px', fontWeight:'600', color:'#00c8ff', marginTop:'1px', letterSpacing:'.05em' }}>
                     {detail.label || '—'}
                   </div>
-                  {(meta?.model || meta?.typecode) && (
+                  {(meta?.model || detail.type_code) && (
                     <div style={{ fontSize:'10px', color:'rgba(200,216,232,0.6)', marginTop:'1px' }}>
-                      {meta.model || meta.typecode}
+                      {meta?.model || detail.type_code}
                     </div>
                   )}
-                  {meta?.registration && (
+                  {(meta?.registration || detail.registration) && (
                     <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', marginTop:'1px' }}>
-                      {meta.registration}
+                      {meta?.registration || detail.registration}
                     </div>
                   )}
                 </div>
@@ -364,7 +364,7 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
 
               {/* Datos de vuelo */}
               {[
-                ['País',      detail.origin_country],
+                detail.squawk   ? ['Squawk',    detail.squawk] : null,
                 ['Velocidad', detail.speed ? `${Math.round(Number(detail.speed))} m/s` : '—'],
                 detail.altitude ? ['Altitud', `${Number(detail.altitude).toLocaleString()} m`] : null,
                 ['Rumbo',     detail.heading ? `${Math.round(Number(detail.heading))}°` : '—'],
