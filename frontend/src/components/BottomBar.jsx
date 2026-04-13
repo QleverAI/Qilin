@@ -3,10 +3,10 @@ export default function BottomBar({ stats }) {
   const ts  = `${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')}:${String(now.getUTCSeconds()).padStart(2,'0')}`
 
   const items = [
-    { icon:'▲', color:'var(--cyan)',  value: stats.aircraftTotal, label:'aeronaves'    },
-    { icon:'■', color:'var(--green)', value: stats.vesselsTotal,  label:'embarcaciones'},
-    { icon:'●', color:'var(--red)',   value: stats.alertsHigh,    label:'high'         },
-    { icon:'●', color:'var(--amber)', value: stats.alertsMedium,  label:'medium'       },
+    { icon:'▲', color:'var(--cyan)',  value: stats.aircraftTotal, label:'aeronaves' },
+    { icon:'▲', color:'var(--red)',   value: stats.aircraftMil,   label:'militares' },
+    { icon:'●', color:'var(--red)',   value: stats.alertsHigh,    label:'high'      },
+    { icon:'●', color:'var(--amber)', value: stats.alertsMedium,  label:'medium'    },
   ]
 
   return (
