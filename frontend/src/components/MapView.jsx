@@ -90,27 +90,45 @@ function alertsGeoJSON(alerts) {
 export default function MapView({ aircraft, alerts, flyTarget }) {
   const containerRef = useRef(null)
   const mapRef       = useRef(null)
-  const [ready, setReady]             = useState(false)
-  const [detail, setDetail]           = useState(null)
-  const [route, setRoute]             = useState(null)
+  const [ready, setReady]               = useState(false)
+  const [detail, setDetail]             = useState(null)  // { ...props, px, py }
+  const [route, setRoute]               = useState(null)
   const [routeLoading, setRouteLoading] = useState(false)
+  const [meta, setMeta]                 = useState(null)
+  const [metaLoading, setMetaLoading]   = useState(false)
   const animRef  = useRef(null)
   const pulseRef = useRef(0)
 
+  function authHdr() {
+    const token = sessionStorage.getItem('qilin_token')
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
   async function fetchRoute(callsign) {
     if (!callsign) { setRoute(null); return }
-    const token = sessionStorage.getItem('qilin_token')
-    const headers = token ? { Authorization: `Bearer ${token}` } : {}
     setRouteLoading(true)
     setRoute(null)
     try {
-      const res  = await fetch(`/api/routes/${encodeURIComponent(callsign)}`, { headers })
-      const data = res.ok ? await res.json() : {}
-      setRoute(data)
+      const res  = await fetch(`/api/routes/${encodeURIComponent(callsign)}`, { headers: authHdr() })
+      setRoute(res.ok ? await res.json() : {})
     } catch (_) {
       setRoute({})
     } finally {
       setRouteLoading(false)
+    }
+  }
+
+  async function fetchMeta(icao24) {
+    if (!icao24) { setMeta(null); return }
+    setMetaLoading(true)
+    setMeta(null)
+    try {
+      const res  = await fetch(`/api/meta/${encodeURIComponent(icao24)}`, { headers: authHdr() })
+      setMeta(res.ok ? await res.json() : {})
+    } catch (_) {
+      setMeta({})
+    } finally {
+      setMetaLoading(false)
     }
   }
 
@@ -194,19 +212,20 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
       map.on('click', 'aircraft-layer', e => {
         const props = e.features[0]?.properties
         if (props) {
-          setDetail({ ...props, lngLat: e.lngLat })
+          setDetail({ ...props, px: e.point.x, py: e.point.y })
           fetchRoute(props.label)
+          fetchMeta(props.id)
         }
       })
       map.on('mouseenter', 'aircraft-layer', () => { map.getCanvas().style.cursor = 'pointer' })
       map.on('mouseleave', 'aircraft-layer', () => { map.getCanvas().style.cursor = '' })
 
       map.on('click', e => {
-        // Solo cerrar el popup si el click no fue sobre ninguna aeronave
         const hits = map.queryRenderedFeatures(e.point, { layers: ['aircraft-layer'] })
         if (!hits.length) {
           setDetail(null)
           setRoute(null)
+          setMeta(null)
         }
       })
 
@@ -274,68 +293,108 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
         pointerEvents:'none', zIndex:2, fontFamily:"'Barlow Condensed',sans-serif",
       }}>TACTICAL DISPLAY · LIVE</div>
 
-      {/* Entity detail card */}
-      {detail && (
-        <div style={{
-          position:'absolute', top:14, right:14, zIndex:10,
-          background:'rgba(7,14,28,0.97)', border:'1px solid rgba(0,200,255,0.35)',
-          borderRadius:'3px', padding:'12px 14px', minWidth:'220px',
-          boxShadow:'0 4px 24px rgba(0,0,0,0.7)',
-          fontFamily:"'IBM Plex Mono',monospace",
-        }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px' }}>
-            <div>
-              <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.45)', letterSpacing:'.15em', textTransform:'uppercase' }}>
-                {detail.type?.toUpperCase()}
-              </div>
-              <div style={{ fontSize:'14px', fontWeight:'500', color:'#00c8ff', marginTop:'2px' }}>
-                {detail.label}
-              </div>
-            </div>
-            <button onClick={() => { setDetail(null); setRoute(null) }} style={{
-              background:'none', border:'none', color:'rgba(0,200,255,0.4)',
-              cursor:'pointer', fontSize:'16px', lineHeight:1, padding:'0 0 0 8px',
-            }}>×</button>
-          </div>
+      {/* Entity detail card — anclado al avión */}
+      {detail && (() => {
+        // Posición del popup: desplazado arriba-derecha del icono
+        const W = 260
+        const containerW = containerRef.current?.offsetWidth  || 800
+        const containerH = containerRef.current?.offsetHeight || 600
+        const flipX = detail.px + W + 16 > containerW
+        const flipY = detail.py - 20 < 180
+        const left = flipX ? detail.px - W - 12 : detail.px + 16
+        const top  = flipY ? detail.py + 16      : detail.py - 20
 
-          {/* Flight data */}
-          {[
-            ['Zona',      detail.zone?.replace(/_/g,' ').toUpperCase()],
-            ['País',      detail.origin_country],
-            ['Velocidad', detail.speed ? `${Math.round(detail.speed)} m/s` : '—'],
-            detail.altitude ? ['Altitud', `${Number(detail.altitude).toLocaleString()} m`] : null,
-            ['Rumbo',     detail.heading ? `${Math.round(detail.heading)}°` : '—'],
-          ].filter(Boolean).map(([k, v]) => (
-            <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
-              <span style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', textTransform:'uppercase', letterSpacing:'.1em' }}>{k}</span>
-              <span style={{ fontSize:'10px', color:'#c8d8e8' }}>{v || '—'}</span>
-            </div>
-          ))}
-
-          {/* Route section */}
-          <div style={{ borderTop:'1px solid rgba(0,200,255,0.15)', marginTop:'8px', paddingTop:'8px' }}>
-            <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:'5px' }}>
-              Ruta
-            </div>
-            {routeLoading && (
-              <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)' }}>Consultando…</div>
-            )}
-            {!routeLoading && route && (route.origin || route.destination) && (
-              <div style={{ fontSize:'12px', color:'#c8d8e8', letterSpacing:'.05em' }}>
-                <span style={{ color:'#00c8ff' }}>{route.origin ?? '—'}</span>
-                <span style={{ color:'rgba(0,200,255,0.35)', margin:'0 6px' }}>→</span>
-                <span style={{ color:'#00c8ff' }}>{route.destination ?? '—'}</span>
+        return (
+          <div style={{
+            position:'absolute', left, top, zIndex:10, width:`${W}px`,
+            background:'rgba(7,14,28,0.97)', border:'1px solid rgba(0,200,255,0.35)',
+            borderRadius:'3px', boxShadow:'0 4px 24px rgba(0,0,0,0.7)',
+            fontFamily:"'IBM Plex Mono',monospace", overflow:'hidden',
+          }}>
+            {/* Foto del avión */}
+            {metaLoading && (
+              <div style={{ height:'80px', background:'rgba(0,200,255,0.04)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <span style={{ fontSize:'9px', color:'rgba(0,200,255,0.3)' }}>Cargando foto…</span>
               </div>
             )}
-            {!routeLoading && route && !route.origin && !route.destination && (
-              <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.3)' }}>Sin datos de ruta</div>
+            {!metaLoading && meta?.photo_url && (
+              <div style={{ position:'relative' }}>
+                <img
+                  src={meta.photo_url}
+                  alt={meta.model || detail.label}
+                  style={{ width:'100%', height:'100px', objectFit:'cover', display:'block', opacity:0.85 }}
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                />
+                {meta.photographer && (
+                  <div style={{
+                    position:'absolute', bottom:3, right:5,
+                    fontSize:'8px', color:'rgba(255,255,255,0.4)',
+                    fontFamily:"'IBM Plex Mono',monospace",
+                  }}>© {meta.photographer}</div>
+                )}
+              </div>
             )}
-            {!routeLoading && !route && (
-              <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.3)' }}>—</div>
-            )}
+
+            <div style={{ padding:'10px 12px' }}>
+              {/* Header */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
+                <div>
+                  <div style={{ fontSize:'9px', color: detail.type === 'military' ? '#ff3b4a' : 'rgba(0,200,255,0.45)', letterSpacing:'.15em', textTransform:'uppercase' }}>
+                    {detail.type === 'military' ? '⬛ MILITAR' : '▲ CIVIL'}
+                  </div>
+                  <div style={{ fontSize:'15px', fontWeight:'600', color:'#00c8ff', marginTop:'1px', letterSpacing:'.05em' }}>
+                    {detail.label || '—'}
+                  </div>
+                  {(meta?.model || meta?.typecode) && (
+                    <div style={{ fontSize:'10px', color:'rgba(200,216,232,0.6)', marginTop:'1px' }}>
+                      {meta.model || meta.typecode}
+                    </div>
+                  )}
+                  {meta?.registration && (
+                    <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', marginTop:'1px' }}>
+                      {meta.registration}
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => { setDetail(null); setRoute(null); setMeta(null) }} style={{
+                  background:'none', border:'none', color:'rgba(0,200,255,0.4)',
+                  cursor:'pointer', fontSize:'16px', lineHeight:1, padding:'0 0 0 8px', flexShrink:0,
+                }}>×</button>
+              </div>
+
+              {/* Datos de vuelo */}
+              {[
+                ['País',      detail.origin_country],
+                ['Velocidad', detail.speed ? `${Math.round(Number(detail.speed))} m/s` : '—'],
+                detail.altitude ? ['Altitud', `${Number(detail.altitude).toLocaleString()} m`] : null,
+                ['Rumbo',     detail.heading ? `${Math.round(Number(detail.heading))}°` : '—'],
+                ['Zona',      detail.zone?.replace(/_/g,' ').toUpperCase()],
+              ].filter(Boolean).map(([k, v]) => (
+                <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:'3px' }}>
+                  <span style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', textTransform:'uppercase', letterSpacing:'.1em' }}>{k}</span>
+                  <span style={{ fontSize:'10px', color:'#c8d8e8' }}>{v || '—'}</span>
+                </div>
+              ))}
+
+              {/* Ruta */}
+              <div style={{ borderTop:'1px solid rgba(0,200,255,0.12)', marginTop:'7px', paddingTop:'7px' }}>
+                <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:'4px' }}>Ruta</div>
+                {routeLoading && <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)' }}>Consultando…</div>}
+                {!routeLoading && route && (route.origin || route.destination) && (
+                  <div style={{ fontSize:'12px', letterSpacing:'.05em' }}>
+                    <span style={{ color:'#00c8ff' }}>{route.origin ?? '—'}</span>
+                    <span style={{ color:'rgba(0,200,255,0.3)', margin:'0 6px' }}>→</span>
+                    <span style={{ color:'#00c8ff' }}>{route.destination ?? '—'}</span>
+                  </div>
+                )}
+                {!routeLoading && route && !route.origin && !route.destination && (
+                  <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.3)' }}>Sin datos de ruta</div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Custom MapLibre style overrides */}
       <style>{`

@@ -272,6 +272,65 @@ async def get_route(callsign: str, _user: str = Depends(get_current_user)):
     return result
 
 
+@app.get("/meta/{icao24}")
+async def get_aircraft_meta(icao24: str, _user: str = Depends(get_current_user)):
+    """
+    Metadata de una aeronave: modelo, matrícula y foto.
+    - Modelo/tipo: OpenSky aircraft database (requiere credenciales, opcional)
+    - Foto:        Planespotters.net public API (sin auth)
+    Cache Redis 24h — el modelo de un avión no cambia.
+    """
+    ic = icao24.lower().strip()
+    redis = app.state.redis
+
+    cached = await redis.get(f"meta:{ic}")
+    if cached:
+        return json.loads(cached)
+
+    result: dict = {"icao24": ic, "model": None, "typecode": None,
+                    "registration": None, "photo_url": None, "photographer": None}
+
+    async with httpx.AsyncClient() as client:
+        # ── OpenSky aircraft metadata ──
+        try:
+            headers = {}
+            token = await _get_opensky_token(client)
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+            resp = await client.get(
+                f"https://opensky-network.org/api/metadata/aircraft/icao/{ic}",
+                headers=headers,
+                timeout=8,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                result["model"]        = data.get("model")
+                result["typecode"]     = data.get("typecode")
+                result["registration"] = data.get("registration")
+                result["owner"]        = data.get("owner")
+        except Exception as e:
+            log.warning(f"OpenSky metadata error para {ic}: {e}")
+
+        # ── Planespotters foto ──
+        try:
+            resp = await client.get(
+                f"https://api.planespotters.net/pub/photos/hex/{ic}",
+                headers={"User-Agent": "Qilin/1.0 (geopolitical intelligence platform)"},
+                timeout=8,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                photos = data.get("photos", [])
+                if photos:
+                    result["photo_url"]    = photos[0].get("thumbnail_large", {}).get("src")
+                    result["photographer"] = photos[0].get("photographer")
+        except Exception as e:
+            log.warning(f"Planespotters error para {ic}: {e}")
+
+    await redis.setex(f"meta:{ic}", 86400, json.dumps(result))
+    return result
+
+
 # ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 
 class ConnectionManager:
