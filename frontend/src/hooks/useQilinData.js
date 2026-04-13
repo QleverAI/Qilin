@@ -1,56 +1,109 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { generateAircraft, generateVessels, MOCK_ALERTS } from '../data/mockData'
+import { useState, useEffect, useRef } from 'react'
 
-const WS_URL = 'ws://localhost:8000/ws'
+const API_BASE    = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_WS_BASE = API_BASE.replace(/^http/, 'ws')
+
+function getToken() {
+  return sessionStorage.getItem('qilin_token')
+}
+
+function authHeaders() {
+  const token = getToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+async function apiFetch(path) {
+  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+function normalizeAircraft(raw) {
+  return {
+    id:             raw.icao24,
+    callsign:       raw.callsign || null,
+    type:           raw.category === 'military' ? 'military' : 'civil',
+    lat:            raw.lat,
+    lon:            raw.lon,
+    altitude:       raw.altitude,
+    speed:          raw.velocity,
+    heading:        raw.heading ?? 0,
+    zone:           raw.zone,
+    origin_country: raw.origin_country,
+  }
+}
+
+function normalizeAlert(raw) {
+  return {
+    id:          raw.id,
+    severity:    raw.severity,
+    zone:        raw.zone,
+    rule:        raw.rule,
+    title:       raw.title,
+    description: raw.description,
+    time:        raw.time,
+  }
+}
+
+function getWsUrl() {
+  const token = getToken()
+  return token ? `${API_WS_BASE}/ws?token=${token}` : `${API_WS_BASE}/ws`
+}
 
 export function useQilinData() {
-  const [aircraft, setAircraft] = useState(() => generateAircraft())
-  const [vessels,  setVessels]  = useState(() => generateVessels())
-  const [alerts,   setAlerts]   = useState(MOCK_ALERTS)
-  const [wsStatus, setWsStatus] = useState('disconnected') // connected | disconnected | error
+  const [aircraft, setAircraft] = useState([])
+  const [alerts,   setAlerts]   = useState([])
+  const [wsStatus, setWsStatus] = useState('disconnected')
 
-  const wsRef    = useRef(null)
-  const animRef  = useRef(null)
-  const frameRef = useRef(0)
+  const wsRef = useRef(null)
 
-  // ── Animate entities locally ──────────────────────────────
-  const tick = useCallback(() => {
-    frameRef.current++
-    if (frameRef.current % 3 === 0) {
-      setAircraft(prev => prev.map(a => ({
-        ...a,
-        lat: a.lat + a.vy,
-        lon: a.lon + a.vx,
-        vy: Math.abs(a.lat + a.vy) > 72 ? -a.vy : a.vy,
-        vx: Math.abs(a.lon + a.vx) > 175 ? -a.vx : a.vx,
-      })))
-      setVessels(prev => prev.map(v => ({
-        ...v,
-        lat: v.lat + v.vy,
-        lon: v.lon + v.vx,
-        vy: Math.abs(v.lat + v.vy) > 72 ? -v.vy : v.vy,
-        vx: Math.abs(v.lon + v.vx) > 175 ? -v.vx : v.vx,
-      })))
+  // ── Carga inicial + polling cada 15s ──────────────────────────
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchSnapshot() {
+      try {
+        const [rawAircraft, rawAlerts] = await Promise.all([
+          apiFetch('/aircraft'),
+          apiFetch('/alerts?limit=50'),
+        ])
+        if (cancelled) return
+        setAircraft((rawAircraft || []).filter(a => a.lat && a.lon).map(normalizeAircraft))
+        setAlerts((rawAlerts || []).map(normalizeAlert))
+      } catch (err) {
+        console.warn('[useQilinData] fetch failed:', err.message)
+      }
     }
-    animRef.current = requestAnimationFrame(tick)
+
+    async function pollAircraft() {
+      try {
+        const raw = await apiFetch('/aircraft')
+        if (cancelled) return
+        setAircraft((raw || []).filter(a => a.lat && a.lon).map(normalizeAircraft))
+      } catch (err) {
+        console.warn('[useQilinData] poll failed:', err.message)
+      }
+    }
+
+    fetchSnapshot()
+    const interval = setInterval(pollAircraft, 15_000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [])
 
-  useEffect(() => {
-    animRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(animRef.current)
-  }, [tick])
-
-  // ── WebSocket (connects to real API when available) ───────
+  // ── WebSocket para alertas en tiempo real ─────────────────────
   useEffect(() => {
     function connect() {
       try {
-        const ws = new WebSocket(WS_URL)
+        const ws = new WebSocket(getWsUrl())
         wsRef.current = ws
 
-        ws.onopen = () => setWsStatus('connected')
+        ws.onopen  = () => setWsStatus('connected')
         ws.onclose = () => {
           setWsStatus('disconnected')
-          setTimeout(connect, 5000) // reconnect
+          setTimeout(connect, 5000)
         }
         ws.onerror = () => setWsStatus('error')
 
@@ -59,28 +112,6 @@ export function useQilinData() {
             const msg = JSON.parse(e.data)
             if (msg.type === 'alert') {
               setAlerts(prev => [msg.data, ...prev].slice(0, 50))
-            }
-            if (msg.type === 'aircraft') {
-              setAircraft(prev => {
-                const idx = prev.findIndex(a => a.icao24 === msg.data.icao24)
-                if (idx >= 0) {
-                  const next = [...prev]
-                  next[idx] = { ...next[idx], ...msg.data }
-                  return next
-                }
-                return [...prev, msg.data]
-              })
-            }
-            if (msg.type === 'vessel') {
-              setVessels(prev => {
-                const idx = prev.findIndex(v => v.mmsi === msg.data.mmsi)
-                if (idx >= 0) {
-                  const next = [...prev]
-                  next[idx] = { ...next[idx], ...msg.data }
-                  return next
-                }
-                return [...prev, msg.data]
-              })
             }
           } catch (_) {}
         }
@@ -94,14 +125,12 @@ export function useQilinData() {
   }, [])
 
   const stats = {
-    aircraftTotal:   aircraft.length,
-    aircraftMil:     aircraft.filter(a => a.type === 'military').length,
-    vesselsTotal:    vessels.length,
-    vesselsMil:      vessels.filter(v => v.type === 'military').length,
-    alertsHigh:      alerts.filter(a => a.severity === 'high').length,
-    alertsMedium:    alerts.filter(a => a.severity === 'medium').length,
-    alertsTotal:     alerts.length,
+    aircraftTotal: aircraft.length,
+    aircraftMil:   aircraft.filter(a => a.type === 'military').length,
+    alertsHigh:    alerts.filter(a => a.severity === 'high').length,
+    alertsMedium:  alerts.filter(a => a.severity === 'medium').length,
+    alertsTotal:   alerts.length,
   }
 
-  return { aircraft, vessels, alerts, stats, wsStatus }
+  return { aircraft, alerts, stats, wsStatus }
 }
