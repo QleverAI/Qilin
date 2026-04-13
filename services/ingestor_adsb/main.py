@@ -73,14 +73,35 @@ def in_zone(lat, lon, zone: dict) -> bool:
     )
 
 
+# Prefijos de callsign asociados a aeronaves militares conocidas.
+# No es exhaustivo pero cubre los callsigns más frecuentes en tráfico OSINT.
+_MILITARY_PREFIXES = (
+    "RCH", "JAKE", "DUKE", "IRON", "COPE", "SPAR", "REACH", "VENUS",
+    "MANTA", "JATO", "TRTN", "POSEI", "ORION", "NEPTUN", "POSDN", "MARLIN",
+    "FORTE", "DARK", "GAF", "HOMER", "ROCKY", "MOOSE", "BRONCO",
+    "NATO", "USAF", "NAVY", "MAGMA", "TOPGN", "VIPER",
+)
+
+
+def _classify_callsign(callsign: str | None) -> str:
+    if not callsign:
+        return "unknown"
+    cs = callsign.upper()
+    for prefix in _MILITARY_PREFIXES:
+        if cs.startswith(prefix):
+            return "military"
+    return "civil"
+
+
 def parse_state(state: list) -> dict:
     """
     OpenSky devuelve cada aeronave como una lista posicional.
     https://openskynetwork.github.io/opensky-api/rest.html
     """
+    callsign = (state[1] or "").strip() or None
     return {
         "icao24":         state[0],
-        "callsign":       (state[1] or "").strip() or None,
+        "callsign":       callsign,
         "origin_country": state[2],
         "lat":            state[6],
         "lon":            state[5],
@@ -88,7 +109,7 @@ def parse_state(state: list) -> dict:
         "on_ground":      state[8],
         "velocity":       state[9],
         "heading":        state[10],
-        "category":       "unknown",  # TODO: clasificar por ICAO24 DB
+        "category":       _classify_callsign(callsign),
     }
 
 

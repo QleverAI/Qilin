@@ -202,7 +202,9 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
       map.on('mouseleave', 'aircraft-layer', () => { map.getCanvas().style.cursor = '' })
 
       map.on('click', e => {
-        if (!e.features?.length) {
+        // Solo cerrar el popup si el click no fue sobre ninguna aeronave
+        const hits = map.queryRenderedFeatures(e.point, { layers: ['aircraft-layer'] })
+        if (!hits.length) {
           setDetail(null)
           setRoute(null)
         }
