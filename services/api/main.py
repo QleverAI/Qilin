@@ -331,6 +331,71 @@ async def get_aircraft_meta(icao24: str, _user: str = Depends(get_current_user))
     return result
 
 
+# ── SOCIAL FEED ───────────────────────────────────────────────────────────────
+
+@app.get("/social/feed")
+async def get_social_feed(
+    limit: int = 50,
+    category: str | None = None,
+    zone: str | None = None,
+    handle: str | None = None,
+    q: str | None = None,
+    since: str | None = None,
+    _user: str = Depends(get_current_user),
+):
+    """
+    Feed de tweets de cuentas monitorizadas.
+    Lee de TimescaleDB ordenado por tiempo DESC.
+    Fallback a Redis stream:social si DB no disponible.
+    """
+    if app.state.db:
+        conditions: list[str] = []
+        params: list = []
+
+        if category:
+            params.append(category)
+            conditions.append(f"category = ${len(params)}")
+        if zone:
+            params.append(zone)
+            conditions.append(f"zone = ${len(params)}")
+        if handle:
+            params.append(handle)
+            conditions.append(f"handle = ${len(params)}")
+        if q:
+            params.append(f"%{q}%")
+            conditions.append(f"content ILIKE ${len(params)}")
+        if since:
+            params.append(since)
+            conditions.append(f"time >= ${len(params)}")
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.append(min(limit, 200))
+        rows = await app.state.db.fetch(
+            f"SELECT * FROM social_posts {where} ORDER BY time DESC LIMIT ${len(params)}",
+            *params,
+        )
+        return [dict(r) for r in rows]
+
+    # Fallback Redis
+    redis = app.state.redis
+    entries = await redis.xrevrange("stream:social", count=min(limit, 200))
+    return [json.loads(msg["data"]) for _, msg in entries]
+
+
+@app.get("/social/accounts")
+async def get_social_accounts(_user: str = Depends(get_current_user)):
+    """Lista de cuentas monitorizadas con sus metadatos desde social_accounts.yaml."""
+    import yaml as _yaml
+    config_path = "/app/config/social_accounts.yaml"
+    try:
+        with open(config_path) as f:
+            cfg = _yaml.safe_load(f)
+        return cfg.get("accounts", [])
+    except Exception as e:
+        log.warning(f"Error leyendo social_accounts.yaml: {e}")
+        return []
+
+
 # ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 
 class ConnectionManager:
