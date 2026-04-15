@@ -1,0 +1,640 @@
+# Qilin — Cuentas de X (Twitter) monitorizadas
+# Campos: handle (sin @), display, category, zone, priority (high|medium)
+
+accounts:
+
+  # ── US GOV / EJECUTIVO ──────────────────────────────────────────────────────
+  - handle: realDonaldTrump
+    display: "Donald Trump"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: POTUS
+    display: "Presidente USA (oficial)"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: WhiteHouse
+    display: "Casa Blanca"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: VP
+    display: "Vicepresidente USA"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: StateDept
+    display: "Depto. de Estado"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: SecRubio
+    display: "Marco Rubio (Sec. Estado)"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: SecDef
+    display: "Secretario de Defensa"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: NSC_Press
+    display: "Consejo Seg. Nacional"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: PressSec
+    display: "Portavoz Casa Blanca"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: JointChiefs
+    display: "Jefes del Estado Mayor"
+    category: us_mil
+    zone: north_america
+    priority: high
+
+  # ── US AGENCIAS / MANDOS ────────────────────────────────────────────────────
+  - handle: DeptofDefense
+    display: "Pentágono"
+    category: us_mil
+    zone: north_america
+    priority: high
+
+  - handle: CIA
+    display: "CIA"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: FBI
+    display: "FBI"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: CISAgov
+    display: "CISA (Ciberseguridad)"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: NSAGov
+    display: "NSA"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: CENTCOM
+    display: "CENTCOM"
+    category: us_mil
+    zone: iran
+    priority: high
+
+  - handle: INDOPACOM
+    display: "INDOPACOM"
+    category: us_mil
+    zone: south_china_sea
+    priority: high
+
+  # ── EUROPA — LÍDERES ────────────────────────────────────────────────────────
+  - handle: EmmanuelMacron
+    display: "Emmanuel Macron"
+    category: europe
+    zone: europe
+    priority: high
+
+  - handle: OlafScholz
+    display: "Olaf Scholz"
+    category: europe
+    zone: europe
+    priority: high
+
+  - handle: Keir_Starmer
+    display: "Keir Starmer"
+    category: europe
+    zone: europe
+    priority: high
+
+  - handle: MeloniGiorgia
+    display: "Giorgia Meloni"
+    category: europe
+    zone: europe
+    priority: high
+
+  - handle: sanchezcastejon
+    display: "Pedro Sánchez"
+    category: europe
+    zone: europe
+    priority: medium
+
+  - handle: vonderleyen
+    display: "Ursula von der Leyen"
+    category: nato_eu
+    zone: europe
+    priority: high
+
+  - handle: CharlesMichel
+    display: "Charles Michel"
+    category: nato_eu
+    zone: europe
+    priority: medium
+
+  - handle: JosepBorrellF
+    display: "Josep Borrell"
+    category: nato_eu
+    zone: europe
+    priority: high
+
+  - handle: MarkRutte
+    display: "Mark Rutte (OTAN)"
+    category: nato_eu
+    zone: europe
+    priority: high
+
+  - handle: kajakallas
+    display: "Kaja Kallas (PE Exterior)"
+    category: nato_eu
+    zone: europe
+    priority: high
+
+  - handle: AndrzejDuda
+    display: "Andrzej Duda (Polonia)"
+    category: europe
+    zone: europe
+    priority: medium
+
+  - handle: ZelenskyyUa
+    display: "Volodymyr Zelensky"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: high
+
+  # ── OTAN / EU INSTITUCIONES ─────────────────────────────────────────────────
+  - handle: NATO
+    display: "OTAN"
+    category: nato_eu
+    zone: europe
+    priority: high
+
+  - handle: EU_Commission
+    display: "Comisión Europea"
+    category: nato_eu
+    zone: europe
+    priority: medium
+
+  - handle: Europarl_EN
+    display: "Parlamento Europeo"
+    category: nato_eu
+    zone: europe
+    priority: medium
+
+  - handle: EUCouncil
+    display: "Consejo EU"
+    category: nato_eu
+    zone: europe
+    priority: medium
+
+  - handle: EU_EEAS
+    display: "Servicio Exterior EU"
+    category: nato_eu
+    zone: europe
+    priority: medium
+
+  # ── RUSIA / UCRANIA ─────────────────────────────────────────────────────────
+  - handle: KremlinRussia_E
+    display: "Kremlin (EN)"
+    category: russia
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: mfa_russia
+    display: "MFA Rusia"
+    category: russia
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: mod_russia
+    display: "MoD Rusia"
+    category: russia
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: Medvedev
+    display: "Dmitry Medvedev"
+    category: russia
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: Ukraine
+    display: "Gobierno Ucrania"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: DefenceU
+    display: "MoD Ucrania"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: GeneralStaffUA
+    display: "Estado Mayor Ucrania"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: MFA_Ukraine
+    display: "MFA Ucrania"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: medium
+
+  - handle: Podolyak_M
+    display: "Mykhailo Podolyak"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: medium
+
+  # ── ORIENTE MEDIO ───────────────────────────────────────────────────────────
+  - handle: netanyahu
+    display: "Benjamin Netanyahu"
+    category: middle_east
+    zone: levante
+    priority: high
+
+  - handle: IsraeliPM
+    display: "PM Israel (oficial)"
+    category: middle_east
+    zone: levante
+    priority: high
+
+  - handle: IDF
+    display: "Israel Defense Forces"
+    category: middle_east_mil
+    zone: levante
+    priority: high
+
+  - handle: khamenei_ir
+    display: "Ayatolá Jamenei"
+    category: middle_east
+    zone: iran
+    priority: high
+
+  - handle: Iran_UN
+    display: "Misión Irán en ONU"
+    category: middle_east
+    zone: iran
+    priority: medium
+
+  - handle: KSAMOFA
+    display: "MFA Arabia Saudí"
+    category: middle_east
+    zone: gulf_ormuz
+    priority: medium
+
+  - handle: RTErdogan
+    display: "Recep T. Erdoğan"
+    category: middle_east
+    zone: south_caucasus
+    priority: high
+
+  - handle: MFA_Turkey
+    display: "MFA Turquía"
+    category: middle_east
+    zone: south_caucasus
+    priority: medium
+
+  - handle: QatarMFA
+    display: "MFA Qatar"
+    category: middle_east
+    zone: gulf_ormuz
+    priority: medium
+
+  - handle: UAEGov
+    display: "Gobierno EAU"
+    category: middle_east
+    zone: gulf_ormuz
+    priority: medium
+
+  - handle: MFA_Egypt
+    display: "MFA Egipto"
+    category: middle_east
+    zone: libya
+    priority: medium
+
+  - handle: LebanonMFA
+    display: "MFA Líbano"
+    category: middle_east
+    zone: levante
+    priority: medium
+
+  # ── ASIA-PACÍFICO ───────────────────────────────────────────────────────────
+  - handle: narendramodi
+    display: "Narendra Modi"
+    category: asia_pacific
+    zone: india_pakistan
+    priority: high
+
+  - handle: MEAIndia
+    display: "MFA India"
+    category: asia_pacific
+    zone: india_pakistan
+    priority: medium
+
+  - handle: MFAChina
+    display: "MFA China"
+    category: asia_pacific
+    zone: china
+    priority: high
+
+  - handle: SpokespersonCHN
+    display: "Portavoz MFA China"
+    category: asia_pacific
+    zone: china
+    priority: high
+
+  - handle: XHNews
+    display: "Xinhua"
+    category: china_state
+    zone: china
+    priority: medium
+
+  - handle: MFA_Japan
+    display: "MFA Japón"
+    category: asia_pacific
+    zone: korea
+    priority: medium
+
+  - handle: JPN_PMO
+    display: "PM Japón"
+    category: asia_pacific
+    zone: korea
+    priority: high
+
+  - handle: AusDeptDefence
+    display: "Defensa Australia"
+    category: asia_pacific
+    zone: south_china_sea
+    priority: medium
+
+  - handle: MFASingapore
+    display: "MFA Singapur"
+    category: asia_pacific
+    zone: south_china_sea
+    priority: medium
+
+  - handle: KoreaMFA
+    display: "MFA Corea del Sur"
+    category: asia_pacific
+    zone: korea
+    priority: medium
+
+  # ── CHINA ESTADO ────────────────────────────────────────────────────────────
+  - handle: PDChina
+    display: "People's Daily"
+    category: china_state
+    zone: china
+    priority: medium
+
+  - handle: CGTNOfficial
+    display: "CGTN"
+    category: china_state
+    zone: china
+    priority: medium
+
+  - handle: ChinaDaily
+    display: "China Daily"
+    category: china_state
+    zone: china
+    priority: medium
+
+  - handle: HuXijin_GT
+    display: "Hu Xijin (ex Global Times)"
+    category: china_state
+    zone: china
+    priority: medium
+
+  - handle: globaltimesnews
+    display: "Global Times"
+    category: china_state
+    zone: china
+    priority: medium
+
+  # ── LATINOAMÉRICA ───────────────────────────────────────────────────────────
+  - handle: lulaoficial
+    display: "Lula da Silva"
+    category: latam
+    zone: venezuela
+    priority: medium
+
+  - handle: JMilei
+    display: "Javier Milei"
+    category: latam
+    zone: venezuela
+    priority: high
+
+  - handle: NicolasMaduro
+    display: "Nicolás Maduro"
+    category: latam
+    zone: venezuela
+    priority: high
+
+  - handle: Claudiashein
+    display: "Claudia Sheinbaum"
+    category: latam
+    zone: north_america
+    priority: medium
+
+  - handle: petrogustavo
+    display: "Gustavo Petro"
+    category: latam
+    zone: venezuela
+    priority: medium
+
+  - handle: LuisArce_Bo
+    display: "Luis Arce (Bolivia)"
+    category: latam
+    zone: venezuela
+    priority: medium
+
+  # ── ORGANISMOS INTERNACIONALES ──────────────────────────────────────────────
+  - handle: UN
+    display: "Naciones Unidas"
+    category: intl_org
+    zone: europe
+    priority: high
+
+  - handle: IAEA
+    display: "AIEA"
+    category: intl_org
+    zone: iran
+    priority: high
+
+  - handle: WHO
+    display: "OMS"
+    category: intl_org
+    zone: europe
+    priority: medium
+
+  - handle: IMFNews
+    display: "FMI"
+    category: intl_org
+    zone: europe
+    priority: medium
+
+  - handle: WFP
+    display: "Prog. Mundial Alimentos"
+    category: intl_org
+    zone: sahel
+    priority: medium
+
+  - handle: UNHCR
+    display: "ACNUR"
+    category: intl_org
+    zone: europe
+    priority: medium
+
+  - handle: _AfricanUnion
+    display: "Unión Africana"
+    category: intl_org
+    zone: sahel
+    priority: medium
+
+  - handle: OPCW
+    display: "Org. Armas Químicas"
+    category: intl_org
+    zone: europe
+    priority: medium
+
+  # ── THINK TANKS / OSINT ─────────────────────────────────────────────────────
+  - handle: ISWonline
+    display: "Inst. Study of War"
+    category: think_tank
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: AtlanticCouncil
+    display: "Atlantic Council"
+    category: think_tank
+    zone: europe
+    priority: medium
+
+  - handle: IISS_org
+    display: "IISS"
+    category: think_tank
+    zone: europe
+    priority: medium
+
+  - handle: CFR_org
+    display: "Council on Foreign Relations"
+    category: think_tank
+    zone: north_america
+    priority: medium
+
+  - handle: RANDCorporation
+    display: "RAND Corporation"
+    category: think_tank
+    zone: north_america
+    priority: medium
+
+  - handle: bellingcat
+    display: "Bellingcat"
+    category: think_tank
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: EliotHiggins
+    display: "Eliot Higgins (Bellingcat)"
+    category: think_tank
+    zone: ukraine_black_sea
+    priority: medium
+
+  - handle: IanBremmer
+    display: "Ian Bremmer (Eurasia Group)"
+    category: think_tank
+    zone: north_america
+    priority: medium
+
+  - handle: OSINTdefender
+    display: "OSINT Defender"
+    category: think_tank
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: CovertShores
+    display: "Covert Shores (naval)"
+    category: think_tank
+    zone: south_china_sea
+    priority: medium
+
+  # ── MEDIOS GEOPOLÍTICOS ─────────────────────────────────────────────────────
+  - handle: Reuters
+    display: "Reuters"
+    category: media
+    zone: europe
+    priority: high
+
+  - handle: AP
+    display: "Associated Press"
+    category: media
+    zone: north_america
+    priority: high
+
+  - handle: BBCWorld
+    display: "BBC World"
+    category: media
+    zone: europe
+    priority: high
+
+  - handle: AlJazeera
+    display: "Al Jazeera"
+    category: media
+    zone: middle_east
+    priority: high
+
+  - handle: AFP
+    display: "AFP"
+    category: media
+    zone: europe
+    priority: medium
+
+  - handle: ForeignPolicy
+    display: "Foreign Policy"
+    category: media
+    zone: north_america
+    priority: medium
+
+  - handle: TheEconomist
+    display: "The Economist"
+    category: media
+    zone: europe
+    priority: medium
+
+  - handle: MiddleEastEye
+    display: "Middle East Eye"
+    category: media
+    zone: levante
+    priority: medium
+
+  - handle: defense_one
+    display: "Defense One"
+    category: media
+    zone: north_america
+    priority: medium
+
+  - handle: EURACTIV
+    display: "Euractiv"
+    category: media
+    zone: europe
+    priority: medium
