@@ -341,7 +341,7 @@ async def get_social_feed(
     zone: str | None = None,
     handle: str | None = None,
     q: str | None = None,
-    since: str | None = None,
+    since: datetime | None = None,
     _user: str = Depends(get_current_user),
 ):
     """
