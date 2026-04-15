@@ -72,3 +72,28 @@ CREATE TABLE IF NOT EXISTS news_events (
 );
 
 CREATE INDEX IF NOT EXISTS news_time_idx ON news_events (time DESC);
+
+-- ─── POSTS SOCIALES (X / Twitter) ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS social_posts (
+    time        TIMESTAMPTZ     NOT NULL,
+    tweet_id    TEXT            NOT NULL,
+    handle      TEXT            NOT NULL,
+    display     TEXT,
+    category    TEXT,
+    zone        TEXT,
+    content     TEXT,
+    lang        TEXT,
+    likes       INT             DEFAULT 0,
+    retweets    INT             DEFAULT 0,
+    url         TEXT,
+    media_url   TEXT,
+    media_type  TEXT,                       -- 'photo' | 'video' | 'animated_gif' | NULL
+    CONSTRAINT social_posts_tweet_id_key UNIQUE (tweet_id)
+);
+
+SELECT create_hypertable('social_posts', 'time', if_not_exists => TRUE);
+SELECT add_compression_policy('social_posts', INTERVAL '7 days');
+
+CREATE INDEX IF NOT EXISTS social_posts_handle_time ON social_posts (handle, time DESC);
+CREATE INDEX IF NOT EXISTS social_posts_category_time ON social_posts (category, time DESC);
+CREATE INDEX IF NOT EXISTS social_posts_zone_time ON social_posts (zone, time DESC);
