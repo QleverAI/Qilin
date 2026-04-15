@@ -3,7 +3,9 @@
  * Centraliza la configuración de fetch, autenticación y headers.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// En dev (sin VITE_API_URL) usamos URL relativa para que el proxy de Vite
+// reescriba /api/* → http://localhost:8000/*. En producción se usa VITE_API_URL.
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export function authHeaders() {
   const token = sessionStorage.getItem('qilin_token')

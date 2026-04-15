@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { apiFetch, getApiBase, authHeaders } from './apiClient'
 
 const API_BASE    = getApiBase()
-const API_WS_BASE = API_BASE.replace(/^http/, 'ws')
+// En dev API_BASE es '' (proxy Vite), derivamos la base WS desde window.location
+const API_WS_BASE = API_BASE
+  ? API_BASE.replace(/^http/, 'ws')
+  : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
 
 function getToken() {
   return sessionStorage.getItem('qilin_token')
@@ -56,8 +59,8 @@ export function useQilinData() {
     async function fetchSnapshot() {
       try {
         const [rawAircraft, rawAlerts] = await Promise.all([
-          apiFetch('/aircraft'),
-          apiFetch('/alerts?limit=50'),
+          apiFetch('/api/aircraft'),
+          apiFetch('/api/alerts?limit=50'),
         ])
         if (cancelled) return
         setAircraft((rawAircraft || []).filter(a => a.lat && a.lon).map(normalizeAircraft))
@@ -69,7 +72,7 @@ export function useQilinData() {
 
     async function pollAircraft() {
       try {
-        const raw = await apiFetch('/aircraft')
+        const raw = await apiFetch('/api/aircraft')
         if (cancelled) return
         setAircraft((raw || []).filter(a => a.lat && a.lon).map(normalizeAircraft))
       } catch (err) {

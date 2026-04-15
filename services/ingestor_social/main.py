@@ -158,20 +158,21 @@ async def publish(redis, db, tweet: dict) -> bool:
 
     if db:
         try:
-            await db.execute(
-                """
-                INSERT INTO social_posts
-                    (time, tweet_id, handle, display, category, zone,
-                     content, lang, likes, retweets, url, media_url, media_type)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-                ON CONFLICT (tweet_id) DO NOTHING
-                """,
-                tweet["time"], tweet["tweet_id"], tweet["handle"],
-                tweet["display"], tweet["category"], tweet["zone"],
-                tweet["content"], tweet["lang"], tweet["likes"],
-                tweet["retweets"], tweet["url"],
-                tweet["media_url"], tweet["media_type"],
-            )
+            async with db.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO social_posts
+                        (time, tweet_id, handle, display, category, zone,
+                         content, lang, likes, retweets, url, media_url, media_type)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                    ON CONFLICT (tweet_id) DO NOTHING
+                    """,
+                    tweet["time"], tweet["tweet_id"], tweet["handle"],
+                    tweet["display"], tweet["category"], tweet["zone"],
+                    tweet["content"], tweet["lang"], tweet["likes"],
+                    tweet["retweets"], tweet["url"],
+                    tweet["media_url"], tweet["media_type"],
+                )
         except Exception as e:
             log.error(f"Error guardando tweet {tweet['tweet_id']} en DB: {e}")
 
@@ -195,8 +196,8 @@ async def main():
     db = None
     if DB_URL:
         try:
-            db = await asyncpg.connect(DB_URL)
-            log.info("Conectado a TimescaleDB.")
+            db = await asyncpg.create_pool(DB_URL, min_size=1, max_size=3)
+            log.info("Pool TimescaleDB creado.")
         except Exception as e:
             log.warning(f"No se pudo conectar a DB: {e}. Tweets no se persistiran.")
 
