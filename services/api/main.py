@@ -15,6 +15,7 @@ import asyncpg
 import httpx
 import bcrypt
 import jwt
+import yaml
 import redis.asyncio as aioredis
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -385,11 +386,10 @@ async def get_social_feed(
 @app.get("/social/accounts")
 async def get_social_accounts(_user: str = Depends(get_current_user)):
     """Lista de cuentas monitorizadas con sus metadatos desde social_accounts.yaml."""
-    import yaml as _yaml
     config_path = "/app/config/social_accounts.yaml"
     try:
         with open(config_path) as f:
-            cfg = _yaml.safe_load(f)
+            cfg = yaml.safe_load(f)
         return cfg.get("accounts", [])
     except Exception as e:
         log.warning(f"Error leyendo social_accounts.yaml: {e}")
