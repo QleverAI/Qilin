@@ -1,17 +1,5 @@
 import { useState, useEffect } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-
-function authHeaders() {
-  const token = sessionStorage.getItem('qilin_token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-async function apiFetch(path) {
-  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
-}
+import { apiFetch } from './apiClient'
 
 export function useSocialFeed() {
   const [posts,      setPosts]      = useState([])
@@ -25,8 +13,8 @@ export function useSocialFeed() {
     async function fetchAll() {
       try {
         const [rawPosts, rawAccounts] = await Promise.all([
-          apiFetch('/social/feed?limit=100'),
-          apiFetch('/social/accounts'),
+          apiFetch('/api/social/feed?limit=100'),
+          apiFetch('/api/social/accounts'),
         ])
         if (cancelled) return
         setPosts(rawPosts   || [])

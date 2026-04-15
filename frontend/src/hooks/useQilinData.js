@@ -1,21 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { apiFetch, getApiBase, authHeaders } from './apiClient'
 
-const API_BASE    = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE    = getApiBase()
 const API_WS_BASE = API_BASE.replace(/^http/, 'ws')
 
 function getToken() {
   return sessionStorage.getItem('qilin_token')
-}
-
-function authHeaders() {
-  const token = getToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-async function apiFetch(path) {
-  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
 }
 
 function normalizeAircraft(raw) {
@@ -29,8 +19,9 @@ function normalizeAircraft(raw) {
     speed:        raw.velocity,
     heading:      raw.heading ?? 0,
     zone:         raw.zone,
-    registration: raw.registration || null,
-    type_code:    raw.type_code   || null,
+    registration:   raw.registration    || null,
+    type_code:      raw.type_code       || null,
+    origin_country: raw.origin_country  || null,
   }
 }
 
