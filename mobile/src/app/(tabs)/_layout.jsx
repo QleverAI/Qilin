@@ -3,11 +3,12 @@ import { Text, View }  from 'react-native'
 import { C }           from '../../theme'
 
 const TABS = [
-  { name:'index',     label:'INICIO',      icon:'◉' },
-  { name:'tactical',  label:'TÁCTICO',     icon:'◎' },
-  { name:'news',      label:'NOTICIAS',    icon:'◈' },
-  { name:'documents', label:'DOCUMENTOS',  icon:'▣' },
-  { name:'social',    label:'SOCIAL',      icon:'◈' },
+  { name:'index',    label:'INICIO',     icon:'◉' },
+  { name:'tactical', label:'TÁCTICO',    icon:'◎' },
+  { name:'news',     label:'NOTICIAS',   icon:'◈' },
+  { name:'documents',label:'DOCUMENTOS', icon:'▣' },
+  { name:'social',   label:'SOCIAL',     icon:'◈' },
+  { name:'markets',  label:'MERCADOS',   icon:'$' },
 ]
 
 function TabIcon({ icon, label, focused }) {
