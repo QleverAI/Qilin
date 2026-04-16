@@ -28,24 +28,24 @@ export default function TacticalScreen() {
         showsCompass={false}
         toolbarEnabled={false}
       >
-        {visibleAircraft.map(aircraft => (
+        {visibleAircraft.map(ac => (
           <Marker
-            key={aircraft.icao24}
-            coordinate={{ latitude: aircraft.lat, longitude: aircraft.lon }}
-            pinColor={aircraft.type === 'military' ? '#ff3b4a' : '#00c8ff'}
+            key={ac.icao24}
+            coordinate={{ latitude: ac.lat, longitude: ac.lon }}
+            pinColor={ac.type === 'military' ? '#ff3b4a' : '#00c8ff'}
             anchor={{ x: 0.5, y: 0.5 }}
           >
             <Callout tooltip={false}>
               <View style={s.callout}>
-                <Text style={s.calloutCall}>{aircraft.callsign || aircraft.icao24}</Text>
-                {aircraft.altitude != null && (
-                  <Text style={s.calloutMeta}>Alt: {Math.round(aircraft.altitude).toLocaleString()} ft</Text>
+                <Text style={s.calloutCall}>{ac.callsign || ac.icao24}</Text>
+                {ac.altitude != null && (
+                  <Text style={s.calloutMeta}>Alt: {Math.round(ac.altitude).toLocaleString()} ft</Text>
                 )}
-                {aircraft.speed != null && (
-                  <Text style={s.calloutMeta}>Vel: {Math.round(aircraft.speed)} kts</Text>
+                {ac.speed != null && (
+                  <Text style={s.calloutMeta}>Vel: {Math.round(ac.speed)} kts</Text>
                 )}
-                <Text style={[s.calloutType, { color: aircraft.type === 'military' ? '#ff3b4a' : '#00c8ff' }]}>
-                  {aircraft.type === 'military' ? 'MILITARY' : 'CIVIL'}
+                <Text style={[s.calloutType, { color: ac.type === 'military' ? '#ff3b4a' : '#00c8ff' }]}>
+                  {ac.type === 'military' ? 'MILITARY' : 'CIVIL'}
                 </Text>
               </View>
             </Callout>
