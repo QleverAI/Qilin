@@ -147,3 +147,29 @@ CREATE INDEX        IF NOT EXISTS documents_severity_idx   ON documents (severit
 CREATE INDEX        IF NOT EXISTS documents_org_type_idx   ON documents (org_type, time DESC);
 CREATE INDEX        IF NOT EXISTS documents_country_idx    ON documents (source_country, time DESC);
 CREATE INDEX        IF NOT EXISTS documents_sectors_gin    ON documents USING GIN (sectors);
+
+-- ─── SEC FILINGS (8-K) ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS sec_filings (
+    id               BIGSERIAL     PRIMARY KEY,
+    time             TIMESTAMPTZ   NOT NULL,
+    discovered_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    ticker           TEXT          NOT NULL,
+    company_name     TEXT          NOT NULL,
+    cik              TEXT          NOT NULL,
+    form_type        TEXT          NOT NULL,
+    accession_number TEXT          NOT NULL,
+    title            TEXT,
+    filing_url       TEXT          NOT NULL,
+    sector           TEXT,
+    severity         TEXT          DEFAULT 'low',
+    relevance        INT           DEFAULT 50,
+    summary          TEXT,
+    full_text        TEXT,
+    status           TEXT          DEFAULT 'pending'
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS sec_filings_accession_key ON sec_filings (accession_number);
+CREATE INDEX        IF NOT EXISTS sec_filings_time_idx      ON sec_filings (time DESC);
+CREATE INDEX        IF NOT EXISTS sec_filings_ticker_idx    ON sec_filings (ticker, time DESC);
+CREATE INDEX        IF NOT EXISTS sec_filings_sector_idx    ON sec_filings (sector, time DESC);
+CREATE INDEX        IF NOT EXISTS sec_filings_form_idx      ON sec_filings (form_type, time DESC);
