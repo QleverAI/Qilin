@@ -1,10 +1,10 @@
-// Home — dashboard preview of all modules
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native'
 import { router }                                        from 'expo-router'
 import { useQilinData }                                  from '../../hooks/useQilinData'
-import { MOCK_NEWS }                                     from '../../data/mockNews'
-import { MOCK_DOCUMENTS }                                from '../../data/mockDocuments'
-import { MOCK_POSTS, TRENDING_TOPICS }                   from '../../data/mockSocial'
+import { useNewsFeed }                                   from '../../hooks/useNewsFeed'
+import { useDocsFeed }                                   from '../../hooks/useDocsFeed'
+import { useSocialFeed }                                 from '../../hooks/useSocialFeed'
+import { useSecFeed }                                    from '../../hooks/useSecFeed'
 import { C, SEV_COLOR }                                  from '../../theme'
 
 function Dot({ color }) {
@@ -52,61 +52,35 @@ function StatGrid({ aircraft, vessels, alerts }) {
   )
 }
 
-function NewsRows() {
-  return (
-    <>
-      {MOCK_NEWS.slice(0,3).map(n => (
-        <View key={n.id} style={s.row}>
-          <View style={[s.rowDot, { backgroundColor:SEV_COLOR[n.severity] }]} />
-          <View style={{ flex:1 }}>
-            <Text style={s.rowTitle} numberOfLines={1}>{n.title}</Text>
-            <Text style={s.rowMeta}>{n.source} · {n.time} UTC</Text>
-          </View>
-        </View>
-      ))}
-    </>
-  )
-}
-
-function TrendRows() {
-  return (
-    <>
-      {TRENDING_TOPICS.slice(0,3).map(t => (
-        <View key={t.topic} style={s.row}>
-          <View style={{ flex:1 }}>
-            <Text style={[s.rowTitle, { color:C.cyan }]}>{t.topic}</Text>
-            <Text style={s.rowMeta}>{t.zone}</Text>
-          </View>
-          <View style={{ alignItems:'flex-end' }}>
-            <Text style={[s.rowTitle, { color:C.txt1 }]}>{(t.count/1000).toFixed(1)}K</Text>
-            <Text style={[s.rowMeta, { color:C.green }]}>{t.delta}</Text>
-          </View>
-        </View>
-      ))}
-    </>
-  )
+function fmt(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' })
 }
 
 export default function HomeScreen() {
   const { aircraft, vessels, alerts, wsStatus } = useQilinData()
-  const pending = MOCK_DOCUMENTS.filter(d => d.status === 'pending' || d.status === 'analyzing').length
+  const { articles }  = useNewsFeed()
+  const { documents } = useDocsFeed()
+  const { posts }     = useSocialFeed()
+  const { filings }   = useSecFeed()
+
+  const today = new Date().toDateString()
+  const todayFilings = filings.filter(f => f.time && new Date(f.time).toDateString() === today)
 
   const statusItems = [
-    { label:'ADS-B',   color:C.green, val:`${aircraft.length} ent.` },
-    { label:'AIS',     color:C.green, val:`${vessels.length} ent.`  },
-    { label:'NOTICIAS',color:C.amber, val:`${MOCK_NEWS.length} art.` },
-    { label:'WS',      color: wsStatus==='live' ? C.green : C.amber, val:wsStatus.toUpperCase() },
+    { label:'ADS-B',    color:C.green, val:`${aircraft.length} ent.` },
+    { label:'AIS',      color:C.green, val:`${vessels.length} ent.`  },
+    { label:'NOTICIAS', color:articles.length ? C.green : C.amber, val:`${articles.length} art.` },
+    { label:'WS',       color:wsStatus==='live' ? C.green : C.amber, val:wsStatus.toUpperCase() },
   ]
 
   return (
     <ScrollView style={s.root} contentContainerStyle={{ padding:16, gap:12, paddingBottom:32 }}>
-      {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>◎ QILIN</Text>
         <Text style={s.headerSub}>INTELIGENCIA GEOPOLÍTICA</Text>
       </View>
 
-      {/* System status strip */}
       <View style={s.statusStrip}>
         {statusItems.map(i => (
           <View key={i.label} style={s.statusItem}>
@@ -117,48 +91,84 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* Cards */}
       <ModuleCard
-        title="Mapa Táctico"  icon="◎"
+        title="Mapa Táctico" icon="◎"
         subtitle="ADS-B · AIS · ALERTAS"
-        status="LIVE"  statusColor={C.green}
+        status="LIVE" statusColor={C.green}
         onPress={() => router.push('/(tabs)/tactical')}
       >
         <StatGrid aircraft={aircraft} vessels={vessels} alerts={alerts} />
       </ModuleCard>
 
       <ModuleCard
-        title="Noticias"  icon="◈"
+        title="Noticias" icon="◈"
         subtitle="OSINT · PRENSA INT."
-        status={`${MOCK_NEWS.filter(n=>n.severity==='high').length} CRÍTICAS`}
-        statusColor={C.red}
+        status={`${articles.filter(n=>n.severity==='high').length} CRÍTICAS`}
+        statusColor={articles.some(n=>n.severity==='high') ? C.red : C.green}
         onPress={() => router.push('/(tabs)/news')}
       >
-        <NewsRows />
-      </ModuleCard>
-
-      <ModuleCard
-        title="Documentos"  icon="▣"
-        subtitle="PDF · DOCX · ANÁLISIS IA"
-        status={pending > 0 ? `${pending} PEND.` : 'AL DÍA'}
-        statusColor={pending > 0 ? C.amber : C.green}
-        onPress={() => router.push('/(tabs)/documents')}
-      >
-        {MOCK_DOCUMENTS.slice(0,3).map(d => (
-          <View key={d.id} style={s.row}>
-            <Text style={s.rowTitle} numberOfLines={1}>{d.name}</Text>
+        {articles.slice(0,3).map(n => (
+          <View key={n.id} style={s.row}>
+            <View style={[s.rowDot, { backgroundColor:SEV_COLOR[n.severity] }]} />
+            <View style={{ flex:1 }}>
+              <Text style={s.rowTitle} numberOfLines={1}>{n.title}</Text>
+              <Text style={s.rowMeta}>{n.source} · {fmt(n.time)} UTC</Text>
+            </View>
           </View>
         ))}
+        {articles.length === 0 && <Text style={s.rowEmpty}>Sin noticias recientes</Text>}
       </ModuleCard>
 
       <ModuleCard
-        title="Redes Sociales"  icon="◉"
+        title="Documentos" icon="▣"
+        subtitle="PDF · ANÁLISIS"
+        status={`${documents.length} docs`}
+        statusColor={C.green}
+        onPress={() => router.push('/(tabs)/documents')}
+      >
+        {documents.slice(0,3).map(d => (
+          <View key={d.id} style={s.row}>
+            <Text style={s.rowTitle} numberOfLines={1}>{d.title}</Text>
+          </View>
+        ))}
+        {documents.length === 0 && <Text style={s.rowEmpty}>Sin documentos recientes</Text>}
+      </ModuleCard>
+
+      <ModuleCard
+        title="Redes Sociales" icon="◉"
         subtitle="X · TELEGRAM · ZONAS"
-        status={`${TRENDING_TOPICS.length} TREND`}
+        status={`${posts.length} posts`}
         statusColor={C.cyan}
         onPress={() => router.push('/(tabs)/social')}
       >
-        <TrendRows />
+        {posts.slice(0,3).map(p => (
+          <View key={p.tweet_id} style={s.row}>
+            <View style={{ flex:1 }}>
+              <Text style={s.rowTitle} numberOfLines={1}>{p.content}</Text>
+              <Text style={s.rowMeta}>@{p.handle} · {p.zone || '—'}</Text>
+            </View>
+          </View>
+        ))}
+        {posts.length === 0 && <Text style={s.rowEmpty}>Sin publicaciones recientes</Text>}
+      </ModuleCard>
+
+      <ModuleCard
+        title="Mercados" icon="$"
+        subtitle="SEC 8-K · FILINGS"
+        status={todayFilings.length > 0 ? `${todayFilings.length} HOY` : 'AL DÍA'}
+        statusColor={todayFilings.length > 0 ? C.amber : C.green}
+        onPress={() => router.push('/(tabs)/markets')}
+      >
+        {filings.slice(0,3).map(f => (
+          <View key={f.id} style={s.row}>
+            <View style={[s.rowDot, { backgroundColor: f.severity==='high' ? C.red : C.amber }]} />
+            <View style={{ flex:1 }}>
+              <Text style={s.rowTitle} numberOfLines={1}>[{f.ticker}] {f.company_name}</Text>
+              <Text style={s.rowMeta}>{f.form_type} · {f.sector}</Text>
+            </View>
+          </View>
+        ))}
+        {filings.length === 0 && <Text style={s.rowEmpty}>Sin filings recientes</Text>}
       </ModuleCard>
     </ScrollView>
   )
@@ -169,14 +179,11 @@ const s = StyleSheet.create({
   header:      { alignItems:'center', paddingVertical:12 },
   headerTitle: { fontSize:22, color:C.cyan, letterSpacing:6, fontFamily:'SpaceMono' },
   headerSub:   { fontSize:8, color:C.txt3, letterSpacing:3, marginTop:3 },
-
   statusStrip: { flexDirection:'row', backgroundColor:C.bg1, borderWidth:1, borderColor:C.borderMd, borderRadius:3, padding:10, gap:12 },
   statusItem:  { flexDirection:'row', alignItems:'center', gap:4 },
   statusLabel: { fontSize:8, letterSpacing:1, fontFamily:'SpaceMono' },
   statusVal:   { fontSize:8, color:C.txt3, fontFamily:'SpaceMono', marginLeft:2 },
-
-  dot: { width:5, height:5, borderRadius:3, shadowOpacity:0.8, shadowRadius:4, elevation:2 },
-
+  dot:         { width:5, height:5, borderRadius:3, shadowOpacity:0.8, shadowRadius:4, elevation:2 },
   card:        { backgroundColor:C.bg1, borderWidth:1, borderColor:C.borderMd, borderRadius:3, overflow:'hidden' },
   cardHeader:  { flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:12, borderBottomWidth:1, borderBottomColor:C.border },
   cardIcon:    { fontSize:18, color:C.cyan },
@@ -184,15 +191,14 @@ const s = StyleSheet.create({
   cardSub:     { fontSize:8, color:C.txt3, letterSpacing:1, marginTop:1 },
   cardStatus:  { fontSize:8, letterSpacing:1, fontFamily:'SpaceMono' },
   cardBody:    { paddingVertical:4 },
-
   statGrid:    { flexDirection:'row', flexWrap:'wrap' },
   statCell:    { width:'50%', padding:12, borderRightWidth:1, borderBottomWidth:1, borderColor:C.border },
   statVal:     { fontSize:28, fontFamily:'SpaceMono', fontWeight:'500', lineHeight:32 },
   statLabel:   { fontSize:7, color:C.txt3, letterSpacing:2, marginTop:2, textTransform:'uppercase' },
   statSub:     { fontSize:8, color:C.txt3, fontFamily:'SpaceMono', marginTop:1 },
-
   row:         { flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:12, paddingVertical:7, borderBottomWidth:1, borderBottomColor:C.border },
   rowDot:      { width:6, height:6, borderRadius:3 },
   rowTitle:    { fontSize:10, color:C.txt1, flex:1 },
   rowMeta:     { fontSize:8, color:C.txt3, fontFamily:'SpaceMono', marginTop:1 },
+  rowEmpty:    { fontSize:9, color:C.txt3, fontFamily:'SpaceMono', padding:12, textAlign:'center' },
 })
