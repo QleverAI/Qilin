@@ -12,7 +12,7 @@ ingestor-news  ──┘                              │
                                          FastAPI + WS
                                                 │
                                                 ▼
-                                       React + Deck.gl
+                                    React + MapLibre GL (:3000)
 ```
 
 ## Arrancar en local
@@ -31,7 +31,7 @@ docker compose up --build
 
 | Servicio | Descripción |
 |---|---|
-| `ingestor-adsb` | Polling OpenSky Network cada 15s, filtra por zonas |
+| `ingestor-adsb` | Polling Airplanes.live — /mil global + /point por zona, sin auth requerida |
 | `ingestor-ais` | Polling AISHub cada 60s, filtra por zonas |
 | `alert-engine` | Motor de reglas, detecta patrones y notifica |
 | `api` | FastAPI REST + WebSocket para el dashboard |

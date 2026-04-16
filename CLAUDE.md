@@ -2,7 +2,7 @@
 
 ## Proyecto
 
-Plataforma de inteligencia geopolítica en tiempo real. Agrega y correlaciona datos de fuentes públicas — aeronaves (ADS-B via OpenSky), embarcaciones (AIS via AISHub) y noticias — para generar alertas de eventos geopolíticos con notificaciones vía Telegram.
+Plataforma de inteligencia geopolítica en tiempo real. Agrega y correlaciona datos de fuentes públicas — aeronaves (ADS-B via Airplanes.live), embarcaciones (AIS via AISHub) y noticias — para generar alertas de eventos geopolíticos con notificaciones vía Telegram.
 
 ## Arquitectura
 
@@ -70,14 +70,13 @@ npm run build
 | Frontend (dev) | 3000 | React + Vite (proxy `/api` y `/ws` → 8000) |
 | `redis` | 6379 | Cache de posiciones actuales + message bus |
 | `timescaledb` | 5432 | Almacenamiento histórico con compresión automática 7d |
-| `ingestor-adsb` | — | Polling OpenSky cada 15s, filtra por zonas |
+| `ingestor-adsb` | — | Polling Airplanes.live (/mil global + /point por zona), filtra por zonas |
 | `ingestor-ais` | — | Polling AISHub cada 60s, filtra por zonas |
 | `alert-engine` | — | Motor de reglas, notifica por Telegram |
 
 ## Variables de entorno clave (ver .env.example)
 
 - `DB_USER` / `DB_PASSWORD` — credenciales PostgreSQL
-- `OPENSKY_USER` / `OPENSKY_PASS` — opcionales, aumentan el rate limit de OpenSky
 - `AISHUB_USER` — requerido para datos AIS
 - `TELEGRAM_TOKEN` / `TELEGRAM_CHAT_ID` — bot para alertas
 - `ADSB_POLL_INTERVAL` / `AIS_POLL_INTERVAL` — intervalos en segundos
