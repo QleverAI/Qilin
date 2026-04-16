@@ -52,6 +52,20 @@ services:
       - redis
       - timescaledb
 
+  ingestor-news:
+    build: ./services/ingestor_news
+    container_name: qilin_ingestor_news
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      NEWS_POLL_INTERVAL: ${NEWS_POLL_INTERVAL:-900}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
   # ingestor-ais: deshabilitado — AISHub requiere equipo receptor propio
   # Alternativa pendiente: MarineTraffic API, aisstream.io u otra fuente AIS
   # ingestor-ais:
