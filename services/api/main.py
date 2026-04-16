@@ -544,6 +544,85 @@ async def get_docs_sources(_user: str = Depends(get_current_user)):
         return []
 
 
+# ── SEC FILINGS FEED ─────────────────────────────────────────────────────────
+
+@app.get("/sec/feed")
+async def get_sec_feed(
+    limit:     int             = 50,
+    sector:    str | None      = None,
+    ticker:    str | None      = None,
+    form_type: str | None      = None,
+    severity:  str | None      = None,
+    since:     datetime | None = None,
+    q:         str | None      = None,
+    _user: str = Depends(get_current_user),
+):
+    """
+    Feed de filings 8-K de empresas S&P 500 geopolíticamente relevantes.
+    Lee de TimescaleDB con filtros dinámicos, ORDER BY time DESC.
+    Devuelve lista vacía si DB no disponible.
+    """
+    if not app.state.db:
+        return []
+
+    conditions: list[str] = []
+    params: list = []
+
+    if sector:
+        params.append(sector)
+        conditions.append(f"sector = ${len(params)}")
+    if ticker:
+        params.append(ticker.upper())
+        conditions.append(f"ticker = ${len(params)}")
+    if form_type:
+        params.append(form_type)
+        conditions.append(f"form_type = ${len(params)}")
+    if severity:
+        params.append(severity)
+        conditions.append(f"severity = ${len(params)}")
+    if since:
+        params.append(since)
+        conditions.append(f"time >= ${len(params)}")
+    if q:
+        params.append(f"%{q}%")
+        conditions.append(
+            f"(ticker ILIKE ${len(params)} OR company_name ILIKE ${len(params)} OR title ILIKE ${len(params)})"
+        )
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(min(limit, 200))
+    rows = await app.state.db.fetch(
+        f"""SELECT id, time, discovered_at, ticker, company_name, cik, form_type,
+                   accession_number, title, filing_url, sector, severity, relevance,
+                   summary, status
+            FROM sec_filings {where}
+            ORDER BY time DESC LIMIT ${len(params)}""",
+        *params,
+    )
+    return [dict(r) for r in rows]
+
+
+@app.get("/sec/sources")
+async def get_sec_sources(_user: str = Depends(get_current_user)):
+    """
+    Lista de empresas monitorizadas desde sec_sources.yaml.
+    Incluye contador de fallos consecutivos desde Redis.
+    """
+    config_path = "/app/config/sec_sources.yaml"
+    try:
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f)
+        companies = cfg.get("companies", [])
+        redis = app.state.redis
+        for company in companies:
+            failures = await redis.get(f"sec:failures:{company['ticker']}")
+            company["consecutive_failures"] = int(failures) if failures else 0
+        return companies
+    except Exception as e:
+        log.warning(f"Error leyendo sec_sources.yaml: {e}")
+        return []
+
+
 # ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 
 class ConnectionManager:
