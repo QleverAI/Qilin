@@ -396,6 +396,77 @@ async def get_social_accounts(_user: str = Depends(get_current_user)):
         return []
 
 
+# ── NEWS FEED ────────────────────────────────────────────────────────────────
+
+@app.get("/news/feed")
+async def get_news_feed(
+    limit: int = 50,
+    zone: str | None = None,
+    country: str | None = None,
+    source_type: str | None = None,
+    sector: str | None = None,
+    severity: str | None = None,
+    q: str | None = None,
+    since: datetime | None = None,
+    _user: str = Depends(get_current_user),
+):
+    """
+    Feed de noticias RSS clasificadas.
+    Lee de TimescaleDB con filtros dinámicos, ORDER BY time DESC.
+    Fallback a stream:news en Redis si DB no disponible.
+    """
+    if app.state.db:
+        conditions: list[str] = []
+        params: list = []
+
+        if zone:
+            params.append(zone)
+            conditions.append(f"${len(params)} = ANY(zones)")
+        if country:
+            params.append(country)
+            conditions.append(f"source_country = ${len(params)}")
+        if source_type:
+            params.append(source_type)
+            conditions.append(f"source_type = ${len(params)}")
+        if sector:
+            params.append(sector)
+            conditions.append(f"${len(params)} = ANY(sectors)")
+        if severity:
+            params.append(severity)
+            conditions.append(f"severity = ${len(params)}")
+        if q:
+            params.append(f"%{q}%")
+            conditions.append(f"(title ILIKE ${len(params)} OR summary ILIKE ${len(params)})")
+        if since:
+            params.append(since)
+            conditions.append(f"time >= ${len(params)}")
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.append(min(limit, 200))
+        rows = await app.state.db.fetch(
+            f"SELECT * FROM news_events {where} ORDER BY time DESC LIMIT ${len(params)}",
+            *params,
+        )
+        return [dict(r) for r in rows]
+
+    # Fallback Redis
+    entries = await app.state.redis.xrevrange("stream:news", count=min(limit, 200))
+    return [json.loads(msg["data"]) for _, msg in entries]
+
+
+@app.get("/news/sources")
+async def get_news_sources(_user: str = Depends(get_current_user)):
+    """Lista de fuentes RSS monitorizadas desde news_sources.yaml."""
+    config_path = "/app/config/news_sources.yaml"
+    try:
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f)
+        return cfg.get("sources", [])
+    except Exception as e:
+        log.warning(f"Error leyendo news_sources.yaml: {e}")
+        return []
+
+
 # ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 
 class ConnectionManager:
