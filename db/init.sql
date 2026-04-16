@@ -73,6 +73,18 @@ CREATE TABLE IF NOT EXISTS news_events (
 
 CREATE INDEX IF NOT EXISTS news_time_idx ON news_events (time DESC);
 
+ALTER TABLE news_events
+    ADD COLUMN IF NOT EXISTS severity       TEXT    DEFAULT 'low',
+    ADD COLUMN IF NOT EXISTS relevance      INT     DEFAULT 50,
+    ADD COLUMN IF NOT EXISTS source_country TEXT,
+    ADD COLUMN IF NOT EXISTS source_type    TEXT,
+    ADD COLUMN IF NOT EXISTS sectors        TEXT[];
+
+CREATE UNIQUE INDEX IF NOT EXISTS news_events_url_key      ON news_events (url);
+CREATE INDEX        IF NOT EXISTS news_events_severity_idx ON news_events (severity, time DESC);
+CREATE INDEX        IF NOT EXISTS news_events_country_idx  ON news_events (source_country, time DESC);
+CREATE INDEX        IF NOT EXISTS news_events_type_idx     ON news_events (source_type, time DESC);
+
 -- ─── POSTS SOCIALES (X / Twitter) ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS social_posts (
     time        TIMESTAMPTZ     NOT NULL,
