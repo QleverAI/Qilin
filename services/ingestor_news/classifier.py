@@ -5,32 +5,38 @@ Lógica pura sin efectos secundarios — facilita testing.
 
 SECTOR_KEYWORDS: dict[str, list[str]] = {
     "militar": [
-        "strike", "airstrike", "missile", "troops", "warship", "drone",
-        "offensive", "ceasefire", "shelling", "bombardment", "tank",
-        "fighter jet", "naval", "military operation", "armed forces",
-        "artillery", "infantry", "battalion", "combat", "casualties",
-        "frontline", "ammunition", "weapons", "air defense", "airspace",
-        "navy", "army", "air force", "deployment", "siege", "artillery fire",
+        "airstrike", "missile strike", "military strike", "troops deployed",
+        "warship", "drone attack", "military offensive", "ceasefire",
+        "shelling", "bombardment", "tank column", "fighter jet",
+        "naval operation", "military operation", "armed forces",
+        "artillery fire", "infantry advance", "combat operations",
+        "frontline", "ammunition depot", "weapons cache", "air defense system",
+        "navy ships", "military deployment", "military siege", "air force",
+        "troops", "missiles", "naval", "strike",
     ],
     "diplomacia": [
-        "sanctions", "treaty", "negotiations", "summit", "ambassador",
-        "ultimatum", "veto", "resolution", "un security council",
-        "bilateral", "diplomatic", "envoy", "foreign minister",
-        "secretary of state", "communique", "nato", "g7", "g20",
-        "talks", "agreement", "deal", "accord", "expel", "recall",
-        "embassy", "foreign policy", "multilateral", "united nations",
+        "sanctions imposed", "peace treaty", "diplomatic negotiations", "bilateral summit",
+        "ambassador expelled", "ultimatum", "security council veto",
+        "un security council", "diplomatic relations", "foreign minister",
+        "secretary of state", "communique", "nato summit", "g7 summit", "g20 summit",
+        "diplomatic talks", "peace agreement", "accord signed", "recalled ambassador",
+        "embassy closed", "foreign policy", "multilateral", "united nations resolution",
+        "sanctions", "treaty", "negotiations", "summit", "diplomatic",
     ],
     "economia": [
-        "sanctions", "tariff", "embargo", "export ban", "swift", "imf",
-        "default", "currency", "trade war", "gdp", "inflation",
-        "recession", "debt", "bond", "reserve", "world bank", "wto",
-        "supply chain", "semiconductor", "economic", "financial crisis",
+        "sanctions regime", "trade tariff", "trade embargo", "export ban",
+        "swift exclusion", "imf bailout", "sovereign default", "currency collapse",
+        "trade war", "gdp contraction", "hyperinflation", "debt crisis",
+        "government bond yield", "central bank reserve", "world bank", "wto dispute",
+        "supply chain disruption", "semiconductor ban", "economic sanctions",
+        "financial crisis", "sanctions", "tariff", "embargo",
     ],
     "energia": [
-        "pipeline", "lng", "oil", "gas", "opec", "nuclear plant",
-        "blackout", "energy deal", "power grid", "refinery",
-        "nord stream", "electricity", "fuel", "petrol", "barrel",
-        "energy supply", "natural gas", "crude", "coal",
+        "gas pipeline", "natural gas", "lng shipment", "oil embargo",
+        "crude oil", "opec", "nuclear power plant", "power grid attack",
+        "energy blackout", "refinery", "nord stream", "electricity supply",
+        "fuel shortage", "petrol price", "oil barrel", "energy supply",
+        "energy deal", "gas supply", "oil production",
     ],
     "ciberseguridad": [
         "cyberattack", "ransomware", "data breach", "hack", "malware",
@@ -39,16 +45,18 @@ SECTOR_KEYWORDS: dict[str, list[str]] = {
         "cybersecurity", "vulnerability", "exploit",
     ],
     "crisis_humanitaria": [
-        "refugees", "famine", "displacement", "civilian casualties",
-        "aid convoy", "hospital", "evacuation", "humanitarian",
-        "displaced", "starvation", "siege", "blockade", "war crimes",
-        "icc", "genocide", "exodus", "civilian", "children killed",
+        "refugees", "famine", "mass displacement", "civilian casualties",
+        "aid convoy", "humanitarian crisis", "humanitarian corridor",
+        "evacuated", "displaced persons", "starvation", "under siege",
+        "naval blockade", "war crimes", "icc investigation",
+        "genocide", "mass exodus", "children killed", "civilian deaths",
     ],
     "nuclear": [
-        "nuclear", "warhead", "icbm", "uranium", "plutonium", "iaea",
-        "enrichment", "ballistic missile", "deterrence", "nonproliferation",
-        "dirty bomb", "radiation", "nuclear deal", "npt", "nuclear test",
-        "nuclear program",
+        "nuclear weapon", "nuclear warhead", "nuclear strike", "nuclear attack",
+        "nuclear test", "nuclear program", "nuclear deal", "nuclear reactor meltdown",
+        "warhead", "icbm", "uranium enrichment", "plutonium", "iaea inspection",
+        "ballistic missile", "deterrence", "nonproliferation",
+        "dirty bomb", "npt violation",
     ],
 }
 
@@ -100,6 +108,6 @@ def compute_relevance(source: dict, sectors: list[str], severity: str) -> int:
     source debe tener campo 'priority' (high|medium).
     """
     score = 30 if source.get("priority") == "high" else 15
-    score += min(len(sectors) * 8, 50)
+    score += min(len(sectors) * 8, 50)  # cap at 50 to allow max score of 100
     score += {"high": 20, "medium": 10, "low": 0}.get(severity, 0)
     return min(score, 100)

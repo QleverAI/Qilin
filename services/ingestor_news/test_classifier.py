@@ -5,6 +5,25 @@ sys.path.insert(0, os.path.dirname(__file__))
 from classifier import classify_sectors, classify_severity, compute_relevance
 
 
+# ── False positive resistance ─────────────────────────────────────────────────
+
+def test_no_false_positive_nuclear_medicine():
+    sectors = classify_sectors("Radiation therapy trial shows cancer benefits", "New MRI technique")
+    assert "nuclear" not in sectors
+
+def test_no_false_positive_civilian_aviation():
+    sectors = classify_sectors("Civilian aviation authority updates runway rules", "")
+    assert "crisis_humanitaria" not in sectors
+
+def test_no_false_positive_gas_station():
+    sectors = classify_sectors("Gas station prices drop ahead of holiday weekend", "")
+    assert "energia" not in sectors
+
+def test_no_false_positive_army_bakery():
+    sectors = classify_sectors("Army veteran opens artisan bakery in downtown", "")
+    assert "militar" not in sectors
+
+
 # ── classify_sectors ──────────────────────────────────────────────────────────
 
 def test_classify_sectors_militar():
@@ -75,7 +94,7 @@ def test_severity_low_empty():
 def test_relevance_high_priority_high_severity():
     source = {"priority": "high"}
     score = compute_relevance(source, ["militar", "nuclear"], "high")
-    assert score >= 60  # 30 + 16 + 20 = 66, capped at 100
+    assert score == 66  # 30 (high priority) + 16 (2 sectors × 8) + 20 (high severity)
 
 def test_relevance_medium_priority_no_sectors():
     source = {"priority": "medium"}
