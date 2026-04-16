@@ -1,0 +1,310 @@
+# Qilin — Fuentes de documentos oficiales
+# fetch_type: rss | scrape
+# mandatory: true → ingestar todo; false → solo si classifier detecta sector relevante
+
+sources:
+
+  # ── DEFENSA ────────────────────────────────────────────────────────────────────
+  - slug: dod_us
+    name: "US Department of Defense"
+    country: US
+    org_type: defense
+    fetch_type: scrape
+    doc_url: "https://www.defense.gov/News/Releases/"
+    mandatory: true
+    sectors: [militar]
+    priority: high
+
+  - slug: uk_mod
+    name: "UK Ministry of Defence"
+    country: UK
+    org_type: defense
+    fetch_type: scrape
+    doc_url: "https://www.gov.uk/government/organisations/ministry-of-defence/about/news"
+    mandatory: true
+    sectors: [militar]
+    priority: high
+
+  - slug: mod_spain
+    name: "Ministerio de Defensa de España"
+    country: ES
+    org_type: defense
+    fetch_type: scrape
+    doc_url: "https://www.defensa.gob.es/gabinete/notasprensa/"
+    mandatory: false
+    sectors: [militar]
+    priority: medium
+
+  - slug: bundeswehr
+    name: "Bundeswehr"
+    country: DE
+    org_type: defense
+    fetch_type: scrape
+    doc_url: "https://www.bundeswehr.de/de/aktuelles/meldungen"
+    mandatory: false
+    sectors: [militar]
+    priority: medium
+
+  - slug: france_armees
+    name: "Ministère des Armées FR"
+    country: FR
+    org_type: defense
+    fetch_type: scrape
+    doc_url: "https://www.defense.gouv.fr/actualites/communiques-de-presse"
+    mandatory: false
+    sectors: [militar]
+    priority: medium
+
+  # ── OTAN / ALIANZAS ────────────────────────────────────────────────────────────
+  - slug: nato_hq
+    name: "NATO HQ"
+    country: NATO
+    org_type: defense
+    fetch_type: scrape
+    doc_url: "https://www.nato.int/cps/en/natohq/news.htm"
+    mandatory: true
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: shape
+    name: "SHAPE NATO"
+    country: NATO
+    org_type: defense
+    fetch_type: scrape
+    doc_url: "https://shape.nato.int/page28722419"
+    mandatory: false
+    sectors: [militar]
+    priority: medium
+
+  - slug: eda
+    name: "European Defence Agency"
+    country: EU
+    org_type: defense
+    fetch_type: scrape
+    doc_url: "https://eda.europa.eu/news-and-events/news"
+    mandatory: false
+    sectors: [militar]
+    priority: medium
+
+  # ── ORGANISMOS INTERNACIONALES ─────────────────────────────────────────────────
+  - slug: iaea
+    name: "IAEA"
+    country: UN
+    org_type: international
+    fetch_type: rss
+    doc_url: "https://www.iaea.org/newscenter/pressreleases/rss"
+    mandatory: true
+    sectors: [nuclear]
+    priority: high
+
+  - slug: osce
+    name: "OSCE"
+    country: UN
+    org_type: international
+    fetch_type: scrape
+    doc_url: "https://www.osce.org/publications"
+    mandatory: false
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: un_sc
+    name: "UN Security Council"
+    country: UN
+    org_type: international
+    fetch_type: scrape
+    doc_url: "https://www.un.org/securitycouncil/content/resolutions-adopted-security-council"
+    mandatory: false
+    sectors: [diplomacia]
+    priority: high
+
+  - slug: sipri
+    name: "SIPRI"
+    country: SE
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://www.sipri.org/publications"
+    mandatory: true
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: un_ohchr
+    name: "UN Human Rights"
+    country: UN
+    org_type: international
+    fetch_type: scrape
+    doc_url: "https://www.ohchr.org/en/documents/publications"
+    mandatory: false
+    sectors: [crisis_humanitaria]
+    priority: medium
+
+  # ── THINK TANKS ───────────────────────────────────────────────────────────────
+  - slug: isw
+    name: "Institute for the Study of War"
+    country: US
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://understandingwar.org/publications"
+    mandatory: true
+    sectors: [militar]
+    priority: high
+
+  - slug: rand_docs
+    name: "RAND Corporation"
+    country: US
+    org_type: think_tank
+    fetch_type: rss
+    doc_url: "https://www.rand.org/pubs/rss/documents.xml"
+    mandatory: true
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: csis
+    name: "CSIS"
+    country: US
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://www.csis.org/publications"
+    mandatory: true
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: chatham_house
+    name: "Chatham House"
+    country: UK
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://www.chathamhouse.org/publications"
+    mandatory: true
+    sectors: [diplomacia, economia]
+    priority: high
+
+  - slug: iiss
+    name: "IISS"
+    country: UK
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://www.iiss.org/publications"
+    mandatory: true
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: 38north
+    name: "38 North"
+    country: US
+    org_type: think_tank
+    fetch_type: rss
+    doc_url: "https://www.38north.org/feed/"
+    mandatory: true
+    sectors: [nuclear]
+    priority: high
+
+  - slug: atlantic_council
+    name: "Atlantic Council"
+    country: US
+    org_type: think_tank
+    fetch_type: rss
+    doc_url: "https://www.atlanticcouncil.org/feed/"
+    mandatory: false
+    sectors: [diplomacia, militar]
+    priority: medium
+
+  - slug: brookings
+    name: "Brookings Institution"
+    country: US
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://www.brookings.edu/publications/"
+    mandatory: false
+    sectors: [diplomacia, economia]
+    priority: medium
+
+  - slug: carnegie
+    name: "Carnegie Endowment"
+    country: US
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://carnegieendowment.org/publications"
+    mandatory: false
+    sectors: [diplomacia, nuclear]
+    priority: medium
+
+  - slug: belfer
+    name: "Belfer Center Harvard"
+    country: US
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://www.belfercenter.org/publications"
+    mandatory: false
+    sectors: [nuclear, diplomacia]
+    priority: medium
+
+  - slug: wilson_center
+    name: "Wilson Center"
+    country: US
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://www.wilsoncenter.org/publication"
+    mandatory: false
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: ecfr
+    name: "ECFR"
+    country: EU
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://ecfr.eu/publications/"
+    mandatory: false
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: odi
+    name: "ODI"
+    country: UK
+    org_type: think_tank
+    fetch_type: scrape
+    doc_url: "https://odi.org/en/publications/"
+    mandatory: false
+    sectors: [crisis_humanitaria]
+    priority: medium
+
+  # ── ENERGÍA / ECONOMÍA ────────────────────────────────────────────────────────
+  - slug: iea
+    name: "International Energy Agency"
+    country: OCDE
+    org_type: energy
+    fetch_type: scrape
+    doc_url: "https://www.iea.org/reports"
+    mandatory: false
+    sectors: [energia]
+    priority: medium
+
+  - slug: eia
+    name: "US Energy Information Administration"
+    country: US
+    org_type: energy
+    fetch_type: scrape
+    doc_url: "https://www.eia.gov/analysis/"
+    mandatory: false
+    sectors: [energia]
+    priority: medium
+
+  - slug: imf
+    name: "IMF"
+    country: UN
+    org_type: government
+    fetch_type: scrape
+    doc_url: "https://www.imf.org/en/Publications"
+    mandatory: false
+    sectors: [economia]
+    priority: medium
+
+  - slug: world_bank
+    name: "World Bank"
+    country: UN
+    org_type: government
+    fetch_type: scrape
+    doc_url: "https://www.worldbank.org/en/publication/all"
+    mandatory: false
+    sectors: [economia]
+    priority: medium
