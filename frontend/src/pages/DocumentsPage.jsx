@@ -1,107 +1,136 @@
-import { useState, useRef } from 'react'
-import { MOCK_DOCUMENTS, DOC_STATUS_COLORS, DOC_TYPE_ICONS } from '../data/mockDocuments'
+import { useState, useMemo } from 'react'
+import { useDocsFeed } from '../hooks/useDocsFeed'
 
-const STATUS_LABELS = {
-  analyzed:  'ANALIZADO',
-  analyzing: 'ANALIZANDO',
-  pending:   'PENDIENTE',
-  archived:  'ARCHIVADO',
+const SEV_COLOR  = { high: 'var(--red)', medium: 'var(--amber)', low: 'var(--green)' }
+const SEV_BG     = { high: 'rgba(255,59,74,0.10)', medium: 'rgba(255,176,32,0.09)', low: 'rgba(0,229,160,0.08)' }
+const SEV_BORDER = { high: 'rgba(255,59,74,0.28)', medium: 'rgba(255,176,32,0.26)', low: 'rgba(0,229,160,0.2)' }
+
+const ORG_LABELS = {
+  defense:       'Defensa',
+  international: 'Internacional',
+  think_tank:    'Think Tank',
+  government:    'Gobierno',
+  energy:        'Energía',
 }
 
-function DropZone({ onDrop }) {
-  const [dragging, setDragging] = useState(false)
-  const inputRef = useRef(null)
+const ORG_ICON = {
+  defense:       '🛡',
+  international: '🌐',
+  think_tank:    '🔬',
+  government:    '🏛',
+  energy:        '⚡',
+}
 
-  function handleDrag(e, over) {
-    e.preventDefault(); setDragging(over)
-  }
-  function handleDrop(e) {
-    e.preventDefault(); setDragging(false)
-    const files = Array.from(e.dataTransfer.files)
-    if (files.length) onDrop(files)
-  }
-  function handleChange(e) {
-    const files = Array.from(e.target.files)
-    if (files.length) onDrop(files)
-  }
+const SECTOR_LABELS = {
+  militar:           'Militar',
+  diplomacia:        'Diplomacia',
+  economia:          'Economía',
+  energia:           'Energía',
+  ciberseguridad:    'Ciber',
+  crisis_humanitaria:'Humanitario',
+  nuclear:           'Nuclear',
+}
 
+const SECTOR_COLOR = {
+  militar:           'rgba(255,59,74,0.8)',
+  diplomacia:        'rgba(0,200,255,0.8)',
+  economia:          'rgba(255,176,32,0.8)',
+  energia:           'rgba(255,140,0,0.8)',
+  ciberseguridad:    'rgba(130,80,255,0.8)',
+  crisis_humanitaria:'rgba(0,229,160,0.8)',
+  nuclear:           'rgba(255,59,74,1)',
+}
+
+function SectorTag({ sector }) {
+  const color = SECTOR_COLOR[sector] || 'rgba(150,150,150,0.8)'
   return (
-    <div
-      onClick={() => inputRef.current.click()}
-      onDragOver={e => handleDrag(e, true)}
-      onDragLeave={e => handleDrag(e, false)}
-      onDrop={handleDrop}
-      style={{
-        border: `1px dashed ${dragging ? 'var(--cyan)' : 'rgba(0,200,255,0.2)'}`,
-        borderRadius: '3px',
-        padding: '20px',
-        textAlign: 'center',
-        cursor: 'pointer',
-        background: dragging ? 'rgba(0,200,255,0.04)' : 'transparent',
-        transition: 'all .2s',
-        marginBottom: '16px',
-        flexShrink: 0,
-      }}
-    >
-      <input ref={inputRef} type="file" multiple accept=".pdf,.docx,.xlsx,.txt" style={{ display:'none' }} onChange={handleChange} />
-      <div style={{ fontSize:'24px', marginBottom:'6px' }}>📂</div>
-      <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--cyan)', letterSpacing:'.1em' }}>
-        ARRASTRA DOCUMENTOS AQUÍ
+    <span style={{
+      fontSize: '8px', fontFamily: 'var(--mono)',
+      color: 'var(--bg-0)', background: color,
+      padding: '1px 5px', borderRadius: '2px',
+    }}>
+      {SECTOR_LABELS[sector] || sector}
+    </span>
+  )
+}
+
+function FilterGroup({ label, options, value, onChange, labelFn }) {
+  return (
+    <div>
+      <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
+        {label}
       </div>
-      <div style={{ fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)', marginTop:'4px' }}>
-        PDF · DOCX · XLSX · TXT
-      </div>
+      {['TODOS', ...options].map(opt => (
+        <button key={opt} onClick={() => onChange(opt)} style={{
+          display: 'block', width: '100%', textAlign: 'left',
+          background: value === opt ? 'rgba(0,200,255,0.08)' : 'none',
+          border: 'none',
+          borderLeft: `2px solid ${value === opt ? 'var(--cyan)' : 'transparent'}`,
+          color: value === opt ? 'var(--cyan)' : 'var(--txt-3)',
+          fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.06em',
+          padding: '4px 8px', cursor: 'pointer', transition: 'all .15s',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          textTransform: 'uppercase',
+        }}>
+          {opt === 'TODOS' ? 'TODOS' : (labelFn ? labelFn(opt) : opt.replace(/_/g, ' '))}
+        </button>
+      ))}
     </div>
   )
 }
 
 function DocRow({ doc, selected, onClick }) {
-  const color = DOC_STATUS_COLORS[doc.status]
+  const severity = doc.severity || 'low'
+  const sectors  = Array.isArray(doc.sectors) ? doc.sectors : []
+  const pubDate  = doc.time
+    ? new Date(doc.time).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—'
+
   return (
     <div
       onClick={onClick}
       style={{
-        display: 'flex', alignItems: 'center', gap: '10px',
-        padding: '9px 14px',
+        display: 'flex', alignItems: 'flex-start', gap: '10px',
+        padding: '9px 12px',
         background: selected ? 'var(--bg-3)' : 'transparent',
         border: `1px solid ${selected ? 'rgba(0,200,255,0.3)' : 'transparent'}`,
+        borderLeft: `3px solid ${SEV_COLOR[severity]}`,
         borderRadius: '2px',
         cursor: 'pointer',
         transition: 'all .12s',
         marginBottom: '2px',
       }}
-      onMouseEnter={e => { if (!selected) { e.currentTarget.style.background='var(--bg-2)' } }}
-      onMouseLeave={e => { if (!selected) { e.currentTarget.style.background='transparent' } }}
+      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'var(--bg-2)' }}
+      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'transparent' }}
     >
-      <span style={{ fontSize:'16px', flexShrink:0 }}>{DOC_TYPE_ICONS[doc.type] || '📄'}</span>
+      <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>
+        {ORG_ICON[doc.org_type] || '📄'}
+      </span>
 
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:'11px', color:'var(--txt-1)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-          {doc.name}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '11px', color: 'var(--txt-1)', lineHeight: 1.35, marginBottom: '4px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          {doc.title}
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'8px', marginTop:'2px' }}>
-          <span style={{ fontFamily:'var(--mono)', fontSize:'8px', color, letterSpacing:'.1em' }}>
-            {STATUS_LABELS[doc.status]}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--txt-3)' }}>
+            {doc.source}
           </span>
-          {doc.status === 'analyzing' && (
-            <div style={{ flex:'0 0 50px', height:'2px', background:'var(--border)', borderRadius:'1px', overflow:'hidden' }}>
-              <div style={{
-                height:'100%', width:'40%', background:'var(--amber)', borderRadius:'1px',
-                animation:'analyzing 1.2s ease-in-out infinite',
-              }} />
-            </div>
+          {doc.source_country && (
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--cyan)' }}>
+              [{doc.source_country}]
+            </span>
           )}
-          {doc.zones.map(z => (
-            <span key={z} style={{ fontSize:'8px', fontFamily:'var(--mono)', color:'var(--txt-3)' }}>{z}</span>
-          ))}
+          {sectors.slice(0, 2).map(s => <SectorTag key={s} sector={s} />)}
         </div>
       </div>
 
-      <div style={{ textAlign:'right', flexShrink:0 }}>
-        <div style={{ fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>{doc.size}</div>
-        <div style={{ fontFamily:'var(--mono)', fontSize:'8px', color:'var(--txt-3)', marginTop:'1px' }}>
-          {doc.pages}p
-        </div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--txt-3)' }}>{pubDate}</div>
+        {doc.page_count && (
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--txt-3)', marginTop: '2px' }}>
+            {doc.page_count}p
+          </div>
+        )}
       </div>
     </div>
   )
@@ -109,194 +138,248 @@ function DocRow({ doc, selected, onClick }) {
 
 function DocDetail({ doc }) {
   if (!doc) return (
-    <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ textAlign:'center', fontFamily:'var(--mono)', fontSize:'10px', color:'var(--txt-3)', lineHeight:2 }}>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--txt-3)', lineHeight: 2 }}>
         SELECCIONA UN DOCUMENTO<br />PARA VER EL ANÁLISIS
       </div>
     </div>
   )
 
-  const color = DOC_STATUS_COLORS[doc.status]
+  const severity = doc.severity || 'low'
+  const sectors  = Array.isArray(doc.sectors) ? doc.sectors : []
+  const pubDate  = doc.time ? new Date(doc.time).toLocaleString('es-ES') : '—'
+  const discDate = doc.discovered_at ? new Date(doc.discovered_at).toLocaleString('es-ES') : '—'
 
   return (
-    <div style={{ flex:1, padding:'20px', overflowY:'auto' }}>
+    <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
       {/* Header */}
-      <div style={{ marginBottom:'16px' }}>
-        <div style={{ fontSize:'20px', marginBottom:'6px' }}>{DOC_TYPE_ICONS[doc.type]}</div>
-        <div style={{ fontSize:'12px', color:'var(--txt-1)', fontWeight:'600', lineHeight:1.4, marginBottom:'8px' }}>
-          {doc.name}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ fontSize: '24px', marginBottom: '6px' }}>{ORG_ICON[doc.org_type] || '📄'}</div>
+        <div style={{ fontSize: '13px', color: 'var(--txt-1)', fontWeight: '600', lineHeight: 1.4, marginBottom: '10px' }}>
+          {doc.title}
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{
-            fontFamily:'var(--mono)', fontSize:'9px', letterSpacing:'.12em',
-            color, background:`${color}18`, border:`1px solid ${color}44`,
-            padding:'2px 8px', borderRadius:'2px',
-          }}>{STATUS_LABELS[doc.status]}</span>
-          <span style={{ fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>{doc.size}</span>
-          <span style={{ fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>{doc.pages} páginas</span>
+            fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.12em',
+            padding: '2px 8px', borderRadius: '2px',
+            background: SEV_BG[severity], color: SEV_COLOR[severity],
+            border: `1px solid ${SEV_BORDER[severity]}`,
+          }}>{severity.toUpperCase()}</span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', background: 'var(--bg-3)', padding: '2px 7px', borderRadius: '2px', border: '1px solid var(--border)' }}>
+            {ORG_LABELS[doc.org_type] || doc.org_type}
+          </span>
+          {doc.source_country && (
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--cyan)' }}>
+              [{doc.source_country}]
+            </span>
+          )}
         </div>
       </div>
 
       {/* Meta */}
-      <div style={{ marginBottom:'16px', paddingBottom:'14px', borderBottom:'1px solid var(--border)' }}>
+      <div style={{ marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--border)' }}>
         {[
-          ['Subido',  doc.uploaded],
-          ['Zonas',   doc.zones.join(', ')],
-          ['Tags',    doc.tags.join(' · ')],
-        ].map(([k,v]) => (
-          <div key={k} style={{ display:'flex', gap:'10px', marginBottom:'5px' }}>
-            <span style={{ fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)', textTransform:'uppercase', letterSpacing:'.1em', flexShrink:0, width:'52px' }}>{k}</span>
-            <span style={{ fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-2)' }}>{v}</span>
+          ['Fuente',     doc.source],
+          ['Publicado',  pubDate],
+          ['Detectado',  discDate],
+          ['Tamaño',     doc.file_size_kb ? `${doc.file_size_kb} KB` : '—'],
+          ['Páginas',    doc.page_count || '—'],
+          ['Estado',     doc.status],
+        ].map(([k, v]) => (
+          <div key={k} style={{ display: 'flex', gap: '10px', marginBottom: '5px' }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '.1em', flexShrink: 0, width: '70px' }}>{k}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-2)' }}>{String(v)}</span>
           </div>
         ))}
       </div>
 
-      {/* Summary */}
-      <div>
-        <div style={{ fontSize:'8px', fontWeight:'700', letterSpacing:'.2em', color:'var(--txt-3)', textTransform:'uppercase', marginBottom:'10px' }}>
-          RESUMEN DE ANÁLISIS
+      {/* Sectores */}
+      {sectors.length > 0 && (
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '8px' }}>
+            SECTORES
+          </div>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {sectors.map(s => <SectorTag key={s} sector={s} />)}
+          </div>
         </div>
-        {doc.status === 'analyzed' && doc.summary ? (
-          <>
-            <div style={{ fontSize:'11px', color:'var(--txt-1)', lineHeight:1.7, marginBottom:'14px' }}>
-              {doc.summary}
-            </div>
-            {doc.relevance && (
-              <div>
-                <div style={{ fontSize:'8px', letterSpacing:'.1em', color:'var(--txt-3)', marginBottom:'5px' }}>RELEVANCIA GEOPOLÍTICA</div>
-                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                  <div style={{ flex:1, height:'4px', background:'var(--border)', borderRadius:'2px', overflow:'hidden' }}>
-                    <div style={{
-                      width:`${doc.relevance}%`, height:'100%', borderRadius:'2px',
-                      background: doc.relevance >= 90 ? 'var(--red)' : doc.relevance >= 75 ? 'var(--amber)' : 'var(--green)',
-                    }} />
-                  </div>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:'12px', color:'var(--txt-1)', fontWeight:'600' }}>
-                    {doc.relevance}
-                  </span>
-                </div>
-              </div>
-            )}
-          </>
-        ) : doc.status === 'analyzing' ? (
-          <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--amber)', animation:'blink 1.2s ease-in-out infinite' }}>
-            ANÁLISIS EN CURSO...
+      )}
+
+      {/* Relevancia */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '8px' }}>
+          RELEVANCIA GEOPOLÍTICA
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ flex: 1, height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{
+              width: `${doc.relevance || 0}%`, height: '100%', borderRadius: '2px',
+              background: (doc.relevance || 0) >= 70 ? 'var(--red)' : (doc.relevance || 0) >= 50 ? 'var(--amber)' : 'var(--green)',
+              transition: 'width .3s',
+            }} />
           </div>
-        ) : (
-          <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--txt-3)' }}>
-            EN COLA PARA ANÁLISIS
-          </div>
-        )}
+          <span style={{ fontFamily: 'var(--mono)', fontSize: '13px', color: 'var(--txt-1)', fontWeight: '600', minWidth: '28px' }}>
+            {doc.relevance || 0}
+          </span>
+        </div>
       </div>
 
-      {/* Future AI action */}
-      <div style={{
-        marginTop:'20px', padding:'10px 12px',
-        background:'rgba(0,200,255,0.03)', border:'1px solid var(--border)',
-        borderRadius:'3px',
-      }}>
-        <div style={{ fontSize:'8px', letterSpacing:'.14em', color:'var(--cyan)', fontFamily:'var(--mono)', marginBottom:'4px' }}>
-          FUSIÓN IA · PRÓXIMAMENTE
+      {/* Resumen */}
+      {doc.summary && (
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '8px' }}>
+            EXTRACTO DEL DOCUMENTO
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--txt-2)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            {doc.summary}
+          </div>
         </div>
-        <div style={{ fontSize:'9px', color:'var(--txt-3)', lineHeight:1.5 }}>
-          Correlación automática con alertas activas, noticias y posts de redes sociales para generar señales de trading.
-        </div>
-      </div>
+      )}
+
+      {/* Enlace */}
+      {doc.url && (
+        <a
+          href={doc.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-block',
+            padding: '8px 20px',
+            background: 'rgba(0,200,255,0.1)',
+            border: '1px solid rgba(0,200,255,0.35)',
+            borderRadius: '2px',
+            color: 'var(--cyan)',
+            fontFamily: 'var(--mono)',
+            fontSize: '10px',
+            fontWeight: '700',
+            letterSpacing: '.1em',
+            textDecoration: 'none',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,200,255,0.2)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,200,255,0.1)'}
+        >
+          ABRIR PDF ↗
+        </a>
+      )}
     </div>
   )
 }
 
 export default function DocumentsPage() {
-  const [docs, setDocs] = useState(MOCK_DOCUMENTS)
-  const [selected, setSelected] = useState(null)
-  const [statusFilter, setStatusFilter] = useState('TODOS')
+  const { docs, orgTypes, countries, sectors, failingSources, loading, lastUpdate } = useDocsFeed()
 
-  function handleDrop(files) {
-    const newDocs = files.map((f, i) => ({
-      id: Date.now() + i,
-      name: f.name,
-      type: f.name.split('.').pop().toLowerCase(),
-      size: `${(f.size / 1024 / 1024).toFixed(1)} MB`,
-      uploaded: new Date().toLocaleString('es-ES').replace(',', ''),
-      status: 'pending',
-      zones: [],
-      summary: null,
-      tags: [],
-      relevance: null,
-      pages: '?',
-    }))
-    setDocs(prev => [...newDocs, ...prev])
-  }
+  const [sevFilter,  setSevFilter]  = useState('TODOS')
+  const [orgFilter,  setOrgFilter]  = useState('TODOS')
+  const [secFilter,  setSecFilter]  = useState('TODOS')
+  const [cntFilter,  setCntFilter]  = useState('TODOS')
+  const [selected,   setSelected]   = useState(null)
+  const [search,     setSearch]     = useState('')
 
-  const filtered = statusFilter === 'TODOS'
-    ? docs
-    : docs.filter(d => d.status === statusFilter.toLowerCase())
+  const filtered = useMemo(() => docs.filter(d => {
+    const docSectors = Array.isArray(d.sectors) ? d.sectors : []
+    if (sevFilter !== 'TODOS' && d.severity       !== sevFilter)       return false
+    if (orgFilter !== 'TODOS' && d.org_type        !== orgFilter)      return false
+    if (secFilter !== 'TODOS' && !docSectors.includes(secFilter))      return false
+    if (cntFilter !== 'TODOS' && d.source_country  !== cntFilter)      return false
+    if (search && !d.title?.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  }), [docs, sevFilter, orgFilter, secFilter, cntFilter, search])
 
   const selectedDoc = docs.find(d => d.id === selected)
 
-  const counts = {
-    TODOS:     docs.length,
-    ANALIZADO: docs.filter(d=>d.status==='analyzed').length,
-    ANALIZANDO:docs.filter(d=>d.status==='analyzing').length,
-    PENDIENTE: docs.filter(d=>d.status==='pending').length,
-  }
-
   return (
-    <div style={{ flex:1, display:'flex', overflow:'hidden', background:'var(--bg-0)' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-0)' }}>
 
-      {/* Left: list */}
-      <div style={{
-        width:'460px', flexShrink:0,
-        display:'flex', flexDirection:'column',
-        borderRight:'1px solid var(--border-md)',
-        overflow:'hidden',
-      }}>
-        <div style={{ padding:'14px 14px 10px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
-          <DropZone onDrop={handleDrop} />
+      {/* Banner de fuentes fallidas */}
+      {failingSources.length > 0 && (
+        <div style={{
+          padding: '8px 16px',
+          background: 'rgba(255,59,74,0.12)',
+          border: '1px solid rgba(255,59,74,0.3)',
+          borderRadius: '0',
+          display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0,
+        }}>
+          <span style={{ color: 'var(--red)', fontFamily: 'var(--mono)', fontSize: '9px', fontWeight: '700', letterSpacing: '.15em' }}>
+            ⚠ SCRAPING FALLIDO:
+          </span>
+          <span style={{ color: 'var(--red)', fontFamily: 'var(--mono)', fontSize: '9px' }}>
+            {failingSources.map(s => s.name).join(' · ')}
+          </span>
+        </div>
+      )}
 
-          {/* Status filter tabs */}
-          <div style={{ display:'flex', gap:'4px' }}>
-            {Object.entries(counts).map(([status, count]) => (
-              <button key={status} onClick={() => setStatusFilter(status)} style={{
-                flex:1, padding:'5px 4px', background:'none', cursor:'pointer',
-                border: `1px solid ${statusFilter===status ? 'rgba(0,200,255,0.4)' : 'var(--border)'}`,
-                borderRadius:'2px',
-                color: statusFilter===status ? 'var(--cyan)' : 'var(--txt-3)',
-                fontFamily:'var(--mono)', fontSize:'8px', letterSpacing:'.08em', textTransform:'uppercase',
-                transition:'all .15s',
-              }}>
-                {status}<br />
-                <span style={{ fontSize:'12px', color: statusFilter===status ? 'var(--cyan)' : 'var(--txt-2)' }}>
-                  {count}
-                </span>
-              </button>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Sidebar filtros */}
+        <aside style={{
+          width: '160px', flexShrink: 0,
+          background: 'var(--bg-1)',
+          borderRight: '1px solid var(--border-md)',
+          padding: '12px 8px',
+          display: 'flex', flexDirection: 'column', gap: '14px',
+          overflowY: 'auto',
+        }}>
+          <div>
+            <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
+              BUSCAR
+            </div>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="título…"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: 'var(--bg-2)', border: '1px solid var(--border)',
+                borderRadius: '2px', color: 'var(--txt-1)',
+                fontFamily: 'var(--mono)', fontSize: '9px',
+                padding: '5px 7px', outline: 'none',
+              }}
+            />
+          </div>
+
+          <FilterGroup label="SEVERIDAD" options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} />
+          <FilterGroup label="ORGANISMO" options={orgTypes} value={orgFilter} onChange={setOrgFilter} labelFn={t => ORG_LABELS[t] || t} />
+          <FilterGroup label="SECTOR" options={sectors} value={secFilter} onChange={setSecFilter} labelFn={s => SECTOR_LABELS[s] || s} />
+          <FilterGroup label="PAÍS" options={countries} value={cntFilter} onChange={setCntFilter} />
+        </aside>
+
+        {/* Lista de documentos */}
+        <div style={{ width: '420px', flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-md)', overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase' }}>
+              DOCUMENTOS OFICIALES
+            </span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', marginLeft: 'auto' }}>
+              {loading ? 'Cargando…' : `${filtered.length} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`}
+            </span>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+            {loading && (
+              <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
+                Cargando documentos…
+              </div>
+            )}
+            {!loading && filtered.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
+                {docs.length === 0 ? 'Ingestor de documentos no activo o sin datos aún' : 'Sin resultados para los filtros actuales'}
+              </div>
+            )}
+            {!loading && filtered.map(doc => (
+              <DocRow
+                key={doc.id}
+                doc={doc}
+                selected={selected === doc.id}
+                onClick={() => setSelected(selected === doc.id ? null : doc.id)}
+              />
             ))}
           </div>
         </div>
 
-        <div style={{ flex:1, overflowY:'auto', padding:'8px 6px' }}>
-          {filtered.map(doc => (
-            <DocRow
-              key={doc.id}
-              doc={doc}
-              selected={selected === doc.id}
-              onClick={() => setSelected(selected === doc.id ? null : doc.id)}
-            />
-          ))}
+        {/* Panel detalle */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-1)' }}>
+          <DocDetail doc={selectedDoc} />
         </div>
       </div>
-
-      {/* Right: detail */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'var(--bg-1)' }}>
-        <DocDetail doc={selectedDoc} />
-      </div>
-
-      <style>{`
-        @keyframes analyzing {
-          0%   { transform: translateX(-100%) }
-          100% { transform: translateX(250%) }
-        }
-      `}</style>
     </div>
   )
 }
