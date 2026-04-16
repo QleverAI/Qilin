@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { id: 'news',      label: 'NOTICIAS'   },
   { id: 'documents', label: 'DOCUMENTOS' },
   { id: 'social',    label: 'SOCIAL'     },
+  { id: 'markets',   label: 'MERCADOS'   },
 ]
 
 function LogoIcon() {

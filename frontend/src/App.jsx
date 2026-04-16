@@ -9,6 +9,7 @@ import HomePage      from './pages/HomePage'
 import NewsPage      from './pages/NewsPage'
 import DocumentsPage from './pages/DocumentsPage'
 import SocialPage    from './pages/SocialPage'
+import FilingsPage   from './pages/FilingsPage'
 import { useQilinData } from './hooks/useQilinData'
 
 const DEFAULT_FILTERS = {
@@ -103,6 +104,7 @@ export default function App() {
       {view === 'news'      && <NewsPage />}
       {view === 'documents' && <DocumentsPage />}
       {view === 'social'    && <SocialPage />}
+      {view === 'markets'   && <FilingsPage />}
     </div>
   )
 }
