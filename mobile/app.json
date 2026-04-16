@@ -21,13 +21,24 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#070b0f"
       },
-      "package": "com.qilin.app"
+      "package": "com.qilin.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      }
     },
     "plugins": [
       "expo-router",
       "expo-document-picker",
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": ""
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
