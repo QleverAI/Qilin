@@ -20,13 +20,13 @@ HIGH_KEYWORDS: frozenset[str] = frozenset({
 MEDIUM_KEYWORDS: frozenset[str] = frozenset({
     "contract award", "government contract", "department of defense",
     "dod contract", "pentagon", "nato contract",
-    "export control", "export license", "commerce department",
+    "export control license", "export license", "commerce department",
+    "entity list",
     "chief executive", "ceo departure", "cfo departure",
     "president appointed", "appointed as",
     "guidance revision", "revenue guidance", "earnings guidance",
     "new facility", "plant expansion",
     "joint venture", "strategic partnership",
-    "sanctions", "restricted", "blacklist", "entity list",
 })
 
 # Sector-specific relevance bonus
