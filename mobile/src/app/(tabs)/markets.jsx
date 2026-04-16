@@ -175,7 +175,7 @@ export default function MarketsScreen() {
       {failingSources.length > 0 && (
         <View style={s.failBanner}>
           <Text style={s.failText}>
-            ⚠ Fallos de fetch: {failingSources.map(s => s.ticker).join(', ')}
+            ⚠ Fallos de fetch: {failingSources.map(src => src.ticker).join(', ')}
           </Text>
         </View>
       )}
