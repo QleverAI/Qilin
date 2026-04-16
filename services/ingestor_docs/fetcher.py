@@ -17,18 +17,22 @@ def _is_pdf_url(url: str) -> bool:
 
 def parse_rss_entries(feed_text: str) -> list[dict]:
     """
-    Parsea texto RSS/Atom y devuelve entradas que enlacen a PDFs.
-    Retorna lista de {title, url, published}.
+    Parsea texto RSS/Atom y devuelve todas las entradas (artículos y PDFs).
+    Retorna lista de {title, url, published, rss_summary}.
+    No filtra por extensión .pdf — los RSS de think tanks enlazan a páginas de artículos,
+    no a PDFs directamente. main.py decide cómo procesar cada URL.
     """
     feed = feedparser.parse(feed_text)
     results = []
     for entry in feed.entries:
         url = getattr(entry, 'link', None) or ''
-        if not _is_pdf_url(url):
+        if not url:
             continue
-        pub = getattr(entry, 'published_parsed', None)
-        title = getattr(entry, 'title', None) or url.split('/')[-1]
-        results.append({'title': title, 'url': url, 'published': pub})
+        pub     = getattr(entry, 'published_parsed', None)
+        title   = getattr(entry, 'title', None) or url.split('/')[-1]
+        summary = getattr(entry, 'summary', '') or ''
+        summary = summary.replace('<p>', '').replace('</p>', ' ').strip()
+        results.append({'title': title, 'url': url, 'published': pub, 'rss_summary': summary})
     return results
 
 

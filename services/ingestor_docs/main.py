@@ -101,16 +101,28 @@ async def process_source(
             if not classify_sectors(entry["title"], ""):
                 continue
 
-        # Descargar y extraer texto del PDF
-        try:
-            meta        = await download_and_extract(client, url)
+        # Para PDFs: descargar y extraer texto. Para artículos HTML: usar summary del RSS.
+        if '.pdf' in url.lower():
+            try:
+                meta        = await download_and_extract(client, url)
+                status      = "processed"
+                fetch_error = None
+            except Exception as e:
+                log.warning(f"[{slug}] extracción PDF fallida {url}: {e}")
+                meta = {"full_text": None, "summary": None, "page_count": None, "file_size_kb": None}
+                status      = "failed"
+                fetch_error = str(e)[:200]
+        else:
+            # Artículo HTML — el summary viene del feed RSS
+            rss_summary = (entry.get("rss_summary") or "")[:1500]
+            meta = {
+                "full_text":    rss_summary or None,
+                "summary":      rss_summary or None,
+                "page_count":   None,
+                "file_size_kb": None,
+            }
             status      = "processed"
             fetch_error = None
-        except Exception as e:
-            log.warning(f"[{slug}] extracción fallida {url}: {e}")
-            meta = {"full_text": None, "summary": None, "page_count": None, "file_size_kb": None}
-            status      = "failed"
-            fetch_error = str(e)[:200]
 
         # Clasificar
         sectors   = classify_sectors(entry["title"], meta.get("summary") or "")
