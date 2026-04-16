@@ -112,7 +112,12 @@ export default function DocumentsScreen() {
   const [filter,     setFilter]     = useState('TODOS')
   const [selected,   setSelected]   = useState(null)
 
-  useEffect(() => { setLocalDocs(documents) }, [documents])
+  useEffect(() => {
+    setLocalDocs(prev => {
+      const localOnly = prev.filter(d => String(d.id).startsWith('local-'))
+      return [...localOnly, ...documents]
+    })
+  }, [documents])
 
   async function pickDocument() {
     const res = await DocumentPicker.getDocumentAsync({ multiple:true, type:'*/*' })
