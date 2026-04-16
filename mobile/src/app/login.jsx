@@ -4,6 +4,7 @@ import { View, Text, TextInput, Pressable,
          StyleSheet, ActivityIndicator }     from 'react-native'
 import { router }                            from 'expo-router'
 import { C }                                from '../theme'
+import { setToken }                         from '../hooks/apiClient'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -23,8 +24,7 @@ export default function LoginPage() {
       })
       if (res.ok) {
         const { access_token } = await res.json()
-        // TODO: store in expo-secure-store
-        // await SecureStore.setItemAsync('qilin_token', access_token)
+        setToken(access_token)
         router.replace('/(tabs)')
         return
       }

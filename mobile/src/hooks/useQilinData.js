@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { AppState } from 'react-native'
+import { getToken } from './apiClient'
 
 const API_BASE    = process.env.EXPO_PUBLIC_API_URL  || 'http://localhost:8000'
 const API_WS_BASE = process.env.EXPO_PUBLIC_WS_URL   || 'ws://localhost:8000'
@@ -15,7 +16,7 @@ export function useQilinData() {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
 
-    const token = null // TODO: read from SecureStore after auth is wired
+    const token = getToken()
     const url   = token ? `${API_WS_BASE}/ws?token=${token}` : `${API_WS_BASE}/ws`
 
     const ws = new WebSocket(url)

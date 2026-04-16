@@ -4,11 +4,14 @@ import { StatusBar }  from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { C } from '../theme'
+import { loadToken } from '../hooks/apiClient'
 
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
-  useEffect(() => { SplashScreen.hideAsync() }, [])
+  useEffect(() => {
+    loadToken().finally(() => SplashScreen.hideAsync())
+  }, [])
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.bg0 }}>
