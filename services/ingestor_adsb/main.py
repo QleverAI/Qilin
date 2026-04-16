@@ -3,16 +3,14 @@ Qilin — Ingestor ADS-B (Airplanes.live)
 Fuente: Airplanes.live REST API — sin autenticación requerida.
 
 Estrategia de polling:
-  1. GET /mil  → todas las aeronaves militares del mundo → filtra por zonas
-  2. GET /point/{lat}/{lon}/{radius} por zona → aeronaves civiles (excluye militares)
+  GET /mil  → todas las aeronaves militares del mundo → filtra por zonas configuradas.
 
-Rate limit de Airplanes.live: 1 req/s → sleep 1.1s entre peticiones.
+Rate limit de Airplanes.live: throttling por ráfagas → sleep 2.5s entre peticiones + retry en 429.
 """
 
 import asyncio
 import json
 import logging
-import math
 import os
 from datetime import datetime, timezone
 
@@ -26,7 +24,58 @@ log = logging.getLogger(__name__)
 BASE_URL      = "https://api.airplanes.live/v2"
 REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "5"))   # segundos de espera tras completar el ciclo
-MAX_RADIUS_NM = 250                                     # límite del endpoint /point
+
+# ── País por prefijo de matrícula (ICAO Doc 9303) ────────────────────────────
+# Ordenados de más largo a más corto para que el match sea correcto
+_REG_PREFIX: list[tuple[str, str]] = sorted([
+    ("N",   "United States"),    ("G",   "United Kingdom"),
+    ("D",   "Germany"),          ("F",   "France"),
+    ("I",   "Italy"),            ("B",   "China"),
+    ("JA",  "Japan"),            ("HL",  "South Korea"),
+    ("VH",  "Australia"),        ("ZK",  "New Zealand"),
+    ("TC",  "Turkey"),           ("RA",  "Russia"),    ("RF", "Russia"),
+    ("4X",  "Israel"),           ("SX",  "Greece"),
+    ("EC",  "Spain"),            ("CS",  "Portugal"),
+    ("OE",  "Austria"),          ("HB",  "Switzerland"),
+    ("PH",  "Netherlands"),      ("LN",  "Norway"),
+    ("SE",  "Sweden"),           ("OH",  "Finland"),
+    ("OY",  "Denmark"),          ("SP",  "Poland"),
+    ("OK",  "Czech Republic"),   ("HA",  "Hungary"),
+    ("YR",  "Romania"),          ("LZ",  "Bulgaria"),
+    ("LY",  "Lithuania"),        ("ES",  "Estonia"),
+    ("YL",  "Latvia"),           ("EI",  "Ireland"),
+    ("UR",  "Ukraine"),          ("EX",  "Kyrgyzstan"),
+    ("UP",  "Kazakhstan"),       ("UN",  "Kazakhstan"),
+    ("4K",  "Azerbaijan"),       ("UK",  "Uzbekistan"),
+    ("EK",  "Armenia"),          ("A6",  "United Arab Emirates"),
+    ("A9C", "Bahrain"),          ("7T",  "Algeria"),
+    ("CN",  "Morocco"),          ("5A",  "Libya"),
+    ("SU",  "Egypt"),            ("OD",  "Lebanon"),
+    ("YK",  "Syria"),            ("JY",  "Jordan"),
+    ("HZ",  "Saudi Arabia"),     ("A4O", "Oman"),
+    ("A7",  "Qatar"),            ("9K",  "Kuwait"),
+    ("EP",  "Iran"),             ("YI",  "Iraq"),
+    ("4W",  "Yemen"),            ("VT",  "India"),
+    ("PK",  "Indonesia"),        ("HS",  "Thailand"),
+    ("XV",  "Vietnam"),          ("9M",  "Malaysia"),
+    ("9V",  "Singapore"),        ("RP",  "Philippines"),
+    ("AP",  "Pakistan"),         ("S2",  "Bangladesh"),
+    ("YA",  "Afghanistan"),      ("ZS",  "South Africa"),
+    ("5N",  "Nigeria"),          ("ET",  "Ethiopia"),
+    ("CC",  "Chile"),            ("LV",  "Argentina"),
+    ("PP",  "Brazil"),           ("PT",  "Brazil"),
+    ("XA",  "Mexico"),           ("C",   "Canada"),
+], key=lambda x: -len(x[0]))
+
+
+def infer_country(registration: str | None) -> str | None:
+    if not registration:
+        return None
+    reg = registration.upper().strip()
+    for prefix, country in _REG_PREFIX:
+        if reg.startswith(prefix):
+            return country
+    return None
 
 
 # ── Carga de zonas ────────────────────────────────────────────────────────────
@@ -37,16 +86,6 @@ def load_zones() -> list[tuple[str, dict]]:
     return [(name, z) for name, z in cfg["zones"].items()]
 
 
-def zone_center_and_radius(zone: dict) -> tuple[float, float, float]:
-    """Centro geográfico de la zona y radio mínimo (nm) que la cubre, máx 250nm."""
-    clat = (zone["lat"][0] + zone["lat"][1]) / 2
-    clon = (zone["lon"][0] + zone["lon"][1]) / 2
-    dlat_nm = (zone["lat"][1] - zone["lat"][0]) / 2 * 60
-    dlon_nm = (zone["lon"][1] - zone["lon"][0]) / 2 * 60 * math.cos(math.radians(clat))
-    radius  = math.sqrt(dlat_nm ** 2 + dlon_nm ** 2)
-    return clat, clon, min(radius, MAX_RADIUS_NM)
-
-
 def in_zone(lat, lon, zone: dict) -> bool:
     if lat is None or lon is None:
         return False
@@ -55,11 +94,6 @@ def in_zone(lat, lon, zone: dict) -> bool:
 
 
 # ── Parsing ───────────────────────────────────────────────────────────────────
-
-def is_military(ac: dict) -> bool:
-    """dbFlags bit 0 == 1 → militar (clasificación de Airplanes.live)."""
-    return bool(int(ac.get("dbFlags") or 0) & 1)
-
 
 def parse_aircraft(ac: dict, zone: str, category: str) -> dict:
     """
@@ -77,8 +111,9 @@ def parse_aircraft(ac: dict, zone: str, category: str) -> dict:
     return {
         "icao24":       (ac.get("hex") or "").lower(),
         "callsign":     (ac.get("flight") or "").strip() or None,
-        "registration": ac.get("r"),        # matrícula directa
-        "type_code":    ac.get("t"),        # tipo ICAO (B738, F16, C130…)
+        "registration":   ac.get("r"),        # matrícula directa
+        "type_code":      ac.get("t"),        # tipo ICAO (B738, F16, C130…)
+        "origin_country": infer_country(ac.get("r")),
         "lat":          ac.get("lat"),
         "lon":          ac.get("lon"),
         "altitude":     altitude_m,
@@ -137,10 +172,9 @@ async def main():
 
     async with httpx.AsyncClient(headers=headers) as client:
         while True:
-            mil_count   = 0
-            civil_count = 0
+            mil_count = 0
 
-            # ── Paso 1: militares globales ──────────────────────────────────
+            # Militares globales — /mil devuelve todo el mundo, filtramos por zona
             mil_aircraft = await fetch_aircraft(client, f"{BASE_URL}/mil")
             log.info(f"Militares globales recibidos: {len(mil_aircraft)}")
 
@@ -152,25 +186,7 @@ async def main():
                         mil_count += 1
                         break  # una zona por avión
 
-            # ── Paso 2: civiles por zona ────────────────────────────────────
-            for zone_name, zone_cfg in zones:
-                clat, clon, radius = zone_center_and_radius(zone_cfg)
-                url = f"{BASE_URL}/point/{clat:.4f}/{clon:.4f}/{int(radius)}"
-                aircraft_in_zone = await fetch_aircraft(client, url)
-
-                for ac in aircraft_in_zone:
-                    if is_military(ac):
-                        continue  # ya procesado en paso 1
-                    lat, lon = ac.get("lat"), ac.get("lon")
-                    if not in_zone(lat, lon, zone_cfg):
-                        continue  # fuera del rectángulo exacto de la zona
-                    await publish(redis, parse_aircraft(ac, zone_name, "civil"))
-                    civil_count += 1
-
-            log.info(
-                f"Ciclo completo — militares en zonas: {mil_count} | "
-                f"civiles en zonas: {civil_count}"
-            )
+            log.info(f"Ciclo completo — militares en zonas: {mil_count}")
             await asyncio.sleep(POLL_INTERVAL)
 
 
