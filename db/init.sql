@@ -119,3 +119,31 @@ SELECT add_compression_policy('social_posts', INTERVAL '7 days');
 CREATE INDEX IF NOT EXISTS social_posts_handle_time ON social_posts (handle, time DESC);
 CREATE INDEX IF NOT EXISTS social_posts_category_time ON social_posts (category, time DESC);
 CREATE INDEX IF NOT EXISTS social_posts_zone_time ON social_posts (zone, time DESC);
+
+-- ─── DOCUMENTOS OFICIALES ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS documents (
+    id               BIGSERIAL        PRIMARY KEY,
+    time             TIMESTAMPTZ      NOT NULL,
+    discovered_at    TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
+    title            TEXT             NOT NULL,
+    url              TEXT             NOT NULL,
+    source           TEXT             NOT NULL,
+    source_country   TEXT,
+    org_type         TEXT,
+    sectors          TEXT[],
+    relevance        INT              DEFAULT 50,
+    severity         TEXT             DEFAULT 'low',
+    page_count       INT,
+    file_size_kb     INT,
+    summary          TEXT,
+    full_text        TEXT,
+    status           TEXT             DEFAULT 'pending',
+    fetch_error      TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS documents_url_key        ON documents (url);
+CREATE INDEX        IF NOT EXISTS documents_time_idx       ON documents (time DESC);
+CREATE INDEX        IF NOT EXISTS documents_severity_idx   ON documents (severity, time DESC);
+CREATE INDEX        IF NOT EXISTS documents_org_type_idx   ON documents (org_type, time DESC);
+CREATE INDEX        IF NOT EXISTS documents_country_idx    ON documents (source_country, time DESC);
+CREATE INDEX        IF NOT EXISTS documents_sectors_gin    ON documents USING GIN (sectors);
