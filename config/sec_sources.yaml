@@ -1,0 +1,314 @@
+# Qilin — Empresas S&P 500 monitorizadas para filings SEC
+# Sectores: defense | energy | semiconductors | financials | cyber_infra
+
+companies:
+
+  # ── DEFENSA & AEROESPACIAL ─────────────────────────────────────────────────
+  - ticker: LMT
+    name: "Lockheed Martin"
+    sector: defense
+    priority: high
+
+  - ticker: RTX
+    name: "RTX Corporation"
+    sector: defense
+    priority: high
+
+  - ticker: NOC
+    name: "Northrop Grumman"
+    sector: defense
+    priority: high
+
+  - ticker: GD
+    name: "General Dynamics"
+    sector: defense
+    priority: high
+
+  - ticker: BA
+    name: "Boeing"
+    sector: defense
+    priority: high
+
+  - ticker: LHX
+    name: "L3Harris Technologies"
+    sector: defense
+    priority: high
+
+  - ticker: LDOS
+    name: "Leidos Holdings"
+    sector: defense
+    priority: medium
+
+  - ticker: HII
+    name: "Huntington Ingalls Industries"
+    sector: defense
+    priority: medium
+
+  - ticker: TDG
+    name: "TransDigm Group"
+    sector: defense
+    priority: medium
+
+  - ticker: HEI
+    name: "HEICO Corporation"
+    sector: defense
+    priority: medium
+
+  - ticker: CW
+    name: "Curtiss-Wright"
+    sector: defense
+    priority: medium
+
+  - ticker: AXON
+    name: "Axon Enterprise"
+    sector: defense
+    priority: medium
+
+  - ticker: CACI
+    name: "CACI International"
+    sector: defense
+    priority: medium
+
+  # ── ENERGÍA ───────────────────────────────────────────────────────────────
+  - ticker: XOM
+    name: "ExxonMobil"
+    sector: energy
+    priority: high
+
+  - ticker: CVX
+    name: "Chevron"
+    sector: energy
+    priority: high
+
+  - ticker: COP
+    name: "ConocoPhillips"
+    sector: energy
+    priority: high
+
+  - ticker: OXY
+    name: "Occidental Petroleum"
+    sector: energy
+    priority: high
+
+  - ticker: SLB
+    name: "SLB (Schlumberger)"
+    sector: energy
+    priority: high
+
+  - ticker: HAL
+    name: "Halliburton"
+    sector: energy
+    priority: medium
+
+  - ticker: BKR
+    name: "Baker Hughes"
+    sector: energy
+    priority: medium
+
+  - ticker: MRO
+    name: "Marathon Oil"
+    sector: energy
+    priority: medium
+
+  - ticker: EOG
+    name: "EOG Resources"
+    sector: energy
+    priority: medium
+
+  - ticker: DVN
+    name: "Devon Energy"
+    sector: energy
+    priority: medium
+
+  - ticker: VLO
+    name: "Valero Energy"
+    sector: energy
+    priority: medium
+
+  - ticker: PSX
+    name: "Phillips 66"
+    sector: energy
+    priority: medium
+
+  - ticker: APA
+    name: "APA Corporation"
+    sector: energy
+    priority: medium
+
+  - ticker: HES
+    name: "Hess Corporation"
+    sector: energy
+    priority: medium
+
+  # ── SEMICONDUCTORES ───────────────────────────────────────────────────────
+  - ticker: NVDA
+    name: "NVIDIA"
+    sector: semiconductors
+    priority: high
+
+  - ticker: INTC
+    name: "Intel"
+    sector: semiconductors
+    priority: high
+
+  - ticker: QCOM
+    name: "Qualcomm"
+    sector: semiconductors
+    priority: high
+
+  - ticker: AMD
+    name: "Advanced Micro Devices"
+    sector: semiconductors
+    priority: high
+
+  - ticker: AMAT
+    name: "Applied Materials"
+    sector: semiconductors
+    priority: high
+
+  - ticker: LRCX
+    name: "Lam Research"
+    sector: semiconductors
+    priority: medium
+
+  - ticker: KLAC
+    name: "KLA Corporation"
+    sector: semiconductors
+    priority: medium
+
+  - ticker: MU
+    name: "Micron Technology"
+    sector: semiconductors
+    priority: medium
+
+  - ticker: TXN
+    name: "Texas Instruments"
+    sector: semiconductors
+    priority: medium
+
+  - ticker: MRVL
+    name: "Marvell Technology"
+    sector: semiconductors
+    priority: medium
+
+  - ticker: ON
+    name: "ON Semiconductor"
+    sector: semiconductors
+    priority: medium
+
+  - ticker: NXPI
+    name: "NXP Semiconductors"
+    sector: semiconductors
+    priority: medium
+
+  # ── FINANCIALS ────────────────────────────────────────────────────────────
+  - ticker: JPM
+    name: "JPMorgan Chase"
+    sector: financials
+    priority: high
+
+  - ticker: GS
+    name: "Goldman Sachs"
+    sector: financials
+    priority: high
+
+  - ticker: MS
+    name: "Morgan Stanley"
+    sector: financials
+    priority: high
+
+  - ticker: C
+    name: "Citigroup"
+    sector: financials
+    priority: high
+
+  - ticker: BAC
+    name: "Bank of America"
+    sector: financials
+    priority: high
+
+  - ticker: WFC
+    name: "Wells Fargo"
+    sector: financials
+    priority: medium
+
+  - ticker: BLK
+    name: "BlackRock"
+    sector: financials
+    priority: medium
+
+  - ticker: BX
+    name: "Blackstone"
+    sector: financials
+    priority: medium
+
+  - ticker: KKR
+    name: "KKR & Co"
+    sector: financials
+    priority: medium
+
+  - ticker: AXP
+    name: "American Express"
+    sector: financials
+    priority: medium
+
+  - ticker: SCHW
+    name: "Charles Schwab"
+    sector: financials
+    priority: medium
+
+  # ── CIBERSEGURIDAD & INFRAESTRUCTURA ──────────────────────────────────────
+  - ticker: MSFT
+    name: "Microsoft"
+    sector: cyber_infra
+    priority: high
+
+  - ticker: PLTR
+    name: "Palantir Technologies"
+    sector: cyber_infra
+    priority: high
+
+  - ticker: CRWD
+    name: "CrowdStrike"
+    sector: cyber_infra
+    priority: high
+
+  - ticker: PANW
+    name: "Palo Alto Networks"
+    sector: cyber_infra
+    priority: high
+
+  - ticker: BAH
+    name: "Booz Allen Hamilton"
+    sector: cyber_infra
+    priority: high
+
+  - ticker: SAIC
+    name: "SAIC"
+    sector: cyber_infra
+    priority: medium
+
+  - ticker: NEE
+    name: "NextEra Energy"
+    sector: cyber_infra
+    priority: medium
+
+  - ticker: DUK
+    name: "Duke Energy"
+    sector: cyber_infra
+    priority: medium
+
+  - ticker: SO
+    name: "Southern Company"
+    sector: cyber_infra
+    priority: medium
+
+  - ticker: D
+    name: "Dominion Energy"
+    sector: cyber_infra
+    priority: medium
+
+  - ticker: AEP
+    name: "American Electric Power"
+    sector: cyber_infra
+    priority: medium
