@@ -1,0 +1,955 @@
+# Qilin — Fuentes RSS de noticias geopolíticas
+# Campos: slug, name, rss_url, country, type, zone, sectors, priority
+
+sources:
+
+  # ── AGENCIAS WIRE ─────────────────────────────────────────────────────────────
+  - slug: reuters_world
+    name: "Reuters World"
+    rss_url: "https://feeds.reuters.com/reuters/worldNews"
+    country: UK
+    type: agency
+    zone: global
+    sectors: [militar, diplomacia, economia, energia, crisis_humanitaria, nuclear]
+    priority: high
+
+  - slug: ap_world
+    name: "Associated Press"
+    rss_url: "https://feeds.apnews.com/apnews/topnews"
+    country: US
+    type: agency
+    zone: global
+    sectors: [militar, diplomacia, economia, energia, crisis_humanitaria, nuclear]
+    priority: high
+
+  - slug: afp_world
+    name: "AFP"
+    rss_url: "https://www.afpbb.com/rss/afpbb-gaishin.xml"
+    country: FR
+    type: agency
+    zone: global
+    sectors: [militar, diplomacia, economia, crisis_humanitaria]
+    priority: high
+
+  - slug: dpa_world
+    name: "DPA International"
+    rss_url: "https://www.dpa-international.com/rss/rss.xml"
+    country: DE
+    type: agency
+    zone: europe
+    sectors: [militar, diplomacia, economia]
+    priority: medium
+
+  - slug: efe_world
+    name: "EFE"
+    rss_url: "https://www.efe.com/efe/english/mundo/rss/2"
+    country: ES
+    type: agency
+    zone: europe
+    sectors: [militar, diplomacia, economia]
+    priority: medium
+
+  - slug: tass_world
+    name: "TASS"
+    rss_url: "https://tass.com/rss/v2.xml"
+    country: RU
+    type: agency
+    zone: ukraine_black_sea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: xinhua_world
+    name: "Xinhua"
+    rss_url: "https://www.xinhuanet.com/english/rss/worldrss.xml"
+    country: CN
+    type: agency
+    zone: china
+    sectors: [militar, diplomacia, economia]
+    priority: medium
+
+  - slug: kyodo_world
+    name: "Kyodo News"
+    rss_url: "https://english.kyodonews.net/rss/world.xml"
+    country: JP
+    type: agency
+    zone: korea
+    sectors: [militar, diplomacia, economia]
+    priority: medium
+
+  - slug: yonhap_world
+    name: "Yonhap News"
+    rss_url: "https://en.yna.co.kr/RSS/index.jsp"
+    country: KR
+    type: agency
+    zone: korea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  # ── MEDIOS INTERNACIONALES ────────────────────────────────────────────────────
+  - slug: bbc_world
+    name: "BBC World"
+    rss_url: "http://feeds.bbci.co.uk/news/world/rss.xml"
+    country: UK
+    type: newspaper
+    zone: europe
+    sectors: [militar, diplomacia, economia, crisis_humanitaria]
+    priority: high
+
+  - slug: aljazeera_world
+    name: "Al Jazeera English"
+    rss_url: "https://www.aljazeera.com/xml/rss/all.xml"
+    country: QA
+    type: newspaper
+    zone: levante
+    sectors: [militar, diplomacia, crisis_humanitaria]
+    priority: high
+
+  - slug: france24_world
+    name: "France 24 EN"
+    rss_url: "https://www.france24.com/en/rss"
+    country: FR
+    type: newspaper
+    zone: europe
+    sectors: [militar, diplomacia, economia]
+    priority: high
+
+  - slug: dw_world
+    name: "Deutsche Welle"
+    rss_url: "https://rss.dw.com/xml/rss-en-world"
+    country: DE
+    type: newspaper
+    zone: europe
+    sectors: [militar, diplomacia, economia]
+    priority: medium
+
+  - slug: euronews_world
+    name: "Euronews"
+    rss_url: "https://www.euronews.com/rss?format=mrss&level=theme&name=news"
+    country: EU
+    type: newspaper
+    zone: europe
+    sectors: [militar, diplomacia, economia]
+    priority: medium
+
+  - slug: rt_world
+    name: "RT EN"
+    rss_url: "https://www.rt.com/rss/news/"
+    country: RU
+    type: newspaper
+    zone: ukraine_black_sea
+    sectors: [diplomacia, militar]
+    priority: medium
+
+  - slug: cgtn_world
+    name: "CGTN"
+    rss_url: "https://www.cgtn.com/subscribe/rss/section/world.xml"
+    country: CN
+    type: newspaper
+    zone: china
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: nhk_world
+    name: "NHK World"
+    rss_url: "https://www3.nhk.or.jp/rss/news/cat0.xml"
+    country: JP
+    type: newspaper
+    zone: korea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  # ── DEFENSA Y MILITAR ─────────────────────────────────────────────────────────
+  - slug: defense_news
+    name: "Defense News"
+    rss_url: "https://www.defensenews.com/arc/outboundfeeds/rss/"
+    country: US
+    type: defense_media
+    zone: global
+    sectors: [militar]
+    priority: high
+
+  - slug: defense_one
+    name: "Defense One"
+    rss_url: "https://www.defenseone.com/rss/all/"
+    country: US
+    type: defense_media
+    zone: global
+    sectors: [militar]
+    priority: high
+
+  - slug: the_war_zone
+    name: "The War Zone"
+    rss_url: "https://www.thedrive.com/the-war-zone/rss"
+    country: US
+    type: defense_media
+    zone: global
+    sectors: [militar]
+    priority: high
+
+  - slug: breaking_defense
+    name: "Breaking Defense"
+    rss_url: "https://breakingdefense.com/feed/"
+    country: US
+    type: defense_media
+    zone: global
+    sectors: [militar]
+    priority: high
+
+  - slug: military_times
+    name: "Military Times"
+    rss_url: "https://www.militarytimes.com/arc/outboundfeeds/rss/"
+    country: US
+    type: defense_media
+    zone: north_america
+    sectors: [militar]
+    priority: medium
+
+  - slug: stars_stripes
+    name: "Stars and Stripes"
+    rss_url: "https://www.stripes.com/arc/outboundfeeds/rss/"
+    country: US
+    type: defense_media
+    zone: global
+    sectors: [militar]
+    priority: medium
+
+  - slug: janes_feed
+    name: "Jane's by S&P"
+    rss_url: "https://www.janes.com/feeds/news"
+    country: UK
+    type: defense_media
+    zone: global
+    sectors: [militar]
+    priority: medium
+
+  - slug: naval_news
+    name: "Naval News"
+    rss_url: "https://www.navalnews.com/feed/"
+    country: FR
+    type: defense_media
+    zone: global
+    sectors: [militar]
+    priority: medium
+
+  - slug: alert5
+    name: "Alert5 (Aviation)"
+    rss_url: "https://alert5.com/feed/"
+    country: US
+    type: defense_media
+    zone: global
+    sectors: [militar]
+    priority: medium
+
+  # ── THINK TANKS / OSINT ───────────────────────────────────────────────────────
+  - slug: isw_ukraine
+    name: "Institute for the Study of War"
+    rss_url: "https://www.understandingwar.org/rss.xml"
+    country: US
+    type: think_tank
+    zone: ukraine_black_sea
+    sectors: [militar]
+    priority: high
+
+  - slug: iiss_world
+    name: "IISS"
+    rss_url: "https://www.iiss.org/rss/latest"
+    country: UK
+    type: think_tank
+    zone: global
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: rand_world
+    name: "RAND Corporation"
+    rss_url: "https://www.rand.org/pubs/rss/rss.xml"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [militar, diplomacia, economia]
+    priority: medium
+
+  - slug: brookings_world
+    name: "Brookings Institution"
+    rss_url: "https://www.brookings.edu/feed/"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [diplomacia, economia]
+    priority: medium
+
+  - slug: atlantic_council
+    name: "Atlantic Council"
+    rss_url: "https://www.atlanticcouncil.org/feed/"
+    country: US
+    type: think_tank
+    zone: europe
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: csis_world
+    name: "CSIS"
+    rss_url: "https://www.csis.org/feed"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: cnas_world
+    name: "CNAS"
+    rss_url: "https://www.cnas.org/feed"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [militar]
+    priority: medium
+
+  - slug: carnegie_world
+    name: "Carnegie Endowment"
+    rss_url: "https://carnegieendowment.org/publications/?fa=rss"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [diplomacia, nuclear]
+    priority: medium
+
+  - slug: stimson_world
+    name: "Stimson Center"
+    rss_url: "https://www.stimson.org/feed/"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [nuclear]
+    priority: medium
+
+  - slug: chatham_house
+    name: "Chatham House"
+    rss_url: "https://www.chathamhouse.org/rss/news"
+    country: UK
+    type: think_tank
+    zone: europe
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: ecfr_world
+    name: "ECFR"
+    rss_url: "https://ecfr.eu/feed/"
+    country: EU
+    type: think_tank
+    zone: europe
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: bellingcat
+    name: "Bellingcat"
+    rss_url: "https://www.bellingcat.com/feed/"
+    country: NL
+    type: think_tank
+    zone: ukraine_black_sea
+    sectors: [militar]
+    priority: high
+
+  # ── POLÍTICA EXTERIOR / GEOPOLÍTICA ───────────────────────────────────────────
+  - slug: foreign_policy
+    name: "Foreign Policy"
+    rss_url: "https://foreignpolicy.com/feed/"
+    country: US
+    type: magazine
+    zone: global
+    sectors: [militar, diplomacia, economia]
+    priority: high
+
+  - slug: foreign_affairs
+    name: "Foreign Affairs"
+    rss_url: "https://www.foreignaffairs.com/rss.xml"
+    country: US
+    type: magazine
+    zone: global
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: the_diplomat
+    name: "The Diplomat"
+    rss_url: "https://thediplomat.com/feed/"
+    country: US
+    type: magazine
+    zone: south_china_sea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: war_on_rocks
+    name: "War on the Rocks"
+    rss_url: "https://warontherocks.com/feed/"
+    country: US
+    type: magazine
+    zone: global
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: lawfare_blog
+    name: "Lawfare"
+    rss_url: "https://www.lawfareblog.com/rss.xml"
+    country: US
+    type: magazine
+    zone: global
+    sectors: [diplomacia, ciberseguridad]
+    priority: medium
+
+  - slug: economist_world
+    name: "The Economist"
+    rss_url: "https://www.economist.com/international/rss.xml"
+    country: UK
+    type: magazine
+    zone: global
+    sectors: [diplomacia, economia]
+    priority: medium
+
+  - slug: national_interest
+    name: "The National Interest"
+    rss_url: "https://nationalinterest.org/rss.xml"
+    country: US
+    type: magazine
+    zone: global
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: responsible_statecraft
+    name: "Responsible Statecraft"
+    rss_url: "https://responsiblestatecraft.org/feed/"
+    country: US
+    type: magazine
+    zone: global
+    sectors: [diplomacia]
+    priority: medium
+
+  # ── ORIENTE MEDIO ─────────────────────────────────────────────────────────────
+  - slug: middle_east_eye
+    name: "Middle East Eye"
+    rss_url: "https://www.middleeasteye.net/rss"
+    country: UK
+    type: newspaper
+    zone: levante
+    sectors: [militar, diplomacia, crisis_humanitaria]
+    priority: high
+
+  - slug: al_monitor
+    name: "Al-Monitor"
+    rss_url: "https://www.al-monitor.com/rss.xml"
+    country: US
+    type: newspaper
+    zone: levante
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: haaretz_en
+    name: "Haaretz English"
+    rss_url: "https://www.haaretz.com/cmlink/1.628765"
+    country: IL
+    type: newspaper
+    zone: levante
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: jerusalem_post
+    name: "Jerusalem Post"
+    rss_url: "https://www.jpost.com/rss/rssfeedsfrontpage.aspx"
+    country: IL
+    type: newspaper
+    zone: levante
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: times_of_israel
+    name: "Times of Israel"
+    rss_url: "https://www.timesofisrael.com/feed/"
+    country: IL
+    type: newspaper
+    zone: levante
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: arab_news
+    name: "Arab News"
+    rss_url: "https://www.arabnews.com/rss.xml"
+    country: SA
+    type: newspaper
+    zone: gulf_ormuz
+    sectors: [diplomacia, economia, energia]
+    priority: medium
+
+  - slug: gulf_news
+    name: "Gulf News"
+    rss_url: "https://gulfnews.com/rss/frontpage.xml"
+    country: AE
+    type: newspaper
+    zone: gulf_ormuz
+    sectors: [diplomacia, economia]
+    priority: medium
+
+  - slug: iran_international
+    name: "Iran International"
+    rss_url: "https://www.iranintl.com/en/rss"
+    country: UK
+    type: newspaper
+    zone: iran
+    sectors: [militar, diplomacia, nuclear]
+    priority: high
+
+  - slug: al_arabiya_en
+    name: "Al-Arabiya English"
+    rss_url: "https://english.alarabiya.net/rss.xml"
+    country: SA
+    type: newspaper
+    zone: levante
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: turkish_minute
+    name: "Turkish Minute"
+    rss_url: "https://www.turkishminute.com/feed/"
+    country: TR
+    type: newspaper
+    zone: south_caucasus
+    sectors: [diplomacia, militar]
+    priority: medium
+
+  # ── EUROPA DEL ESTE / RUSIA / UCRANIA ─────────────────────────────────────────
+  - slug: kyiv_independent
+    name: "Kyiv Independent"
+    rss_url: "https://kyivindependent.com/rss/"
+    country: UA
+    type: newspaper
+    zone: ukraine_black_sea
+    sectors: [militar, diplomacia, crisis_humanitaria]
+    priority: high
+
+  - slug: ukrainska_pravda_en
+    name: "Ukrainska Pravda EN"
+    rss_url: "https://www.pravda.com.ua/eng/rss/"
+    country: UA
+    type: newspaper
+    zone: ukraine_black_sea
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: meduza_en
+    name: "Meduza EN"
+    rss_url: "https://meduza.io/rss/news"
+    country: LV
+    type: newspaper
+    zone: ukraine_black_sea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: moscow_times
+    name: "Moscow Times"
+    rss_url: "https://www.themoscowtimes.com/rss/news"
+    country: NL
+    type: newspaper
+    zone: ukraine_black_sea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: rferl_world
+    name: "RFE/RL"
+    rss_url: "https://www.rferl.org/api/zyqmxqiymts"
+    country: US
+    type: newspaper
+    zone: ukraine_black_sea
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: euromaidan_press
+    name: "Euromaidan Press"
+    rss_url: "https://euromaidanpress.com/feed/"
+    country: UA
+    type: newspaper
+    zone: ukraine_black_sea
+    sectors: [militar]
+    priority: medium
+
+  - slug: politico_eu
+    name: "Politico Europe"
+    rss_url: "https://www.politico.eu/rss"
+    country: EU
+    type: newspaper
+    zone: europe
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: euobserver
+    name: "EUobserver"
+    rss_url: "https://euobserver.com/rss.xml"
+    country: EU
+    type: newspaper
+    zone: europe
+    sectors: [diplomacia]
+    priority: medium
+
+  # ── ASIA-PACÍFICO ─────────────────────────────────────────────────────────────
+  - slug: scmp_world
+    name: "South China Morning Post"
+    rss_url: "https://www.scmp.com/rss/91/feed"
+    country: HK
+    type: newspaper
+    zone: china
+    sectors: [militar, diplomacia, economia]
+    priority: high
+
+  - slug: straits_times
+    name: "The Straits Times"
+    rss_url: "https://www.straitstimes.com/global/rss.xml"
+    country: SG
+    type: newspaper
+    zone: south_china_sea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: japan_times
+    name: "Japan Times"
+    rss_url: "https://www.japantimes.co.jp/news_category/world/feed/"
+    country: JP
+    type: newspaper
+    zone: korea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: korea_herald
+    name: "Korea Herald"
+    rss_url: "http://www.koreaherald.com/rss_3_02.xml"
+    country: KR
+    type: newspaper
+    zone: korea
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: dawn_pk
+    name: "Dawn (Pakistan)"
+    rss_url: "https://www.dawn.com/feeds/home"
+    country: PK
+    type: newspaper
+    zone: india_pakistan
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: the_hindu
+    name: "The Hindu"
+    rss_url: "https://www.thehindu.com/news/international/feeder/default.rss"
+    country: IN
+    type: newspaper
+    zone: india_pakistan
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: ndtv_world
+    name: "NDTV World"
+    rss_url: "https://feeds.feedburner.com/NDTV-World-News"
+    country: IN
+    type: newspaper
+    zone: india_pakistan
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: asia_times
+    name: "Asia Times"
+    rss_url: "https://asiatimes.com/feed/"
+    country: HK
+    type: newspaper
+    zone: south_china_sea
+    sectors: [militar, diplomacia, economia]
+    priority: medium
+
+  - slug: taiwan_news
+    name: "Taiwan News"
+    rss_url: "https://www.taiwannews.com.tw/en/rss"
+    country: TW
+    type: newspaper
+    zone: china
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: nk_news
+    name: "NK News"
+    rss_url: "https://www.nknews.org/feed/"
+    country: US
+    type: newspaper
+    zone: korea
+    sectors: [militar, nuclear]
+    priority: high
+
+  - slug: 38north
+    name: "38 North"
+    rss_url: "https://www.38north.org/feed/"
+    country: US
+    type: think_tank
+    zone: korea
+    sectors: [nuclear, militar]
+    priority: high
+
+  # ── ÁFRICA / SAHEL ────────────────────────────────────────────────────────────
+  - slug: allafrica
+    name: "AllAfrica"
+    rss_url: "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"
+    country: ZA
+    type: newspaper
+    zone: sahel
+    sectors: [militar, crisis_humanitaria]
+    priority: medium
+
+  - slug: africa_report
+    name: "The Africa Report"
+    rss_url: "https://www.theafricareport.com/feed/"
+    country: FR
+    type: newspaper
+    zone: sahel
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: premium_times_ng
+    name: "Premium Times Nigeria"
+    rss_url: "https://www.premiumtimesng.com/feed/"
+    country: NG
+    type: newspaper
+    zone: sahel
+    sectors: [militar, crisis_humanitaria]
+    priority: medium
+
+  - slug: daily_maverick
+    name: "Daily Maverick"
+    rss_url: "https://www.dailymaverick.co.za/feed/"
+    country: ZA
+    type: newspaper
+    zone: sahel
+    sectors: [diplomacia, economia]
+    priority: medium
+
+  # ── LATAM ─────────────────────────────────────────────────────────────────────
+  - slug: mercopress
+    name: "Mercopress"
+    rss_url: "https://en.mercopress.com/rss"
+    country: UY
+    type: newspaper
+    zone: venezuela
+    sectors: [militar, diplomacia]
+    priority: medium
+
+  - slug: infobae_world
+    name: "Infobae"
+    rss_url: "https://www.infobae.com/feeds/rss/2013/04/15/politics.xml"
+    country: AR
+    type: newspaper
+    zone: venezuela
+    sectors: [diplomacia, economia]
+    priority: medium
+
+  - slug: elpais_world
+    name: "El País Internacional"
+    rss_url: "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/internacional/portada"
+    country: ES
+    type: newspaper
+    zone: venezuela
+    sectors: [diplomacia, economia]
+    priority: medium
+
+  - slug: insight_crime
+    name: "InSight Crime"
+    rss_url: "https://insightcrime.org/feed/"
+    country: CO
+    type: think_tank
+    zone: venezuela
+    sectors: [militar, crisis_humanitaria]
+    priority: medium
+
+  # ── GOBIERNO / OFICIAL ────────────────────────────────────────────────────────
+  - slug: nato_newsroom
+    name: "NATO Newsroom"
+    rss_url: "https://www.nato.int/cps/en/natolive/news.xml"
+    country: NATO
+    type: government
+    zone: europe
+    sectors: [militar, diplomacia]
+    priority: high
+
+  - slug: eu_eeas
+    name: "EU External Action"
+    rss_url: "https://www.eeas.europa.eu/eeas/press-releases_en.xml"
+    country: EU
+    type: government
+    zone: europe
+    sectors: [diplomacia]
+    priority: high
+
+  - slug: us_dod_news
+    name: "US Department of Defense"
+    rss_url: "https://www.defense.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=10"
+    country: US
+    type: government
+    zone: global
+    sectors: [militar]
+    priority: high
+
+  - slug: uk_mod
+    name: "UK Ministry of Defence"
+    rss_url: "https://www.gov.uk/search/news-and-communications.atom?organisations%5B%5D=ministry-of-defence"
+    country: UK
+    type: government
+    zone: europe
+    sectors: [militar]
+    priority: high
+
+  - slug: iaea_news
+    name: "IAEA Newscenter"
+    rss_url: "https://www.iaea.org/feeds/pressreleases.xml"
+    country: IAEA
+    type: government
+    zone: iran
+    sectors: [nuclear]
+    priority: high
+
+  - slug: un_news
+    name: "UN News"
+    rss_url: "https://news.un.org/feed/subscribe/en/news/all/rss.xml"
+    country: UN
+    type: government
+    zone: global
+    sectors: [diplomacia, crisis_humanitaria]
+    priority: high
+
+  - slug: ofac_actions
+    name: "OFAC Recent Actions"
+    rss_url: "https://home.treasury.gov/system/files/126/ofac.xml"
+    country: US
+    type: government
+    zone: global
+    sectors: [economia]
+    priority: high
+
+  # ── ECONOMÍA / SANCIONES ──────────────────────────────────────────────────────
+  - slug: reuters_business
+    name: "Reuters Business"
+    rss_url: "https://feeds.reuters.com/reuters/businessNews"
+    country: UK
+    type: agency
+    zone: global
+    sectors: [economia]
+    priority: high
+
+  - slug: bloomberg_markets
+    name: "Bloomberg Markets"
+    rss_url: "https://feeds.bloomberg.com/markets/news.rss"
+    country: US
+    type: newspaper
+    zone: global
+    sectors: [economia]
+    priority: medium
+
+  - slug: ft_world
+    name: "Financial Times"
+    rss_url: "https://www.ft.com/?format=rss"
+    country: UK
+    type: newspaper
+    zone: global
+    sectors: [economia, diplomacia]
+    priority: medium
+
+  - slug: politico_dc
+    name: "Politico DC"
+    rss_url: "https://www.politico.com/rss/politicopicks.xml"
+    country: US
+    type: newspaper
+    zone: north_america
+    sectors: [diplomacia]
+    priority: medium
+
+  - slug: axios_world
+    name: "Axios World"
+    rss_url: "https://api.axios.com/feed/world"
+    country: US
+    type: newspaper
+    zone: north_america
+    sectors: [diplomacia, economia]
+    priority: medium
+
+  # ── CIBERSEGURIDAD ────────────────────────────────────────────────────────────
+  - slug: recorded_future_news
+    name: "Recorded Future News"
+    rss_url: "https://therecord.media/feed"
+    country: US
+    type: defense_media
+    zone: global
+    sectors: [ciberseguridad]
+    priority: high
+
+  - slug: wired_security
+    name: "Wired Security"
+    rss_url: "https://www.wired.com/feed/category/security/latest/rss"
+    country: US
+    type: magazine
+    zone: global
+    sectors: [ciberseguridad]
+    priority: medium
+
+  - slug: krebs_security
+    name: "Krebs on Security"
+    rss_url: "https://krebsonsecurity.com/feed/"
+    country: US
+    type: magazine
+    zone: global
+    sectors: [ciberseguridad]
+    priority: medium
+
+  - slug: bleeping_computer
+    name: "Bleeping Computer"
+    rss_url: "https://www.bleepingcomputer.com/feed/"
+    country: RO
+    type: magazine
+    zone: global
+    sectors: [ciberseguridad]
+    priority: medium
+
+  # ── NUCLEAR / CBRN ────────────────────────────────────────────────────────────
+  - slug: bulletin_atomic
+    name: "Bulletin of the Atomic Scientists"
+    rss_url: "https://thebulletin.org/feed/"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [nuclear]
+    priority: high
+
+  - slug: arms_control_assoc
+    name: "Arms Control Association"
+    rss_url: "https://www.armscontrol.org/rss.xml"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [nuclear]
+    priority: high
+
+  - slug: nti_world
+    name: "Nuclear Threat Initiative"
+    rss_url: "https://www.nti.org/feed/"
+    country: US
+    type: think_tank
+    zone: global
+    sectors: [nuclear]
+    priority: high
+
+  # ── ENERGÍA ───────────────────────────────────────────────────────────────────
+  - slug: oilprice_world
+    name: "OilPrice.com"
+    rss_url: "https://oilprice.com/rss/main"
+    country: UK
+    type: magazine
+    zone: gulf_ormuz
+    sectors: [energia]
+    priority: medium
+
+  - slug: sp_global_energy
+    name: "S&P Global Platts"
+    rss_url: "https://www.spglobal.com/commodityinsights/en/rss-feed/oil"
+    country: US
+    type: agency
+    zone: gulf_ormuz
+    sectors: [energia, economia]
+    priority: medium
