@@ -13,6 +13,9 @@ from bs4 import BeautifulSoup
 
 log = logging.getLogger(__name__)
 
+MAX_TEXT_LENGTH = 500_000   # cap full_text at ~500 KB
+SUMMARY_LENGTH  = 1_500     # first N chars used as summary
+
 SEC_HEADERS = {
     "User-Agent": "Qilin/1.0 geopolitical-intelligence-platform admin@qilin.local",
     "Accept":     "application/json, text/html, application/pdf, */*",
@@ -122,6 +125,8 @@ async def download_and_extract(
             tag.decompose()
         full_text = " ".join(soup.get_text(separator=" ").split())
 
-    full_text = full_text[:500_000]  # cap at 500 KB
-    summary   = full_text[:1500] if full_text else None
+    full_text = full_text[:MAX_TEXT_LENGTH]
+    if not full_text:
+        log.warning(f"Text extraction yielded no content for {url}")
+    summary = full_text[:SUMMARY_LENGTH] if full_text else None
     return full_text or None, summary
