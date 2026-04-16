@@ -638,3 +638,328 @@ accounts:
     category: media
     zone: europe
     priority: medium
+
+  # ── US GOV ADICIONALES ──────────────────────────────────────────────────────
+  - handle: TulsiGabbard
+    display: "Tulsi Gabbard (DNI)"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: MikeWaltz
+    display: "Mike Waltz (Asesor Seg. Nacional)"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: SpeakerMike
+    display: "Mike Johnson (Speaker Cámara)"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: SenSchumer
+    display: "Chuck Schumer (Lider Minoría Senado)"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: LindseyGrahamSC
+    display: "Lindsey Graham (Senador)"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: tedcruz
+    display: "Ted Cruz (Senador)"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: elonmusk
+    display: "Elon Musk (DOGE)"
+    category: us_gov
+    zone: north_america
+    priority: high
+
+  - handle: RonDeSantis
+    display: "Ron DeSantis (Gobernador Florida)"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: GovAbbott
+    display: "Greg Abbott (Gobernador Texas)"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  - handle: RepMTG
+    display: "Marjorie Taylor Greene (Congresista)"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  # ── CHINA ADICIONALES ───────────────────────────────────────────────────────
+  - handle: ChinaEmbassyUSA
+    display: "Embajada China en EEUU"
+    category: asia_pacific
+    zone: china
+    priority: medium
+
+  - handle: ChinaEmbEU
+    display: "Misión China ante la UE"
+    category: asia_pacific
+    zone: china
+    priority: medium
+
+  - handle: zlj517
+    display: "Zhao Lijian (ex Portavoz MFA)"
+    category: china_state
+    zone: china
+    priority: high
+
+  - handle: ChinaMissionUN
+    display: "Misión China en la ONU"
+    category: intl_org
+    zone: china
+    priority: medium
+
+  - handle: AmbLiuPengyu
+    display: "Liu Pengyu (Portavoz Embajada China EEUU)"
+    category: asia_pacific
+    zone: china
+    priority: medium
+
+  # ── RUSIA ADICIONALES ───────────────────────────────────────────────────────
+  - handle: zakharova_maria
+    display: "Maria Zakharova (Portavoz MFA Rusia)"
+    category: russia
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: LavrovMid
+    display: "Sergei Lavrov (Ministro AAEE Rusia)"
+    category: russia
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: RT_com
+    display: "Russia Today (EN)"
+    category: russia
+    zone: ukraine_black_sea
+    priority: medium
+
+  - handle: tass_agency
+    display: "TASS (Agencia Estatal Rusa)"
+    category: russia
+    zone: ukraine_black_sea
+    priority: medium
+
+  - handle: RussianEmbassy
+    display: "Embajada Rusa en EEUU"
+    category: russia
+    zone: ukraine_black_sea
+    priority: medium
+
+  # ── EUROPA ADICIONALES ──────────────────────────────────────────────────────
+  - handle: SwedishPM
+    display: "Ulf Kristersson (PM Suecia)"
+    category: europe
+    zone: europe
+    priority: medium
+
+  - handle: PM_ViktorOrban
+    display: "Viktor Orbán (PM Hungría)"
+    category: europe
+    zone: europe
+    priority: high
+
+  - handle: DonaldTusk
+    display: "Donald Tusk (PM Polonia)"
+    category: europe
+    zone: europe
+    priority: high
+
+  - handle: jensstoltenberg
+    display: "Jens Stoltenberg (ex Sec. General OTAN)"
+    category: nato_eu
+    zone: europe
+    priority: medium
+
+  - handle: Sigmundur
+    display: "Sigmundur Davíð Gunnlaugsson (PM Islandia)"
+    category: europe
+    zone: europe
+    priority: medium
+
+  - handle: pchimenti
+    display: "Pedro Sánchez Partido — cuenta informativa"
+    category: europe
+    zone: europe
+    priority: medium
+
+  # ── JAPÓN ADICIONALES ───────────────────────────────────────────────────────
+  - handle: JapanMOD
+    display: "Ministerio de Defensa de Japón"
+    category: asia_pacific
+    zone: korea
+    priority: high
+
+  - handle: japangov
+    display: "Gobierno de Japón"
+    category: asia_pacific
+    zone: korea
+    priority: medium
+
+  - handle: kishida230
+    display: "Fumio Kishida (ex PM Japón)"
+    category: asia_pacific
+    zone: korea
+    priority: medium
+
+  - handle: SankeiShimbun
+    display: "Sankei Shimbun (diario conservador JP)"
+    category: media
+    zone: korea
+    priority: medium
+
+  # ── PAÍSES ÁRABES ADICIONALES ───────────────────────────────────────────────
+  - handle: KingAbdullahII
+    display: "Rey Abdalá II (Jordania)"
+    category: middle_east
+    zone: levante
+    priority: high
+
+  - handle: HHShkMohd
+    display: "Mohammed bin Rashid Al Maktoum (Dubái)"
+    category: middle_east
+    zone: gulf_ormuz
+    priority: high
+
+  - handle: JZarif
+    display: "Javad Zarif (ex Canciller Irán)"
+    category: middle_east
+    zone: iran
+    priority: high
+
+  - handle: adeljubeir
+    display: "Adel Al-Jubeir (Min. Estado Arabia Saudí)"
+    category: middle_east
+    zone: gulf_ormuz
+    priority: medium
+
+  - handle: IraqiPMO
+    display: "Oficina PM Irak"
+    category: middle_east
+    zone: iraq_syria
+    priority: medium
+
+  - handle: MBZNews
+    display: "Mohamed bin Zayed (Presidente EAU)"
+    category: middle_east
+    zone: gulf_ormuz
+    priority: high
+
+  - handle: HamdanMohammed
+    display: "Hamdan bin Mohammed (Príncipe heredero Dubái)"
+    category: middle_east
+    zone: gulf_ormuz
+    priority: medium
+
+  - handle: TurkishMinDef
+    display: "Ministerio de Defensa Turquía"
+    category: middle_east
+    zone: south_caucasus
+    priority: high
+
+  # ── NOTICIAS ADICIONALES ────────────────────────────────────────────────────
+  - handle: WSJ
+    display: "Wall Street Journal"
+    category: media
+    zone: north_america
+    priority: high
+
+  - handle: nytimes
+    display: "New York Times"
+    category: media
+    zone: north_america
+    priority: high
+
+  - handle: washingtonpost
+    display: "Washington Post"
+    category: media
+    zone: north_america
+    priority: high
+
+  - handle: politico
+    display: "Politico"
+    category: media
+    zone: north_america
+    priority: high
+
+  - handle: axios
+    display: "Axios"
+    category: media
+    zone: north_america
+    priority: medium
+
+  - handle: guardian
+    display: "The Guardian"
+    category: media
+    zone: europe
+    priority: high
+
+  - handle: DeutscheWelle
+    display: "Deutsche Welle (DW)"
+    category: media
+    zone: europe
+    priority: medium
+
+  - handle: France24English
+    display: "France 24 (EN)"
+    category: media
+    zone: europe
+    priority: medium
+
+  - handle: haaretzcom
+    display: "Haaretz (Israel)"
+    category: media
+    zone: levante
+    priority: medium
+
+  - handle: TimesofIsrael
+    display: "Times of Israel"
+    category: media
+    zone: levante
+    priority: medium
+
+  - handle: IRNA_English
+    display: "IRNA (Agencia Estatal Iraní EN)"
+    category: media
+    zone: iran
+    priority: medium
+
+  - handle: AJEnglish
+    display: "Al Jazeera English"
+    category: media
+    zone: middle_east
+    priority: high
+
+  - handle: spectatorindex
+    display: "The Spectator Index"
+    category: media
+    zone: europe
+    priority: medium
+
+  - handle: disclosetv
+    display: "Disclose.tv (breaking news)"
+    category: media
+    zone: europe
+    priority: medium
+
+  - handle: ReutersWorld
+    display: "Reuters World"
+    category: media
+    zone: europe
+    priority: high
