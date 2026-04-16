@@ -61,29 +61,39 @@ CREATE INDEX IF NOT EXISTS alerts_zone_idx ON alerts (zone);
 
 -- ─── NOTICIAS (fase 2) ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS news_events (
-    id          BIGSERIAL       PRIMARY KEY,
-    time        TIMESTAMPTZ     NOT NULL,
-    source      TEXT            NOT NULL,
-    title       TEXT            NOT NULL,
-    url         TEXT,
-    summary     TEXT,
-    zones       TEXT[],                    -- zonas relacionadas detectadas
-    keywords    TEXT[]
+    id              BIGSERIAL       PRIMARY KEY,
+    time            TIMESTAMPTZ     NOT NULL,
+    source          TEXT            NOT NULL,
+    title           TEXT            NOT NULL,
+    url             TEXT            NOT NULL,
+    summary         TEXT,
+    zones           TEXT[],                    -- zonas relacionadas detectadas
+    keywords        TEXT[],
+    severity        TEXT            DEFAULT 'low',
+    relevance       INT             DEFAULT 50,
+    source_country  TEXT,
+    source_type     TEXT,
+    sectors         TEXT[]
 );
 
 CREATE INDEX IF NOT EXISTS news_time_idx ON news_events (time DESC);
-
-ALTER TABLE news_events
-    ADD COLUMN IF NOT EXISTS severity       TEXT    DEFAULT 'low',
-    ADD COLUMN IF NOT EXISTS relevance      INT     DEFAULT 50,
-    ADD COLUMN IF NOT EXISTS source_country TEXT,
-    ADD COLUMN IF NOT EXISTS source_type    TEXT,
-    ADD COLUMN IF NOT EXISTS sectors        TEXT[];
-
 CREATE UNIQUE INDEX IF NOT EXISTS news_events_url_key      ON news_events (url);
 CREATE INDEX        IF NOT EXISTS news_events_severity_idx ON news_events (severity, time DESC);
 CREATE INDEX        IF NOT EXISTS news_events_country_idx  ON news_events (source_country, time DESC);
 CREATE INDEX        IF NOT EXISTS news_events_type_idx     ON news_events (source_type, time DESC);
+
+-- GIN indexes para búsquedas eficientes en arrays
+CREATE INDEX IF NOT EXISTS news_events_zones_gin    ON news_events USING GIN (zones);
+CREATE INDEX IF NOT EXISTS news_events_sectors_gin  ON news_events USING GIN (sectors);
+CREATE INDEX IF NOT EXISTS news_events_keywords_gin ON news_events USING GIN (keywords);
+
+-- Para DBs existentes (init.sql solo corre en primera creación del volumen):
+-- ALTER TABLE news_events
+--     ADD COLUMN IF NOT EXISTS severity       TEXT    DEFAULT 'low',
+--     ADD COLUMN IF NOT EXISTS relevance      INT     DEFAULT 50,
+--     ADD COLUMN IF NOT EXISTS source_country TEXT,
+--     ADD COLUMN IF NOT EXISTS source_type    TEXT,
+--     ADD COLUMN IF NOT EXISTS sectors        TEXT[];
 
 -- ─── POSTS SOCIALES (X / Twitter) ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS social_posts (
