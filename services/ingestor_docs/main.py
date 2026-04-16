@@ -25,6 +25,7 @@ import asyncpg
 import httpx
 import redis.asyncio as aioredis
 import yaml
+from playwright.async_api import async_playwright
 
 from classifier import classify_sectors, classify_severity, compute_relevance
 from extractor import download_and_extract
@@ -64,6 +65,7 @@ async def process_source(
     redis,
     db,
     source: dict,
+    browser=None,
 ) -> int:
     """
     Procesa una fuente: fetch → dedup → (optional filter) → download → classify → persist.
@@ -74,7 +76,7 @@ async def process_source(
     new_count   = 0
 
     try:
-        entries = await fetch_source(client, source)
+        entries = await fetch_source(client, source, browser=browser)
     except Exception as e:
         log.error(f"[{slug}] fetch fallido: {e}")
         failures = int(await redis.incr(failure_key))
@@ -175,15 +177,22 @@ async def main():
         [s for s in sources if s.get("priority") != "high"]
     )
 
-    async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
-        while True:
-            new_count = 0
-            for source in ordered:
-                new_count += await process_source(client, redis, db, source)
-                await asyncio.sleep(1.0)  # cortesía entre fuentes
+    log.info("Iniciando Playwright (Chromium headless)...")
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        log.info("Playwright listo.")
 
-            log.info(f"Ciclo completo — {new_count} documentos nuevos de {len(ordered)} fuentes")
-            await asyncio.sleep(POLL_INTERVAL)
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+            while True:
+                new_count = 0
+                for source in ordered:
+                    new_count += await process_source(client, redis, db, source, browser=browser)
+                    await asyncio.sleep(1.0)  # cortesía entre fuentes
+
+                log.info(f"Ciclo completo — {new_count} documentos nuevos de {len(ordered)} fuentes")
+                await asyncio.sleep(POLL_INTERVAL)
+
+        await browser.close()
 
 
 if __name__ == "__main__":
