@@ -29,13 +29,13 @@ export function useSecFeed() {
 
     async function fetchAll() {
       try {
-        const [rawFilings, rawSources] = await Promise.all([
+        const [filingsResult, sourcesResult] = await Promise.allSettled([
           authFetch('/sec/feed?limit=100'),
           authFetch('/sec/sources'),
         ])
         if (!cancelled) {
-          setFilings(rawFilings  || [])
-          setSources(rawSources  || [])
+          if (filingsResult.status === 'fulfilled') setFilings(filingsResult.value || [])
+          if (sourcesResult.status === 'fulfilled') setSources(sourcesResult.value || [])
         }
       } catch (err) {
         console.warn('[useSecFeed]', err.message)

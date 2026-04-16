@@ -2,7 +2,7 @@ jest.mock('../src/hooks/apiClient', () => ({
   authFetch: jest.fn(),
 }))
 
-import { renderHook, act, waitFor } from '@testing-library/react-native'
+import { renderHook, waitFor } from '@testing-library/react-native'
 import { authFetch } from '../src/hooks/apiClient'
 import { useNewsFeed } from '../src/hooks/useNewsFeed'
 
