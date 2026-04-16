@@ -52,6 +52,51 @@ zones:
     lat: [20, 33]
     lon: [9, 25]
 
+  ukraine_black_sea:
+    label: "Ucrania / Mar Negro"
+    lat: [44, 53]
+    lon: [22, 40]
+
+  baltic_sea:
+    label: "Mar Báltico"
+    lat: [53, 66]
+    lon: [9, 30]
+
+  south_caucasus:
+    label: "Cáucaso Sur"
+    lat: [38, 44]
+    lon: [38, 51]
+
+  india_pakistan:
+    label: "India / Pakistán"
+    lat: [20, 37]
+    lon: [60, 80]
+
+  south_china_sea:
+    label: "Mar del Sur de China"
+    lat: [0, 25]
+    lon: [105, 125]
+
+  sahel:
+    label: "Sahel"
+    lat: [10, 20]
+    lon: [-10, 25]
+
+  somalia_horn:
+    label: "Somalia / Cuerno de África"
+    lat: [0, 15]
+    lon: [38, 52]
+
+  venezuela:
+    label: "Venezuela"
+    lat: [0, 15]
+    lon: [-75, -58]
+
+  myanmar:
+    label: "Myanmar"
+    lat: [10, 28]
+    lon: [92, 102]
+
 # Chokepoints estratégicos (marcadores fijos en el mapa)
 chokepoints:
   gibraltar:

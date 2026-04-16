@@ -5,6 +5,32 @@ import { ZONES, CHOKEPOINTS } from '../data/zones'
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
+// Country name → ISO 3166-1 alpha-2 code (for flag CDN)
+const COUNTRY_ISO2 = {
+  'Afghanistan':'af','Albania':'al','Algeria':'dz','Argentina':'ar','Australia':'au',
+  'Austria':'at','Azerbaijan':'az','Bahrain':'bh','Belarus':'by','Belgium':'be',
+  'Brazil':'br','Bulgaria':'bg','Canada':'ca','Chile':'cl','China':'cn',
+  'Colombia':'co','Croatia':'hr','Cyprus':'cy','Czech Republic':'cz','Denmark':'dk',
+  'Egypt':'eg','Estonia':'ee','Ethiopia':'et','Finland':'fi','France':'fr',
+  'Georgia':'ge','Germany':'de','Greece':'gr','Hungary':'hu','India':'in',
+  'Indonesia':'id','Iran':'ir','Iraq':'iq','Ireland':'ie','Israel':'il',
+  'Italy':'it','Japan':'jp','Jordan':'jo','Kazakhstan':'kz','Kuwait':'kw',
+  'Latvia':'lv','Lebanon':'lb','Libya':'ly','Lithuania':'lt','Luxembourg':'lu',
+  'Malaysia':'my','Malta':'mt','Mexico':'mx','Moldova':'md','Morocco':'ma',
+  'Netherlands':'nl','New Zealand':'nz','Nigeria':'ng','Norway':'no','Oman':'om',
+  'Pakistan':'pk','Philippines':'ph','Poland':'pl','Portugal':'pt','Qatar':'qa',
+  'Romania':'ro','Russia':'ru','Saudi Arabia':'sa','Serbia':'rs','Singapore':'sg',
+  'Slovakia':'sk','Slovenia':'si','South Korea':'kr','Spain':'es','Sweden':'se',
+  'Switzerland':'ch','Syria':'sy','Taiwan':'tw','Thailand':'th','Tunisia':'tn',
+  'Turkey':'tr','Ukraine':'ua','United Arab Emirates':'ae','United Kingdom':'gb',
+  'United States':'us','Uruguay':'uy','Venezuela':'ve','Vietnam':'vn','Yemen':'ye',
+}
+function flagUrl(country) {
+  if (!country) return null
+  const code = COUNTRY_ISO2[country]
+  return code ? `https://flagcdn.com/20x15/${code}.png` : null
+}
+
 // ── Icon factories ─────────────────────────────────────────────
 function makePlaneIcon(color, size = 24) {
   const c = document.createElement('canvas')
@@ -25,21 +51,31 @@ function makePlaneIcon(color, size = 24) {
 }
 
 // ── GeoJSON helpers ────────────────────────────────────────────
+function makeCirclePolygon(clon, clat, radiusDeg, n = 72) {
+  const cosLat = Math.cos(clat * Math.PI / 180)
+  const pts = []
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * 2 * Math.PI
+    pts.push([clon + (radiusDeg / cosLat) * Math.cos(a), clat + radiusDeg * Math.sin(a)])
+  }
+  return pts
+}
+
 function zonesToGeoJSON() {
   return {
     type: 'FeatureCollection',
-    features: ZONES.map(z => ({
-      type: 'Feature',
-      properties: { label: z.label, fill: z.color, stroke: z.border },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [[
-          [z.lon[0], z.lat[0]], [z.lon[1], z.lat[0]],
-          [z.lon[1], z.lat[1]], [z.lon[0], z.lat[1]],
-          [z.lon[0], z.lat[0]],
-        ]],
-      },
-    })),
+    features: ZONES.map(z => {
+      const clat = (z.lat[0] + z.lat[1]) / 2
+      const clon = (z.lon[0] + z.lon[1]) / 2
+      const dlat = (z.lat[1] - z.lat[0]) / 2
+      const dlon = (z.lon[1] - z.lon[0]) / 2
+      const radiusDeg = Math.sqrt(dlat * dlat + dlon * dlon)
+      return {
+        type: 'Feature',
+        properties: { label: z.label, fill: z.color, stroke: z.border },
+        geometry: { type: 'Polygon', coordinates: [makeCirclePolygon(clon, clat, radiusDeg)] },
+      }
+    }),
   }
 }
 
@@ -153,14 +189,17 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
       map.addImage('plane-civil',    makePlaneIcon('#00c8ff'))
       map.addImage('plane-military', makePlaneIcon('#ff3b4a', 26))
 
-      // ── Zones ──
+      // ── Zones (círculos con fill + stroke dashed + label) ──
       map.addSource('zones', { type: 'geojson', data: zonesToGeoJSON() })
-      map.addLayer({ id:'zones-fill', type:'fill', source:'zones', paint:{ 'fill-color':'rgba(0,200,255,0.05)', 'fill-opacity':1 } })
-      map.addLayer({ id:'zones-line', type:'line', source:'zones', paint:{ 'line-color':['get','stroke'], 'line-width':0.8, 'line-opacity':0.7 } })
-      map.addLayer({
-        id:'zones-label', type:'symbol', source:'zones',
-        layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'], 'text-size':9, 'text-anchor':'top-left', 'text-offset':[0.3,0.3], 'text-allow-overlap':true },
-        paint:{ 'text-color':'rgba(0,200,255,0.5)', 'text-halo-color':'rgba(0,0,0,0.5)', 'text-halo-width':1 },
+      map.addLayer({ id:'zones-fill', type:'fill', source:'zones',
+        paint:{ 'fill-color':['get','fill'], 'fill-opacity':1 } })
+      map.addLayer({ id:'zones-stroke', type:'line', source:'zones',
+        paint:{ 'line-color':['get','stroke'], 'line-width':1.2,
+          'line-dasharray':[5, 3], 'line-opacity':0.9 } })
+      map.addLayer({ id:'zones-label', type:'symbol', source:'zones',
+        layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'],
+          'text-size':9, 'text-anchor':'center', 'text-allow-overlap':true },
+        paint:{ 'text-color':['get','stroke'], 'text-halo-color':'rgba(0,0,0,0.7)', 'text-halo-width':1.5 },
       })
 
       // ── Chokepoints ──
@@ -317,23 +356,41 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
                 <span style={{ fontSize:'9px', color:'rgba(0,200,255,0.3)' }}>Cargando foto…</span>
               </div>
             )}
-            {!metaLoading && meta?.photo_url && (
-              <div style={{ position:'relative' }}>
-                <img
-                  src={meta.photo_url}
-                  alt={meta.model || detail.label}
-                  style={{ width:'100%', height:'100px', objectFit:'cover', display:'block', opacity:0.85 }}
-                  onError={e => { e.currentTarget.style.display = 'none' }}
-                />
-                {meta.photographer && (
-                  <div style={{
-                    position:'absolute', bottom:3, right:5,
-                    fontSize:'8px', color:'rgba(255,255,255,0.4)',
-                    fontFamily:"'IBM Plex Mono',monospace",
-                  }}>© {meta.photographer}</div>
-                )}
-              </div>
-            )}
+            {!metaLoading && meta?.photo_url && (() => {
+              const flag = flagUrl(detail.origin_country)
+              return (
+                <div style={{ position:'relative' }}>
+                  <img
+                    src={meta.photo_url}
+                    alt={meta.model || detail.label}
+                    style={{ width:'100%', height:'100px', objectFit:'cover', display:'block', opacity:0.85 }}
+                    onError={e => { e.currentTarget.style.display = 'none' }}
+                  />
+                  {flag && (
+                    <img
+                      src={flag}
+                      alt={detail.origin_country}
+                      title={detail.origin_country}
+                      style={{
+                        position:'absolute', top:7, right:7,
+                        width:'20px', height:'15px',
+                        boxShadow:'0 1px 4px rgba(0,0,0,0.7)',
+                        border:'1px solid rgba(255,255,255,0.15)',
+                        borderRadius:'1px',
+                        imageRendering:'crisp-edges',
+                      }}
+                    />
+                  )}
+                  {meta.photographer && (
+                    <div style={{
+                      position:'absolute', bottom:3, right:5,
+                      fontSize:'8px', color:'rgba(255,255,255,0.4)',
+                      fontFamily:"'IBM Plex Mono',monospace",
+                    }}>© {meta.photographer}</div>
+                  )}
+                </div>
+              )
+            })()}
 
             <div style={{ padding:'10px 12px' }}>
               {/* Header */}
@@ -355,6 +412,20 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
                       {meta?.registration || detail.registration}
                     </div>
                   )}
+                  {detail.origin_country && (() => {
+                    const flag = flagUrl(detail.origin_country)
+                    return (
+                      <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'3px' }}>
+                        {flag && (
+                          <img src={flag} alt={detail.origin_country}
+                            style={{ width:'14px', height:'10px', borderRadius:'1px', border:'1px solid rgba(255,255,255,0.12)', flexShrink:0 }} />
+                        )}
+                        <span style={{ fontSize:'9px', color:'rgba(200,216,232,0.45)', letterSpacing:'.05em' }}>
+                          {detail.origin_country}
+                        </span>
+                      </div>
+                    )
+                  })()}
                 </div>
                 <button onClick={() => { setDetail(null); setRoute(null); setMeta(null) }} style={{
                   background:'none', border:'none', color:'rgba(0,200,255,0.4)',
