@@ -299,6 +299,7 @@ function TweetCard({ post, onClick }) {
         </span>
         <a
           href={post.url} target="_blank" rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
           style={{
             marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: '9px',
             color: 'var(--cyan)', textDecoration: 'none', letterSpacing: '.06em',
