@@ -244,7 +244,12 @@ async def main():
         )
 
         while True:
-            count, reached = await get_quota(redis)
+            try:
+                count, reached = await get_quota(redis)
+            except Exception as e:
+                log.error(f"Error comprobando cuota diaria: {e}")
+                await asyncio.sleep(60)
+                continue
             if reached:
                 log.warning(f"Cuota diaria alcanzada ({count}/{DAILY_CAP}) — esperando hasta mañana")
                 await asyncio.sleep(3600)
