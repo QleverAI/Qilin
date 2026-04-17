@@ -3,7 +3,7 @@ export default function BottomBar({ stats }) {
   const ts  = `${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')}:${String(now.getUTCSeconds()).padStart(2,'0')}`
 
   const items = [
-    { icon:'▲', color:'var(--cyan)',  value: stats.aircraftTotal, label:'aeronaves' },
+    { icon:'▲', color:'var(--accent)', value: stats.aircraftTotal, label:'aeronaves' },
     { icon:'▲', color:'var(--red)',   value: stats.aircraftMil,   label:'militares' },
     { icon:'●', color:'var(--red)',   value: stats.alertsHigh,    label:'high'      },
     { icon:'●', color:'var(--amber)', value: stats.alertsMedium,  label:'medium'    },
@@ -45,7 +45,6 @@ export default function BottomBar({ stats }) {
         <div style={{
           width:'8px', height:'8px', borderRadius:'50%',
           background:'var(--green)',
-          animation:'liveRing 1.5s ease-out infinite',
         }} />
         LIVE
       </div>

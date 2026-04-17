@@ -12,13 +12,13 @@ const NAV_ITEMS = [
 function LogoIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
-      <circle cx="13" cy="13" r="11" stroke="#00c8ff" strokeWidth="1.2" opacity=".4"/>
-      <circle cx="13" cy="13" r="7"  stroke="#00c8ff" strokeWidth="1.2" opacity=".6"/>
-      <circle cx="13" cy="13" r="3"  fill="#00c8ff" opacity=".9"/>
-      <line x1="13" y1="2"  x2="13" y2="6"  stroke="#00c8ff" strokeWidth="1" opacity=".5"/>
-      <line x1="13" y1="20" x2="13" y2="24" stroke="#00c8ff" strokeWidth="1" opacity=".5"/>
-      <line x1="2"  y1="13" x2="6"  y2="13" stroke="#00c8ff" strokeWidth="1" opacity=".5"/>
-      <line x1="20" y1="13" x2="24" y2="13" stroke="#00c8ff" strokeWidth="1" opacity=".5"/>
+      <circle cx="13" cy="13" r="11" stroke="var(--accent)" strokeWidth="1.2" opacity=".4"/>
+      <circle cx="13" cy="13" r="7"  stroke="var(--accent)" strokeWidth="1.2" opacity=".6"/>
+      <circle cx="13" cy="13" r="3"  fill="var(--accent)" opacity=".9"/>
+      <line x1="13" y1="2"  x2="13" y2="6"  stroke="var(--accent)" strokeWidth="1" opacity=".5"/>
+      <line x1="13" y1="20" x2="13" y2="24" stroke="var(--accent)" strokeWidth="1" opacity=".5"/>
+      <line x1="2"  y1="13" x2="6"  y2="13" stroke="var(--accent)" strokeWidth="1" opacity=".5"/>
+      <line x1="20" y1="13" x2="24" y2="13" stroke="var(--accent)" strokeWidth="1" opacity=".5"/>
     </svg>
   )
 }
@@ -102,7 +102,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate 
         }}>
           <div style={{
             width:'5px', height:'5px', borderRadius:'50%',
-            background: wsColor, boxShadow: `0 0 5px ${wsColor}`,
+            background: wsColor,
             animation: 'blink 2.4s ease-in-out infinite',
           }} />
           {wsLabel}
@@ -119,7 +119,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate 
           }}>
             <div style={{
               width:'5px', height:'5px', borderRadius:'50%',
-              background:'var(--red)', boxShadow:'0 0 5px var(--red)',
+              background:'var(--red)',
               animation:'blink 1.2s ease-in-out infinite',
             }} />
             {alertsTotal} ALERTAS
@@ -128,7 +128,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate 
 
         {/* Clock */}
         <div style={{ fontFamily:'var(--mono)', fontSize:'12px', color:'var(--txt-3)', letterSpacing:'.08em' }}>
-          UTC <span style={{ color:'var(--cyan-dim)' }}>{time}</span>
+          UTC <span style={{ color:'var(--txt-2)' }}>{time}</span>
         </div>
       </div>
     </header>

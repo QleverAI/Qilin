@@ -1,7 +1,7 @@
 const FILTERS_CONFIG = [
-  { key:'civil',             icon:'▲', label:'Civil',      color:'#00c8ff' },
-  { key:'military_aircraft', icon:'▲', label:'Mil. Aéreo', color:'#ff3b4a' },
-  { key:'alerts',            icon:'●', label:'Alertas',    color:'#ff3b4a' },
+  { key:'civil',             icon:'▲', label:'Civil',      color:'#4f9cf9' },
+  { key:'military_aircraft', icon:'▲', label:'Mil. Aéreo', color:'#f43f5e' },
+  { key:'alerts',            icon:'●', label:'Alertas',    color:'#f43f5e' },
 ]
 
 export default function FilterPanel({ filters, onToggle, counts }) {

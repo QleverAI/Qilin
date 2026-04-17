@@ -1,7 +1,7 @@
-const SEV_COLOR = { high:'var(--red)', medium:'var(--amber)', low:'var(--green)' }
-const SEV_BG    = { high:'rgba(255,59,74,0.14)', medium:'rgba(255,176,32,0.11)', low:'rgba(0,229,160,0.09)' }
-const SEV_BORDER= { high:'rgba(255,59,74,0.3)',  medium:'rgba(255,176,32,0.28)', low:'rgba(0,229,160,0.22)' }
-const SEV_LEFT  = { high:'var(--red)',            medium:'var(--amber)',          low:'var(--green)' }
+const SEV_COLOR  = { high:'var(--red)',   medium:'var(--amber)', low:'var(--green)' }
+const SEV_BG     = { high:'rgba(244,63,94,0.10)',  medium:'rgba(245,158,11,0.09)', low:'rgba(52,211,153,0.08)' }
+const SEV_BORDER = { high:'rgba(244,63,94,0.28)',  medium:'rgba(245,158,11,0.26)', low:'rgba(52,211,153,0.20)' }
+const SEV_LEFT   = { high:'var(--red)',   medium:'var(--amber)', low:'var(--green)' }
 
 function AlertCard({ alert, onClick }) {
   return (
@@ -15,46 +15,36 @@ function AlertCard({ alert, onClick }) {
         borderLeft:`3px solid ${SEV_LEFT[alert.severity]}`,
         borderRadius:'2px',
         cursor:'pointer',
-        position:'relative',
-        overflow:'hidden',
-        animation: alert.severity==='high' ? 'alertPulse 3s ease-in-out infinite' : 'none',
-        transition:'background .15s',
+        transition:'border-color .15s',
       }}
-      onMouseEnter={e=>e.currentTarget.style.background='var(--bg-3)'}
-      onMouseLeave={e=>e.currentTarget.style.background='var(--bg-2)'}
+      onMouseEnter={e=>e.currentTarget.style.borderColor='var(--border-md)'}
+      onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
     >
-      {/* Left glow on hover done via pseudo — use a tint div instead */}
-      <div style={{
-        position:'absolute', inset:0, pointerEvents:'none',
-        background:`linear-gradient(90deg, ${SEV_BG[alert.severity]} 0%, transparent 100%)`,
-      }} />
-      <div style={{ position:'relative', zIndex:1 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'5px' }}>
-          <span style={{
-            fontSize:'8px', fontWeight:'700', letterSpacing:'.15em',
-            textTransform:'uppercase', padding:'2px 6px', borderRadius:'2px',
-            fontFamily:'var(--mono)', flexShrink:0,
-            background: SEV_BG[alert.severity],
-            color: SEV_COLOR[alert.severity],
-            border: `1px solid ${SEV_BORDER[alert.severity]}`,
-          }}>
-            {alert.severity.toUpperCase()}
-          </span>
-          <span style={{
-            fontSize:'10px', fontWeight:'600', letterSpacing:'.12em',
-            textTransform:'uppercase', color:'var(--txt-2)',
-            fontFamily:'var(--mono)',
-          }}>{alert.zone}</span>
-          <span style={{ marginLeft:'auto', fontSize:'9px', color:'var(--txt-3)', fontFamily:'var(--mono)' }}>
-            {alert.time} UTC
-          </span>
-        </div>
-        <div style={{ fontSize:'12px', fontWeight:'600', letterSpacing:'.03em', color:'var(--txt-1)', lineHeight:1.3, marginBottom:'4px' }}>
-          {alert.title}
-        </div>
-        <div style={{ fontSize:'10px', color:'var(--txt-2)', lineHeight:1.5 }}>
-          {alert.desc}
-        </div>
+      <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'5px' }}>
+        <span style={{
+          fontSize:'8px', fontWeight:'700', letterSpacing:'.15em',
+          textTransform:'uppercase', padding:'2px 6px', borderRadius:'2px',
+          fontFamily:'var(--mono)', flexShrink:0,
+          background: SEV_BG[alert.severity],
+          color: SEV_COLOR[alert.severity],
+          border: `1px solid ${SEV_BORDER[alert.severity]}`,
+        }}>
+          {alert.severity.toUpperCase()}
+        </span>
+        <span style={{
+          fontSize:'10px', fontWeight:'600', letterSpacing:'.12em',
+          textTransform:'uppercase', color:'var(--txt-2)',
+          fontFamily:'var(--mono)',
+        }}>{alert.zone}</span>
+        <span style={{ marginLeft:'auto', fontSize:'9px', color:'var(--txt-3)', fontFamily:'var(--mono)' }}>
+          {alert.time} UTC
+        </span>
+      </div>
+      <div style={{ fontSize:'12px', fontWeight:'600', letterSpacing:'.03em', color:'var(--txt-1)', lineHeight:1.3, marginBottom:'4px' }}>
+        {alert.title}
+      </div>
+      <div style={{ fontSize:'10px', color:'var(--txt-2)', lineHeight:1.5 }}>
+        {alert.desc}
       </div>
     </div>
   )
@@ -81,7 +71,7 @@ export default function AlertPanel({ alerts, stats, onAlertClick }) {
         <span style={{
           fontFamily:'var(--mono)', fontSize:'10px',
           background:'var(--bg-3)', border:'1px solid var(--border-md)',
-          borderRadius:'2px', padding:'1px 7px', color:'var(--cyan)',
+          borderRadius:'2px', padding:'1px 7px', color:'var(--accent)',
         }}>{alerts.length}</span>
       </div>
 
@@ -103,7 +93,7 @@ export default function AlertPanel({ alerts, stats, onAlertClick }) {
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1px', background:'var(--border)' }}>
           {[
-            { label:'Aeronaves',   value: stats.aircraftTotal, sub:`${stats.aircraftMil} militares`,  color:'var(--cyan)'  },
+            { label:'Aeronaves',   value: stats.aircraftTotal, sub:`${stats.aircraftMil} militares`,  color:'var(--accent)'  },
             { label:'Embarcaciones', value: stats.vesselsTotal, sub:`${stats.vesselsMil} militares`, color:'var(--green)' },
             { label:'Alertas high',  value: stats.alertsHigh,  sub:'últimas 6h',                     color:'var(--red)'   },
             { label:'Alertas med',   value: stats.alertsMedium,sub:'últimas 6h',                     color:'var(--amber)' },
