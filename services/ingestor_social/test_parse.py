@@ -1,5 +1,7 @@
 """Tests unitarios para parse_tweet — sin dependencias externas."""
 
+from datetime import datetime, timezone
+
 
 def parse_tweet(raw: dict, account: dict, media_map: dict) -> dict:
     """Copia local de la funcion para test aislado — debe coincidir con main.py."""
@@ -27,7 +29,7 @@ def parse_tweet(raw: dict, account: dict, media_map: dict) -> dict:
         "url":        f"https://x.com/{account['handle']}/status/{tweet_id}",
         "media_url":  media_url,
         "media_type": media_type,
-        "time":       raw.get("created_at", ""),
+        "time":       raw.get("created_at", datetime.now(timezone.utc).isoformat()),
     }
 
 
