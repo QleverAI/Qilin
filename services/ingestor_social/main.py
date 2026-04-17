@@ -29,6 +29,7 @@ BEARER_TOKEN  = os.getenv("X_BEARER_TOKEN", "")
 REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379")
 DB_URL        = os.getenv("DB_URL", "")
 POLL_INTERVAL = int(os.getenv("SOCIAL_POLL_INTERVAL", "900"))  # 15 min por defecto
+DAILY_CAP     = int(os.getenv("TWITTER_DAILY_CAP", "300"))
 
 
 # ── Carga de configuracion ─────────────────────────────────────────────────────
@@ -37,6 +38,30 @@ def load_accounts() -> list[dict]:
     with open("/app/config/social_accounts.yaml") as f:
         cfg = yaml.safe_load(f)
     return cfg["accounts"]
+
+
+# ── Quota guards ───────────────────────────────────────────────────────────────
+
+async def get_quota(redis, cap: int = DAILY_CAP) -> tuple[int, bool]:
+    """
+    Obtiene el contador de tweets del dia y retorna (count, reached_cap).
+    """
+    key = f"twitter:quota:{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+    val = await redis.get(key)
+    count = int(val) if val else 0
+    return count, count >= cap
+
+
+async def increment_quota(redis) -> int:
+    """
+    Incrementa el contador de tweets del dia. Retorna el nuevo contador.
+    Si es el primer incremento del dia, establece TTL de 90000 segundos.
+    """
+    key = f"twitter:quota:{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+    count = await redis.incr(key)
+    if count == 1:
+        await redis.expire(key, 90000)
+    return count
 
 
 # ── Parsing ───────────────────────────────────────────────────────────────────
@@ -155,6 +180,7 @@ async def publish(redis, db, tweet: dict) -> bool:
     payload = json.dumps(tweet)
     await redis.setex(key, 86400, payload)
     await redis.xadd("stream:social", {"data": payload}, maxlen=2000)
+    await increment_quota(redis)
 
     if db:
         try:
@@ -218,6 +244,12 @@ async def main():
         )
 
         while True:
+            count, reached = await get_quota(redis)
+            if reached:
+                log.warning(f"Cuota diaria alcanzada ({count}/{DAILY_CAP}) — esperando hasta mañana")
+                await asyncio.sleep(3600)
+                continue
+
             new_count = 0
 
             for account in ordered:

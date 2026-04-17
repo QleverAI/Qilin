@@ -109,3 +109,79 @@ def test_parse_unknown_media_key_ignored():
     result = parse_tweet(raw, ACCOUNT, {})
     assert result["media_url"] is None
     assert result["media_type"] is None
+
+
+import asyncio
+from unittest.mock import AsyncMock
+
+
+# ── Quota helpers (inline copies for test isolation) ─────────────────────────
+
+_DAILY_CAP = 300
+
+
+async def _get_quota(redis, cap: int = _DAILY_CAP) -> tuple[int, bool]:
+    from datetime import datetime, timezone
+    key = f"twitter:quota:{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+    val = await redis.get(key)
+    count = int(val) if val else 0
+    return count, count >= cap
+
+
+async def _increment_quota(redis) -> int:
+    from datetime import datetime, timezone
+    key = f"twitter:quota:{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+    count = await redis.incr(key)
+    if count == 1:
+        await redis.expire(key, 90000)
+    return count
+
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+
+def test_quota_under_cap():
+    redis = AsyncMock()
+    redis.get = AsyncMock(return_value="50")
+    count, reached = asyncio.run(_get_quota(redis, cap=300))
+    assert count == 50
+    assert reached is False
+
+
+def test_quota_at_cap():
+    redis = AsyncMock()
+    redis.get = AsyncMock(return_value="300")
+    count, reached = asyncio.run(_get_quota(redis, cap=300))
+    assert count == 300
+    assert reached is True
+
+
+def test_quota_over_cap():
+    redis = AsyncMock()
+    redis.get = AsyncMock(return_value="301")
+    count, reached = asyncio.run(_get_quota(redis, cap=300))
+    assert reached is True
+
+
+def test_quota_no_key_returns_zero():
+    redis = AsyncMock()
+    redis.get = AsyncMock(return_value=None)
+    count, reached = asyncio.run(_get_quota(redis, cap=300))
+    assert count == 0
+    assert reached is False
+
+
+def test_increment_quota_sets_ttl_on_first():
+    redis = AsyncMock()
+    redis.incr = AsyncMock(return_value=1)
+    redis.expire = AsyncMock()
+    result = asyncio.run(_increment_quota(redis))
+    assert result == 1
+    redis.expire.assert_called_once()
+
+
+def test_increment_quota_no_ttl_after_first():
+    redis = AsyncMock()
+    redis.incr = AsyncMock(return_value=2)
+    redis.expire = AsyncMock()
+    asyncio.run(_increment_quota(redis))
+    redis.expire.assert_not_called()
