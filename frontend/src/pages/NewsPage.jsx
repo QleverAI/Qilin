@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNewsFeed } from '../hooks/useNewsFeed'
 
 const SEV_COLOR  = { high: 'var(--red)', medium: 'var(--amber)', low: 'var(--green)' }
@@ -34,115 +34,285 @@ const SECTOR_COLOR = {
   nuclear:           'rgba(255,59,74,1)',
 }
 
-function RelevanceBar({ value }) {
-  const color = value >= 70 ? 'var(--red)' : value >= 50 ? 'var(--amber)' : 'var(--green)'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-      <div style={{ flex: 1, height: '2px', background: 'var(--border)', borderRadius: '1px', overflow: 'hidden' }}>
-        <div style={{ width: `${value}%`, height: '100%', background: color, borderRadius: '1px', transition: 'width .3s' }} />
-      </div>
-      <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color, flexShrink: 0 }}>{value}</span>
-    </div>
-  )
+function domainOf(url) {
+  try { return new URL(url).hostname.replace('www.', '') } catch { return '' }
 }
 
-function SectorTag({ sector }) {
+function faviconUrl(url) {
+  const domain = domainOf(url)
+  return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : null
+}
+
+function SectorTag({ sector, large }) {
   const color = SECTOR_COLOR[sector] || 'rgba(150,150,150,0.8)'
   const label = SECTOR_LABELS[sector] || sector
   return (
     <span style={{
-      fontSize: '8px', fontFamily: 'var(--mono)',
-      color: 'var(--bg-0)', background: color,
-      padding: '1px 5px', borderRadius: '2px',
+      fontSize: large ? '10px' : '8px',
+      fontFamily: 'var(--mono)',
+      color: 'var(--bg-0)',
+      background: color,
+      padding: large ? '3px 8px' : '1px 5px',
+      borderRadius: '2px',
     }}>
       {label}
     </span>
   )
 }
 
-function NewsCard({ article, selected, onClick }) {
+function RelevanceBar({ value }) {
+  const color = value >= 70 ? 'var(--red)' : value >= 50 ? 'var(--amber)' : 'var(--green)'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ flex: 1, height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{ width: `${value}%`, height: '100%', background: color, borderRadius: '2px', transition: 'width .3s' }} />
+      </div>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: '10px', color, flexShrink: 0, minWidth: '24px' }}>{value}</span>
+    </div>
+  )
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────────
+
+function NewsModal({ article, onClose }) {
   const severity = article.severity || 'low'
-  const sectors = Array.isArray(article.sectors)
-    ? article.sectors
-    : (article.keywords || [])
+  const sectors  = Array.isArray(article.sectors) ? article.sectors : (article.keywords || [])
+  const favicon  = article.url ? faviconUrl(article.url) : null
+  const domain   = article.url ? domainOf(article.url) : ''
+  const pubDate  = article.time ? new Date(article.time).toLocaleString('es-ES', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : ''
+
+  // Cerrar con Escape
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.75)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '24px',
+        backdropFilter: 'blur(4px)',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: '640px',
+          background: 'var(--bg-1)',
+          border: `1px solid ${SEV_BORDER[severity]}`,
+          borderTop: `4px solid ${SEV_COLOR[severity]}`,
+          borderRadius: '4px',
+          overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          maxHeight: '85vh',
+        }}
+      >
+        {/* Imagen */}
+        {article.image_url && (
+          <div style={{ width: '100%', height: '200px', overflow: 'hidden', flexShrink: 0 }}>
+            <img
+              src={article.image_url}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              onError={e => { e.currentTarget.parentElement.style.display = 'none' }}
+            />
+          </div>
+        )}
+
+        {/* Contenido */}
+        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+
+          {/* Cabecera: fuente + fecha + cerrar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+            {favicon && (
+              <img src={favicon} alt="" width={20} height={20} style={{ borderRadius: '3px', flexShrink: 0 }}
+                onError={e => { e.currentTarget.style.display = 'none' }} />
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--txt-1)', fontFamily: 'var(--mono)' }}>
+                {article.source}
+              </div>
+              <div style={{ fontSize: '9px', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>
+                {domain} · {pubDate}
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none', border: 'none', color: 'var(--txt-3)',
+                cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '2px 6px',
+                flexShrink: 0,
+              }}
+            >×</button>
+          </div>
+
+          {/* Badges: severidad + país + tipo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+            <span style={{
+              fontSize: '9px', fontWeight: '700', letterSpacing: '.12em',
+              padding: '3px 8px', borderRadius: '2px',
+              background: SEV_BG[severity], color: SEV_COLOR[severity],
+              border: `1px solid ${SEV_BORDER[severity]}`,
+              fontFamily: 'var(--mono)',
+            }}>{severity.toUpperCase()}</span>
+
+            {article.source_country && (
+              <span style={{ fontSize: '10px', fontFamily: 'var(--mono)', color: 'var(--accent)', letterSpacing: '.06em' }}>
+                [{article.source_country}]
+              </span>
+            )}
+
+            {article.source_type && (
+              <span style={{ fontSize: '9px', fontFamily: 'var(--mono)', color: 'var(--txt-3)', background: 'var(--bg-3)', padding: '2px 7px', borderRadius: '2px', border: '1px solid var(--border)' }}>
+                {TYPE_LABELS[article.source_type] || article.source_type}
+              </span>
+            )}
+          </div>
+
+          {/* Titular */}
+          <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--txt-1)', lineHeight: 1.4, marginBottom: '14px' }}>
+            {article.title}
+          </div>
+
+          {/* Resumen */}
+          {article.summary && (
+            <div style={{ fontSize: '12px', color: 'var(--txt-2)', lineHeight: 1.7, marginBottom: '16px' }}>
+              {article.summary}
+            </div>
+          )}
+
+          {/* Sectores */}
+          {sectors.length > 0 && (
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {sectors.map(s => <SectorTag key={s} sector={s} large />)}
+            </div>
+          )}
+
+          {/* Relevancia */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '8px', fontFamily: 'var(--mono)', color: 'var(--txt-3)', letterSpacing: '.15em', marginBottom: '6px' }}>
+              RELEVANCIA GEOPOLÍTICA
+            </div>
+            <RelevanceBar value={article.relevance || 50} />
+          </div>
+
+          {/* Botón leer */}
+          {article.url && (
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                padding: '8px 20px',
+                background: 'var(--accent-dim)',
+                border: '1px solid rgba(79,156,249,0.3)',
+                borderRadius: '2px',
+                color: 'var(--accent)',
+                fontFamily: 'var(--mono)',
+                fontSize: '10px',
+                fontWeight: '700',
+                letterSpacing: '.1em',
+                textDecoration: 'none',
+                transition: 'background .15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,156,249,0.2)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-dim)'}
+            >
+              LEER ARTÍCULO COMPLETO ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Tarjeta ────────────────────────────────────────────────────────────────────
+
+function NewsCard({ article, onClick }) {
+  const severity = article.severity || 'low'
+  const sectors  = Array.isArray(article.sectors) ? article.sectors : (article.keywords || [])
+  const favicon  = article.url ? faviconUrl(article.url) : null
 
   return (
     <div
       onClick={onClick}
       style={{
-        padding: '12px 14px',
-        background: selected ? 'var(--bg-3)' : 'var(--bg-2)',
-        border: `1px solid ${selected ? 'rgba(0,200,255,0.35)' : 'var(--border)'}`,
-        borderLeft: `3px solid ${SEV_COLOR[severity]}`,
-        borderRadius: '2px',
+        display: 'flex', flexDirection: 'column',
+        background: 'var(--bg-2)',
+        border: '1px solid var(--border)',
+        borderTop: `3px solid ${SEV_COLOR[severity]}`,
+        borderRadius: '3px',
         cursor: 'pointer',
-        transition: 'all .15s',
-        marginBottom: '6px',
+        transition: 'border-color .15s, background .15s',
+        overflow: 'hidden',
+        minHeight: '150px',
       }}
-      onMouseEnter={e => { if (!selected) e.currentTarget.style.borderColor = 'rgba(0,200,255,0.2)' }}
-      onMouseLeave={e => { if (!selected) e.currentTarget.style.borderColor = 'var(--border)' }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-md)'}
+      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
-      {/* Meta row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px', flexWrap: 'wrap' }}>
-        <span style={{
-          fontSize: '8px', fontWeight: '700', letterSpacing: '.12em',
-          padding: '2px 6px', borderRadius: '2px',
-          background: SEV_BG[severity],
-          color: SEV_COLOR[severity],
-          border: `1px solid ${SEV_BORDER[severity]}`,
-          fontFamily: 'var(--mono)', flexShrink: 0,
-        }}>{severity.toUpperCase()}</span>
-
-        <span style={{ fontSize: '9px', fontFamily: 'var(--mono)', color: 'var(--cyan)', letterSpacing: '.06em', flexShrink: 0 }}>
-          {article.source_country && `[${article.source_country}]`}
-        </span>
-
-        <span style={{ fontSize: '8px', fontFamily: 'var(--mono)', color: 'var(--txt-3)', flexShrink: 0 }}>
-          {TYPE_LABELS[article.source_type] || article.source_type}
-        </span>
-
-        <span style={{ marginLeft: 'auto', fontSize: '9px', fontFamily: 'var(--mono)', color: 'var(--txt-3)', flexShrink: 0 }}>
-          {article.source}
-        </span>
-      </div>
-
-      {/* Título */}
-      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--txt-1)', lineHeight: 1.35, marginBottom: '6px' }}>
-        {article.title}
-      </div>
-
-      {/* Resumen (solo si está seleccionado) */}
-      {selected && article.summary && (
-        <div style={{ fontSize: '11px', color: 'var(--txt-2)', lineHeight: 1.6, marginBottom: '8px' }}>
-          {article.summary}
+      {/* Imagen del artículo */}
+      {article.image_url && (
+        <div style={{ width: '100%', height: '110px', overflow: 'hidden', flexShrink: 0 }}>
+          <img
+            src={article.image_url}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={e => { e.currentTarget.parentElement.style.display = 'none' }}
+          />
         </div>
       )}
 
-      {/* Footer: sectores + relevancia + enlace */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        {sectors.slice(0, 3).map(s => <SectorTag key={s} sector={s} />)}
-        <div style={{ marginLeft: 'auto', flex: '0 0 100px' }}>
-          <RelevanceBar value={article.relevance || 50} />
+      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {/* Meta: favicon + fuente + país */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '7px' }}>
+          {favicon && (
+            <img src={favicon} alt="" width={13} height={13} style={{ borderRadius: '2px', flexShrink: 0 }}
+              onError={e => { e.currentTarget.style.display = 'none' }} />
+          )}
+          <span style={{ fontSize: '8px', fontFamily: 'var(--mono)', color: 'var(--txt-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+            {article.source}
+          </span>
+          {article.source_country && (
+            <span style={{ fontSize: '8px', fontFamily: 'var(--mono)', color: 'var(--accent)', flexShrink: 0 }}>
+              {article.source_country}
+            </span>
+          )}
         </div>
-        {article.url && (
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            style={{
-              fontFamily: 'var(--mono)', fontSize: '9px',
-              color: 'var(--cyan)', textDecoration: 'none',
-              flexShrink: 0,
-            }}
-          >
-            Leer ↗
-          </a>
-        )}
+
+        {/* Titular */}
+        <div style={{
+          fontSize: '11px', fontWeight: '600', color: 'var(--txt-1)', lineHeight: 1.4,
+          flex: 1, marginBottom: '8px',
+          overflow: 'hidden', display: '-webkit-box',
+          WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+        }}>
+          {article.title}
+        </div>
+
+        {/* Footer: sectores + severidad */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+          {sectors.slice(0, 2).map(s => <SectorTag key={s} sector={s} />)}
+          <span style={{
+            marginLeft: 'auto', fontSize: '7px', fontWeight: '700',
+            padding: '1px 5px', borderRadius: '2px',
+            background: SEV_BG[severity], color: SEV_COLOR[severity],
+            border: `1px solid ${SEV_BORDER[severity]}`,
+            fontFamily: 'var(--mono)', flexShrink: 0,
+          }}>{severity.toUpperCase()}</span>
+        </div>
       </div>
     </div>
   )
 }
+
+// ── Filtros ────────────────────────────────────────────────────────────────────
 
 function FilterGroup({ label, options, value, onChange, labelFn }) {
   return (
@@ -153,12 +323,12 @@ function FilterGroup({ label, options, value, onChange, labelFn }) {
       {['TODOS', ...options].map(opt => (
         <button key={opt} onClick={() => onChange(opt)} style={{
           display: 'block', width: '100%', textAlign: 'left',
-          background: value === opt ? 'rgba(0,200,255,0.08)' : 'none',
+          background: value === opt ? 'var(--accent-dim)' : 'none',
           border: 'none',
-          borderLeft: `2px solid ${value === opt ? 'var(--cyan)' : 'transparent'}`,
-          color: value === opt ? 'var(--cyan)' : 'var(--txt-3)',
+          borderLeft: `2px solid ${value === opt ? 'var(--accent)' : 'transparent'}`,
+          color: value === opt ? 'var(--accent)' : 'var(--txt-3)',
           fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.06em',
-          padding: '4px 8px', cursor: 'pointer', transition: 'all .15s',
+          padding: '4px 8px', cursor: 'pointer', transition: 'color .15s',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           textTransform: 'uppercase',
         }}>
@@ -169,6 +339,8 @@ function FilterGroup({ label, options, value, onChange, labelFn }) {
   )
 }
 
+// ── Página ─────────────────────────────────────────────────────────────────────
+
 export default function NewsPage() {
   const { articles, countries, sourceTypes, zones, sectors, loading, lastUpdate } = useNewsFeed()
 
@@ -177,24 +349,28 @@ export default function NewsPage() {
   const [zoneFilter,   setZoneFilter]   = useState('TODOS')
   const [countryFilter,setCountryFilter]= useState('TODOS')
   const [typeFilter,   setTypeFilter]   = useState('TODOS')
-  const [selected,     setSelected]     = useState(null)
+  const [modalArticle, setModalArticle] = useState(null)
   const [search,       setSearch]       = useState('')
 
   const filtered = useMemo(() => articles.filter(a => {
     const articleSectors = Array.isArray(a.sectors) ? a.sectors : (a.keywords || [])
     const articleZones   = Array.isArray(a.zones) ? a.zones : []
-
-    if (sevFilter    !== 'TODOS' && a.severity        !== sevFilter)           return false
-    if (sectorFilter !== 'TODOS' && !articleSectors.includes(sectorFilter))    return false
-    if (zoneFilter   !== 'TODOS' && !articleZones.includes(zoneFilter))        return false
-    if (countryFilter!== 'TODOS' && a.source_country  !== countryFilter)       return false
-    if (typeFilter   !== 'TODOS' && a.source_type      !== typeFilter)         return false
-    if (search && !a.title?.toLowerCase().includes(search.toLowerCase()))      return false
+    if (sevFilter    !== 'TODOS' && a.severity       !== sevFilter)           return false
+    if (sectorFilter !== 'TODOS' && !articleSectors.includes(sectorFilter))   return false
+    if (zoneFilter   !== 'TODOS' && !articleZones.includes(zoneFilter))       return false
+    if (countryFilter!== 'TODOS' && a.source_country !== countryFilter)       return false
+    if (typeFilter   !== 'TODOS' && a.source_type    !== typeFilter)          return false
+    if (search && !a.title?.toLowerCase().includes(search.toLowerCase()))     return false
     return true
   }), [articles, sevFilter, sectorFilter, zoneFilter, countryFilter, typeFilter, search])
 
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: 'var(--bg-0)' }}>
+
+      {/* Modal */}
+      {modalArticle && (
+        <NewsModal article={modalArticle} onClose={() => setModalArticle(null)} />
+      )}
 
       {/* Sidebar filtros */}
       <aside style={{
@@ -205,7 +381,6 @@ export default function NewsPage() {
         display: 'flex', flexDirection: 'column', gap: '14px',
         overflowY: 'auto',
       }}>
-        {/* Búsqueda */}
         <div>
           <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
             BUSCAR
@@ -224,47 +399,15 @@ export default function NewsPage() {
           />
         </div>
 
-        <FilterGroup
-          label="SEVERIDAD"
-          options={['high', 'medium', 'low']}
-          value={sevFilter}
-          onChange={setSevFilter}
-        />
-
-        <FilterGroup
-          label="SECTOR"
-          options={sectors}
-          value={sectorFilter}
-          onChange={setSectorFilter}
-          labelFn={s => SECTOR_LABELS[s] || s}
-        />
-
-        <FilterGroup
-          label="ZONA"
-          options={zones}
-          value={zoneFilter}
-          onChange={setZoneFilter}
-        />
-
-        <FilterGroup
-          label="PAÍS"
-          options={countries}
-          value={countryFilter}
-          onChange={setCountryFilter}
-        />
-
-        <FilterGroup
-          label="TIPO"
-          options={sourceTypes}
-          value={typeFilter}
-          onChange={setTypeFilter}
-          labelFn={t => TYPE_LABELS[t] || t}
-        />
+        <FilterGroup label="SEVERIDAD" options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} />
+        <FilterGroup label="SECTOR" options={sectors} value={sectorFilter} onChange={setSectorFilter} labelFn={s => SECTOR_LABELS[s] || s} />
+        <FilterGroup label="ZONA" options={zones} value={zoneFilter} onChange={setZoneFilter} />
+        <FilterGroup label="PAÍS" options={countries} value={countryFilter} onChange={setCountryFilter} />
+        <FilterGroup label="TIPO" options={sourceTypes} value={typeFilter} onChange={setTypeFilter} labelFn={t => TYPE_LABELS[t] || t} />
       </aside>
 
       {/* Feed principal */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Barra de estado */}
         <div style={{
           padding: '8px 16px',
           borderBottom: '1px solid var(--border)',
@@ -275,15 +418,11 @@ export default function NewsPage() {
             NEWS INTELLIGENCE · RSS
           </span>
           <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', marginLeft: 'auto' }}>
-            {loading
-              ? 'Cargando…'
-              : `${filtered.length} artículos · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
-            }
+            {loading ? 'Cargando…' : `${filtered.length} artículos · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`}
           </span>
         </div>
 
-        {/* Artículos */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
           {loading && (
             <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
               Cargando noticias…
@@ -291,21 +430,24 @@ export default function NewsPage() {
           )}
           {!loading && filtered.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
-              {articles.length === 0
-                ? 'Ingestor de noticias no activo o sin artículos aún'
-                : 'Sin resultados para los filtros actuales'}
+              {articles.length === 0 ? 'Ingestor de noticias no activo o sin artículos aún' : 'Sin resultados para los filtros actuales'}
             </div>
           )}
-          {!loading && filtered.map(article => (
-            <NewsCard
-              key={article.id || article.url}
-              article={article}
-              selected={selected === (article.id || article.url)}
-              onClick={() => setSelected(
-                selected === (article.id || article.url) ? null : (article.id || article.url)
-              )}
-            />
-          ))}
+          {!loading && filtered.length > 0 && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '10px',
+            }}>
+              {filtered.map(article => (
+                <NewsCard
+                  key={article.id || article.url}
+                  article={article}
+                  onClick={() => setModalArticle(article)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>

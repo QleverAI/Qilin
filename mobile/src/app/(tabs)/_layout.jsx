@@ -12,7 +12,7 @@ const TABS = [
 ]
 
 function TabIcon({ icon, label, focused }) {
-  const color = focused ? C.cyan : C.txt3
+  const color = focused ? C.accent : C.txt3
   return (
     <View style={{ alignItems:'center', gap:2, paddingTop:6 }}>
       <Text style={{ fontSize:14, color }}>{icon}</Text>
@@ -34,7 +34,7 @@ export default function TabsLayout() {
           paddingBottom:    0,
         },
         tabBarShowLabel:    false,
-        tabBarActiveTintColor:   C.cyan,
+        tabBarActiveTintColor:   C.accent,
         tabBarInactiveTintColor: C.txt3,
       }}
     >

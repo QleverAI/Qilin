@@ -14,11 +14,11 @@ const ORG_LABELS = {
 }
 
 const ORG_ICON = {
-  defense:       '🛡',
-  international: '🌐',
-  think_tank:    '🔬',
-  government:    '🏛',
-  energy:        '⚡',
+  defense:       '[DEF]',
+  international: '[INT]',
+  think_tank:    '[TT]',
+  government:    '[GOV]',
+  energy:        '[NRG]',
 }
 
 const SECTOR_LABELS = {
@@ -33,7 +33,7 @@ const SECTOR_LABELS = {
 
 const SECTOR_COLOR = {
   militar:           'rgba(255,59,74,0.8)',
-  diplomacia:        'rgba(0,200,255,0.8)',
+  diplomacia:        'rgba(79,156,249,0.8)',
   economia:          'rgba(255,176,32,0.8)',
   energia:           'rgba(255,140,0,0.8)',
   ciberseguridad:    'rgba(130,80,255,0.8)',
@@ -63,12 +63,12 @@ function FilterGroup({ label, options, value, onChange, labelFn }) {
       {['TODOS', ...options].map(opt => (
         <button key={opt} onClick={() => onChange(opt)} style={{
           display: 'block', width: '100%', textAlign: 'left',
-          background: value === opt ? 'rgba(0,200,255,0.08)' : 'none',
+          background: value === opt ? 'var(--accent-dim)' : 'none',
           border: 'none',
-          borderLeft: `2px solid ${value === opt ? 'var(--cyan)' : 'transparent'}`,
-          color: value === opt ? 'var(--cyan)' : 'var(--txt-3)',
+          borderLeft: `2px solid ${value === opt ? 'var(--accent)' : 'transparent'}`,
+          color: value === opt ? 'var(--accent)' : 'var(--txt-3)',
           fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.06em',
-          padding: '4px 8px', cursor: 'pointer', transition: 'all .15s',
+          padding: '4px 8px', cursor: 'pointer', transition: 'color .15s',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           textTransform: 'uppercase',
         }}>
@@ -93,7 +93,7 @@ function DocRow({ doc, selected, onClick }) {
         display: 'flex', alignItems: 'flex-start', gap: '10px',
         padding: '9px 12px',
         background: selected ? 'var(--bg-3)' : 'transparent',
-        border: `1px solid ${selected ? 'rgba(0,200,255,0.3)' : 'transparent'}`,
+        border: `1px solid ${selected ? 'rgba(79,156,249,0.3)' : 'transparent'}`,
         borderLeft: `3px solid ${SEV_COLOR[severity]}`,
         borderRadius: '2px',
         cursor: 'pointer',
@@ -103,8 +103,8 @@ function DocRow({ doc, selected, onClick }) {
       onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'var(--bg-2)' }}
       onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'transparent' }}
     >
-      <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>
-        {ORG_ICON[doc.org_type] || '📄'}
+      <span style={{ fontSize: '9px', flexShrink: 0, marginTop: '1px', fontFamily: 'var(--mono)', color: 'var(--txt-3)' }}>
+        {ORG_ICON[doc.org_type] || '[DOC]'}
       </span>
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -116,7 +116,7 @@ function DocRow({ doc, selected, onClick }) {
             {doc.source}
           </span>
           {doc.source_country && (
-            <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--cyan)' }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--accent)' }}>
               [{doc.source_country}]
             </span>
           )}
@@ -154,7 +154,7 @@ function DocDetail({ doc }) {
     <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '16px' }}>
-        <div style={{ fontSize: '24px', marginBottom: '6px' }}>{ORG_ICON[doc.org_type] || '📄'}</div>
+        <div style={{ fontSize: '9px', marginBottom: '6px', fontFamily: 'var(--mono)', color: 'var(--txt-3)' }}>{ORG_ICON[doc.org_type] || '[DOC]'}</div>
         <div style={{ fontSize: '13px', color: 'var(--txt-1)', fontWeight: '600', lineHeight: 1.4, marginBottom: '10px' }}>
           {doc.title}
         </div>
@@ -169,7 +169,7 @@ function DocDetail({ doc }) {
             {ORG_LABELS[doc.org_type] || doc.org_type}
           </span>
           {doc.source_country && (
-            <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--cyan)' }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--accent)' }}>
               [{doc.source_country}]
             </span>
           )}
@@ -245,18 +245,19 @@ function DocDetail({ doc }) {
           style={{
             display: 'inline-block',
             padding: '8px 20px',
-            background: 'rgba(0,200,255,0.1)',
-            border: '1px solid rgba(0,200,255,0.35)',
+            background: 'var(--accent-dim)',
+            border: '1px solid rgba(79,156,249,0.3)',
             borderRadius: '2px',
-            color: 'var(--cyan)',
+            color: 'var(--accent)',
             fontFamily: 'var(--mono)',
             fontSize: '10px',
             fontWeight: '700',
             letterSpacing: '.1em',
             textDecoration: 'none',
+            transition: 'background .15s',
           }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,200,255,0.2)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,200,255,0.1)'}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,156,249,0.2)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-dim)'}
         >
           ABRIR PDF ↗
         </a>

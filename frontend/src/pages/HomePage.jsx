@@ -16,17 +16,11 @@ function ModuleCard({ id, title, icon, subtitle, status, statusColor, children, 
         flexDirection: 'column',
         cursor: 'pointer',
         overflow: 'hidden',
-        transition: 'border-color .2s, box-shadow .2s',
+        transition: 'border-color .15s',
         position: 'relative',
       }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'rgba(0,200,255,0.4)'
-        e.currentTarget.style.boxShadow   = '0 0 24px rgba(0,200,255,0.06), inset 0 0 40px rgba(0,200,255,0.02)'
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'var(--border)'
-        e.currentTarget.style.boxShadow   = 'none'
-      }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-md)'}
+      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
       {/* Card header */}
       <div style={{
@@ -38,7 +32,7 @@ function ModuleCard({ id, title, icon, subtitle, status, statusColor, children, 
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <span style={{ fontSize:'18px', lineHeight:1 }}>{icon}</span>
           <div>
-            <div style={{ fontSize:'11px', fontWeight:'700', letterSpacing:'.18em', color:'var(--cyan)', textTransform:'uppercase' }}>
+            <div style={{ fontSize:'11px', fontWeight:'700', letterSpacing:'.18em', color:'var(--accent)', textTransform:'uppercase' }}>
               {title}
             </div>
             <div style={{ fontSize:'9px', color:'var(--txt-3)', letterSpacing:'.1em', marginTop:'1px' }}>
@@ -50,7 +44,6 @@ function ModuleCard({ id, title, icon, subtitle, status, statusColor, children, 
           <div style={{
             width:'5px', height:'5px', borderRadius:'50%',
             background: statusColor,
-            boxShadow: `0 0 6px ${statusColor}`,
             animation: 'blink 2.4s ease-in-out infinite',
           }} />
           <span style={{ fontFamily:'var(--mono)', fontSize:'9px', color: statusColor, letterSpacing:'.1em' }}>
@@ -67,7 +60,7 @@ function ModuleCard({ id, title, icon, subtitle, status, statusColor, children, 
       {/* Enter hint */}
       <div style={{
         position:'absolute', bottom:10, right:12,
-        fontFamily:'var(--mono)', fontSize:'9px', color:'rgba(0,200,255,0.25)',
+        fontFamily:'var(--mono)', fontSize:'9px', color:'rgba(79,156,249,0.25)',
         letterSpacing:'.1em', pointerEvents:'none',
       }}>
         ABRIR →
@@ -134,8 +127,8 @@ function DocsPreview() {
           borderBottom:'1px solid var(--border)',
           display:'flex', alignItems:'center', gap:'8px',
         }}>
-          <span style={{ fontSize:'13px', flexShrink:0 }}>
-            {d.type === 'pdf' ? '📄' : d.type === 'docx' ? '📝' : '📊'}
+          <span style={{ fontSize:'10px', flexShrink:0, fontFamily:'var(--mono)', color:'var(--txt-3)' }}>
+            {d.type === 'pdf' ? '[PDF]' : d.type === 'docx' ? '[DOC]' : '[XLS]'}
           </span>
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{
@@ -168,7 +161,7 @@ function SocialPreview() {
           display:'flex', alignItems:'center', justifyContent:'space-between',
         }}>
           <div>
-            <div style={{ fontSize:'10px', color:'var(--cyan)', fontFamily:'var(--mono)' }}>{t.topic}</div>
+            <div style={{ fontSize:'10px', color:'var(--accent)', fontFamily:'var(--mono)' }}>{t.topic}</div>
             <div style={{ fontSize:'9px', color:'var(--txt-3)', marginTop:'1px' }}>{t.zone}</div>
           </div>
           <div style={{ textAlign:'right', flexShrink:0, marginLeft:'8px' }}>
@@ -221,7 +214,7 @@ export default function HomePage({ aircraft, alerts, onNavigate }) {
           <div key={item.label} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
             <div style={{
               width:'5px', height:'5px', borderRadius:'50%',
-              background: item.color, boxShadow:`0 0 5px ${item.color}`,
+              background: item.color,
               animation:'blink 2.4s ease-in-out infinite',
             }} />
             <span style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--txt-3)', letterSpacing:'.1em' }}>
@@ -296,7 +289,7 @@ export default function HomePage({ aircraft, alerts, onNavigate }) {
           icon="◉"
           subtitle="X · TELEGRAM · MONITORIZACIÓN ZONAS"
           status={`${TRENDING_TOPICS.length} TRENDING`}
-          statusColor="var(--cyan)"
+          statusColor="var(--accent)"
           onClick={() => onNavigate('social')}
         >
           <SocialPreview />

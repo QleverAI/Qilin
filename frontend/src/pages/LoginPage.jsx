@@ -8,12 +8,12 @@ function BackgroundCanvas() {
     const canvas = ref.current
     const ctx = canvas.getContext('2d')
     let scanY = 0
-    const particles = Array.from({ length: 60 }, () => ({
+    const particles = Array.from({ length: 40 }, () => ({
       x: Math.random(), y: Math.random(),
       vx: (Math.random() - .5) * .0003,
       vy: (Math.random() - .5) * .0002,
-      size: Math.random() * 1.5 + .5,
-      alpha: Math.random() * .4 + .1,
+      size: Math.random() * 1.2 + .4,
+      alpha: Math.random() * .25 + .05,
     }))
 
     function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
@@ -23,10 +23,10 @@ function BackgroundCanvas() {
     function loop() {
       const w = canvas.width, h = canvas.height
       ctx.clearRect(0, 0, w, h)
-      ctx.fillStyle = '#030811'; ctx.fillRect(0, 0, w, h)
+      ctx.fillStyle = '#0c0c0e'; ctx.fillRect(0, 0, w, h)
 
-      ctx.strokeStyle = 'rgba(0,200,255,0.045)'; ctx.lineWidth = .5
-      const gs = 50
+      ctx.strokeStyle = 'rgba(255,255,255,0.025)'; ctx.lineWidth = .5
+      const gs = 60
       for (let x = 0; x < w; x += gs) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke() }
       for (let y = 0; y < h; y += gs) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke() }
 
@@ -36,19 +36,19 @@ function BackgroundCanvas() {
         if (p.y < 0) p.y = 1; if (p.y > 1) p.y = 0
         ctx.beginPath()
         ctx.arc(p.x * w, p.y * h, p.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(0,200,255,${p.alpha})`
+        ctx.fillStyle = `rgba(79,156,249,${p.alpha})`
         ctx.fill()
       })
 
-      scanY = (scanY + .4) % h
-      const grad = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30)
-      grad.addColorStop(0, 'rgba(0,200,255,0)')
-      grad.addColorStop(.5, 'rgba(0,200,255,0.06)')
-      grad.addColorStop(1, 'rgba(0,200,255,0)')
-      ctx.fillStyle = grad; ctx.fillRect(0, scanY - 30, w, 60)
+      scanY = (scanY + .3) % h
+      const grad = ctx.createLinearGradient(0, scanY - 40, 0, scanY + 40)
+      grad.addColorStop(0, 'rgba(79,156,249,0)')
+      grad.addColorStop(.5, 'rgba(79,156,249,0.03)')
+      grad.addColorStop(1, 'rgba(79,156,249,0)')
+      ctx.fillStyle = grad; ctx.fillRect(0, scanY - 40, w, 80)
 
       const vig = ctx.createRadialGradient(w/2,h/2,w*.2,w/2,h/2,w*.8)
-      vig.addColorStop(0,'transparent'); vig.addColorStop(1,'rgba(0,0,0,0.7)')
+      vig.addColorStop(0,'transparent'); vig.addColorStop(1,'rgba(0,0,0,0.6)')
       ctx.fillStyle = vig; ctx.fillRect(0,0,w,h)
 
       requestAnimationFrame(loop)
@@ -71,7 +71,6 @@ export default function LoginPage({ onLogin }) {
     setError(''); setLoading(true)
 
     try {
-      // Intentar autenticar contra la API real
       const body = new URLSearchParams({ username: user, password: pass })
       const res  = await fetch(`${API_URL}/auth/login`, {
         method:  'POST',
@@ -81,20 +80,15 @@ export default function LoginPage({ onLogin }) {
 
       if (res.ok) {
         const data = await res.json()
-        // Guardar token en sessionStorage (desaparece al cerrar pestaña)
         sessionStorage.setItem('qilin_token', data.access_token)
         sessionStorage.setItem('qilin_user',  data.username)
         onLogin({ username: data.username, token: data.access_token })
         return
       }
-
-      // API respondió con error (credenciales incorrectas)
       throw new Error('unauthorized')
 
     } catch (err) {
-      // Si el backend no está corriendo, fallback a credenciales locales (solo dev)
       if (err.name === 'TypeError' || err.message === 'Failed to fetch') {
-        // Backend offline: modo desarrollo
         setTimeout(() => {
           if (user === 'carlos' && pass === '12345') {
             onLogin({ username: user, token: null })
@@ -105,7 +99,6 @@ export default function LoginPage({ onLogin }) {
         }, 800)
         return
       }
-
       setLoading(false)
       triggerError()
     }
@@ -119,60 +112,59 @@ export default function LoginPage({ onLogin }) {
 
   const fieldStyle = {
     width: '100%',
-    background: 'rgba(0,200,255,0.04)',
-    border: '1px solid rgba(0,200,255,0.18)',
-    borderBottom: '1px solid rgba(0,200,255,0.45)',
-    color: '#00c8ff',
-    fontFamily: "'IBM Plex Mono', monospace",
-    fontSize: '14px',
+    background: 'var(--bg-2)',
+    border: '1px solid var(--border-md)',
+    borderBottom: '1px solid var(--border-hi)',
+    color: 'var(--txt-1)',
+    fontFamily: 'var(--mono)',
+    fontSize: '13px',
     padding: '11px 14px',
     outline: 'none',
-    letterSpacing: '.05em',
+    letterSpacing: '.04em',
     borderRadius: '2px',
-    transition: 'all .2s',
+    transition: 'border-color .15s',
     boxSizing: 'border-box',
   }
 
   return (
-    <div style={{ position:'fixed', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow Condensed',sans-serif" }}>
+    <div style={{ position:'fixed', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <BackgroundCanvas />
 
       <div style={{
         position: 'relative', zIndex: 1,
-        width: '360px',
+        width: '340px',
         animation: shake ? 'shake .4s ease' : 'fadeSlideIn .5s ease',
       }}>
-        <div style={{ textAlign:'center', marginBottom:'32px' }}>
-          <svg width="48" height="48" viewBox="0 0 26 26" fill="none" style={{ display:'block', margin:'0 auto 12px' }}>
-            <circle cx="13" cy="13" r="11" stroke="#00c8ff" strokeWidth="1.2" opacity=".3"/>
-            <circle cx="13" cy="13" r="7"  stroke="#00c8ff" strokeWidth="1.2" opacity=".55"/>
-            <circle cx="13" cy="13" r="3"  fill="#00c8ff"/>
-            <line x1="13" y1="2"  x2="13" y2="5"  stroke="#00c8ff" strokeWidth="1"/>
-            <line x1="13" y1="21" x2="13" y2="24" stroke="#00c8ff" strokeWidth="1"/>
-            <line x1="2"  y1="13" x2="5"  y2="13" stroke="#00c8ff" strokeWidth="1"/>
-            <line x1="21" y1="13" x2="24" y2="13" stroke="#00c8ff" strokeWidth="1"/>
+        <div style={{ textAlign:'center', marginBottom:'28px' }}>
+          <svg width="44" height="44" viewBox="0 0 26 26" fill="none" style={{ display:'block', margin:'0 auto 12px' }}>
+            <circle cx="13" cy="13" r="11" stroke="#4f9cf9" strokeWidth="1.2" opacity=".3"/>
+            <circle cx="13" cy="13" r="7"  stroke="#4f9cf9" strokeWidth="1.2" opacity=".55"/>
+            <circle cx="13" cy="13" r="3"  fill="#4f9cf9"/>
+            <line x1="13" y1="2"  x2="13" y2="5"  stroke="#4f9cf9" strokeWidth="1"/>
+            <line x1="13" y1="21" x2="13" y2="24" stroke="#4f9cf9" strokeWidth="1"/>
+            <line x1="2"  y1="13" x2="5"  y2="13" stroke="#4f9cf9" strokeWidth="1"/>
+            <line x1="21" y1="13" x2="24" y2="13" stroke="#4f9cf9" strokeWidth="1"/>
           </svg>
-          <div style={{ fontSize:'36px', fontWeight:'700', letterSpacing:'.3em', color:'#00c8ff', textTransform:'uppercase' }}>QILIN</div>
-          <div style={{ fontSize:'11px', letterSpacing:'.2em', color:'rgba(0,200,255,0.5)', marginTop:'4px', textTransform:'uppercase' }}>
+          <div style={{ fontSize:'32px', fontWeight:'700', letterSpacing:'.3em', color:'var(--accent)', fontFamily:'var(--mono)', textTransform:'uppercase' }}>QILIN</div>
+          <div style={{ fontSize:'10px', letterSpacing:'.18em', color:'var(--txt-3)', marginTop:'4px', fontFamily:'var(--mono)', textTransform:'uppercase' }}>
             Geopolitical Intelligence Platform
           </div>
         </div>
 
         <div style={{
-          background: 'rgba(7,14,28,0.92)',
-          border: '1px solid rgba(0,200,255,0.18)',
-          borderRadius: '4px',
-          padding: '28px 28px 24px',
-          backdropFilter: 'blur(12px)',
-          boxShadow: '0 0 60px rgba(0,0,0,0.6), 0 0 30px rgba(0,200,255,0.05)',
+          background: 'var(--bg-1)',
+          border: '1px solid var(--border-md)',
+          borderTop: '3px solid var(--accent)',
+          borderRadius: '3px',
+          padding: '24px 24px 20px',
         }}>
-          <div style={{ fontSize:'10px', fontWeight:'700', letterSpacing:'.25em', color:'rgba(0,200,255,0.45)', marginBottom:'20px', textTransform:'uppercase' }}>
+          <div style={{ fontSize:'9px', fontWeight:'700', letterSpacing:'.22em', color:'var(--txt-3)', marginBottom:'18px', fontFamily:'var(--mono)', textTransform:'uppercase' }}>
             AUTENTICACIÓN REQUERIDA
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom:'14px' }}>
-              <div style={{ fontSize:'9px', fontWeight:'600', letterSpacing:'.18em', color:'rgba(0,200,255,0.5)', marginBottom:'6px', textTransform:'uppercase' }}>
+            <div style={{ marginBottom:'12px' }}>
+              <div style={{ fontSize:'8px', fontWeight:'600', letterSpacing:'.16em', color:'var(--txt-3)', marginBottom:'5px', fontFamily:'var(--mono)', textTransform:'uppercase' }}>
                 USUARIO
               </div>
               <input
@@ -180,13 +172,13 @@ export default function LoginPage({ onLogin }) {
                 autoComplete="username" spellCheck={false}
                 placeholder="identificador"
                 style={fieldStyle}
-                onFocus={e => { e.target.style.borderColor = '#00c8ff'; e.target.style.boxShadow = '0 0 15px rgba(0,200,255,0.1)' }}
-                onBlur={e  => { e.target.style.borderColor = ''; e.target.style.boxShadow = '' }}
+                onFocus={e => e.target.style.borderColor = 'var(--border-hi)'}
+                onBlur={e  => { e.target.style.borderColor = 'var(--border-md)'; e.target.style.borderBottomColor = 'var(--border-hi)' }}
               />
             </div>
 
-            <div style={{ marginBottom:'20px' }}>
-              <div style={{ fontSize:'9px', fontWeight:'600', letterSpacing:'.18em', color:'rgba(0,200,255,0.5)', marginBottom:'6px', textTransform:'uppercase' }}>
+            <div style={{ marginBottom:'18px' }}>
+              <div style={{ fontSize:'8px', fontWeight:'600', letterSpacing:'.16em', color:'var(--txt-3)', marginBottom:'5px', fontFamily:'var(--mono)', textTransform:'uppercase' }}>
                 CONTRASEÑA
               </div>
               <input
@@ -194,17 +186,17 @@ export default function LoginPage({ onLogin }) {
                 autoComplete="current-password"
                 placeholder="••••••••"
                 style={fieldStyle}
-                onFocus={e => { e.target.style.borderColor = '#00c8ff'; e.target.style.boxShadow = '0 0 15px rgba(0,200,255,0.1)' }}
-                onBlur={e  => { e.target.style.borderColor = ''; e.target.style.boxShadow = '' }}
+                onFocus={e => e.target.style.borderColor = 'var(--border-hi)'}
+                onBlur={e  => { e.target.style.borderColor = 'var(--border-md)'; e.target.style.borderBottomColor = 'var(--border-hi)' }}
               />
             </div>
 
             {error && (
               <div style={{
-                fontFamily:"'IBM Plex Mono',monospace", fontSize:'10px', fontWeight:'500',
-                color:'#ff3b4a', letterSpacing:'.1em', marginBottom:'14px',
-                padding:'8px 10px', background:'rgba(255,59,74,0.08)',
-                border:'1px solid rgba(255,59,74,0.25)', borderRadius:'2px',
+                fontFamily:'var(--mono)', fontSize:'9px', fontWeight:'500',
+                color:'var(--red)', letterSpacing:'.08em', marginBottom:'12px',
+                padding:'7px 10px', background:'rgba(244,63,94,0.08)',
+                border:'1px solid rgba(244,63,94,0.25)', borderRadius:'2px',
               }}>
                 {error}
               </div>
@@ -213,18 +205,18 @@ export default function LoginPage({ onLogin }) {
             <button
               type="submit" disabled={loading || !user || !pass}
               style={{
-                width:'100%', padding:'13px',
-                background: loading ? 'rgba(0,200,255,0.08)' : 'transparent',
-                border:'1px solid #00c8ff',
-                color:'#00c8ff',
-                fontFamily:"'Barlow Condensed',sans-serif",
-                fontSize:'13px', fontWeight:'700', letterSpacing:'.3em', textTransform:'uppercase',
+                width:'100%', padding:'12px',
+                background: 'var(--accent-dim)',
+                border:'1px solid rgba(79,156,249,0.3)',
+                color:'var(--accent)',
+                fontFamily:'var(--mono)',
+                fontSize:'11px', fontWeight:'700', letterSpacing:'.2em', textTransform:'uppercase',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                transition:'all .2s', borderRadius:'2px',
-                opacity: (!user || !pass) ? .5 : 1,
+                transition:'background .15s, border-color .15s', borderRadius:'2px',
+                opacity: (!user || !pass) ? .45 : 1,
               }}
-              onMouseEnter={e => { if(!loading) e.target.style.background='rgba(0,200,255,0.1)' }}
-              onMouseLeave={e => { if(!loading) e.target.style.background='transparent' }}
+              onMouseEnter={e => { if(!loading && user && pass) e.target.style.background='rgba(79,156,249,0.2)' }}
+              onMouseLeave={e => { if(!loading) e.target.style.background='var(--accent-dim)' }}
             >
               {loading ? '◌  AUTENTICANDO...' : 'ACCEDER AL SISTEMA'}
             </button>
@@ -232,9 +224,9 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         <div style={{
-          marginTop:'16px', textAlign:'center',
-          fontFamily:"'IBM Plex Mono',monospace", fontSize:'9px',
-          color:'rgba(0,200,255,0.2)', letterSpacing:'.1em', lineHeight:1.8,
+          marginTop:'14px', textAlign:'center',
+          fontFamily:'var(--mono)', fontSize:'8px',
+          color:'var(--txt-3)', letterSpacing:'.08em', lineHeight:1.8,
         }}>
           SISTEMA RESTRINGIDO · ACCESO NO AUTORIZADO PROHIBIDO<br />
           TODAS LAS SESIONES SON REGISTRADAS Y MONITORIZADAS
@@ -248,6 +240,10 @@ export default function LoginPage({ onLogin }) {
           40%{transform:translateX(8px)}
           60%{transform:translateX(-5px)}
           80%{transform:translateX(5px)}
+        }
+        @keyframes fadeSlideIn {
+          from{opacity:0;transform:translateY(8px)}
+          to{opacity:1;transform:translateY(0)}
         }
       `}</style>
     </div>

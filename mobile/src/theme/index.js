@@ -1,23 +1,20 @@
-// Qilin design tokens — mirrors CSS variables in the web app
 export const C = {
-  bg0:      '#070b0f',
-  bg1:      '#0c1117',
-  bg2:      '#111820',
-  bg3:      '#162030',
-  cyan:     '#00c8ff',
-  green:    '#00e5a0',
-  amber:    '#ffb020',
-  red:      '#ff3b4a',
-  txt1:     '#e2e8f0',
-  txt2:     '#8899aa',
-  txt3:     '#4a5568',
-  border:   'rgba(255,255,255,0.07)',
-  borderMd: 'rgba(255,255,255,0.12)',
+  bg0: '#0c0c0e', bg1: '#131316', bg2: '#1a1a1f', bg3: '#222228',
+  border:   'rgba(255,255,255,0.06)',
+  borderMd: 'rgba(255,255,255,0.11)',
+  borderHi: 'rgba(255,255,255,0.20)',
+  accent:    '#4f9cf9',
+  accentDim: 'rgba(79,156,249,0.12)',
+  cyan:      '#4f9cf9',
+  green:     '#34d399',
+  amber:     '#f59e0b',
+  red:       '#f43f5e',
+  txt1:      '#e8eaf0', txt2: '#7a8699', txt3: '#3f4a5c',
 }
 
 export const FONT = {
-  mono:  'SpaceMono',   // loaded via expo-font
-  sans:  'System',
+  mono: 'SpaceMono',
+  sans: 'System',
 }
 
 export const SEV_COLOR = {
