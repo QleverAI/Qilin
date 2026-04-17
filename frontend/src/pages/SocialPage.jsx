@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSocialFeed } from '../hooks/useSocialFeed'
 
 const CAT_LABELS = {
@@ -83,10 +83,175 @@ function MediaBlock({ url, type, tweetUrl }) {
   )
 }
 
-function TweetCard({ post }) {
+// ── Modal ──────────────────────────────────────────────────────────────────────
+
+function TweetModal({ post, onClose }) {
+  const color = CAT_COLOR[post.category] || '#888'
+  const initial = (post.handle || '?')[0].toUpperCase()
+  const pubDate = post.time
+    ? new Date(post.time).toLocaleString('es-ES', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
+    : ''
+
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.75)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '24px',
+        backdropFilter: 'blur(4px)',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: '580px',
+          background: 'var(--bg-1)',
+          border: `1px solid ${color}33`,
+          borderTop: `4px solid ${color}`,
+          borderRadius: '4px',
+          overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          maxHeight: '85vh',
+        }}
+      >
+        {/* Media */}
+        {post.media_url && post.media_type === 'photo' && (
+          <div style={{ width: '100%', maxHeight: '260px', overflow: 'hidden', flexShrink: 0 }}>
+            <img
+              src={post.media_url}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              onError={e => { e.currentTarget.parentElement.style.display = 'none' }}
+            />
+          </div>
+        )}
+        {post.media_url && post.media_type !== 'photo' && (
+          <a
+            href={post.url} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'block', position: 'relative', flexShrink: 0 }}
+          >
+            <img
+              src={post.media_url} alt=""
+              style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block', opacity: 0.75 }}
+              onError={e => { e.currentTarget.parentElement.style.display = 'none' }}
+            />
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{
+                fontSize: '32px', background: 'rgba(0,0,0,0.6)',
+                borderRadius: '50%', width: '56px', height: '56px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>▶</span>
+            </div>
+          </a>
+        )}
+
+        {/* Content */}
+        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+              background: `${color}22`, border: `1px solid ${color}55`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--mono)', fontSize: '14px', fontWeight: '700', color,
+            }}>
+              {initial}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--txt-1)', fontFamily: 'var(--mono)' }}>
+                {post.display || post.handle}
+              </div>
+              <div style={{ fontSize: '9px', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>
+                @{post.handle} · {pubDate}
+              </div>
+            </div>
+            <span style={{
+              fontSize: '8px', fontWeight: '700', letterSpacing: '.08em',
+              padding: '2px 7px', borderRadius: '2px',
+              background: `${color}18`, color, border: `1px solid ${color}44`,
+              fontFamily: 'var(--mono)', flexShrink: 0,
+            }}>
+              {CAT_LABELS[post.category] || post.category}
+            </span>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none', border: 'none', color: 'var(--txt-3)',
+                cursor: 'pointer', fontSize: '18px', lineHeight: 1,
+                padding: '2px 6px', flexShrink: 0,
+              }}
+            >×</button>
+          </div>
+
+          {/* Tweet text */}
+          <div style={{
+            fontSize: '14px', color: 'var(--txt-1)', lineHeight: 1.65,
+            marginBottom: '20px', wordBreak: 'break-word',
+          }}>
+            {post.content}
+          </div>
+
+          {/* Metrics */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '16px',
+            marginBottom: '20px',
+            fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--txt-3)',
+          }}>
+            <span>❤ {(post.likes || 0).toLocaleString()}</span>
+            <span>🔁 {(post.retweets || 0).toLocaleString()}</span>
+          </div>
+
+          {/* Link */}
+          {post.url && (
+            <a
+              href={post.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                padding: '8px 20px',
+                background: 'rgba(0,200,255,0.1)',
+                border: '1px solid rgba(0,200,255,0.35)',
+                borderRadius: '2px',
+                color: 'var(--cyan)',
+                fontFamily: 'var(--mono)',
+                fontSize: '10px',
+                fontWeight: '700',
+                letterSpacing: '.1em',
+                textDecoration: 'none',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,200,255,0.2)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,200,255,0.1)'}
+            >
+              VER EN X ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TweetCard({ post, onClick }) {
   const color = CAT_COLOR[post.category] || '#888'
   return (
     <div
+      onClick={onClick}
       style={{
         padding: '11px 14px',
         background: 'var(--bg-2)',
@@ -94,6 +259,7 @@ function TweetCard({ post }) {
         borderRadius: '3px',
         marginBottom: '6px',
         transition: 'border-color .15s',
+        cursor: 'pointer',
       }}
       onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(0,200,255,0.2)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
@@ -151,6 +317,7 @@ export default function SocialPage() {
   const [catFilter,  setCatFilter]  = useState('TODAS')
   const [zoneFilter, setZoneFilter] = useState('TODAS')
   const [query,      setQuery]      = useState('')
+  const [modalPost,  setModalPost]  = useState(null)
 
   const filtered = useMemo(() => posts.filter(p => {
     if (catFilter  !== 'TODAS' && p.category !== catFilter)                   return false
@@ -161,6 +328,11 @@ export default function SocialPage() {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-0)' }}>
+
+      {/* Modal */}
+      {modalPost && (
+        <TweetModal post={modalPost} onClose={() => setModalPost(null)} />
+      )}
 
       <div style={{
         background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
@@ -257,7 +429,13 @@ export default function SocialPage() {
                   </span>
                 )}
               </div>
-              {filtered.map(post => <TweetCard key={post.tweet_id} post={post} />)}
+              {filtered.map(post => (
+                <TweetCard
+                  key={post.tweet_id}
+                  post={post}
+                  onClick={() => setModalPost(post)}
+                />
+              ))}
               {filtered.length === 0 && posts.length > 0 && (
                 <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
                   Sin resultados para los filtros actuales
