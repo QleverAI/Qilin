@@ -13,3 +13,4 @@ build/
 # Claude Code — archivos locales (no compartir)
 CLAUDE.local.md
 .claude/settings.local.json
+.worktrees/
