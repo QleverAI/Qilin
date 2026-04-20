@@ -209,3 +209,60 @@ CREATE TABLE IF NOT EXISTS reports (
 
 CREATE INDEX IF NOT EXISTS reports_type_time_idx ON reports (report_type, generated_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS reports_type_period_idx ON reports (report_type, period_start);
+
+-- ─── MERCADOS FINANCIEROS ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS market_prices (
+    time            TIMESTAMPTZ     NOT NULL,
+    ticker          TEXT            NOT NULL,
+    name            TEXT,
+    sector          TEXT,
+    asset_type      TEXT,           -- 'equity' | 'index'
+    open            DOUBLE PRECISION,
+    high            DOUBLE PRECISION,
+    low             DOUBLE PRECISION,
+    close           DOUBLE PRECISION,
+    volume          DOUBLE PRECISION,
+    rsi             DOUBLE PRECISION,
+    macd            DOUBLE PRECISION,
+    macd_signal     DOUBLE PRECISION,
+    bb_upper        DOUBLE PRECISION,
+    bb_lower        DOUBLE PRECISION,
+    bb_mid          DOUBLE PRECISION,
+    sma20           DOUBLE PRECISION,
+    sma50           DOUBLE PRECISION,
+    sma200          DOUBLE PRECISION,
+    atr             DOUBLE PRECISION,
+    vol_sma20       DOUBLE PRECISION,
+    technical_score INTEGER         DEFAULT 0
+);
+
+SELECT create_hypertable('market_prices', 'time', if_not_exists => TRUE);
+SELECT add_compression_policy('market_prices', INTERVAL '7 days');
+
+CREATE INDEX IF NOT EXISTS market_prices_ticker_time_idx ON market_prices (ticker, time DESC);
+
+CREATE TABLE IF NOT EXISTS market_signals (
+    time            TIMESTAMPTZ     NOT NULL,
+    ticker          TEXT            NOT NULL,
+    name            TEXT,
+    sector          TEXT,
+    asset_type      TEXT,
+    geo_relevance   TEXT[],
+    price           DOUBLE PRECISION,
+    volume          DOUBLE PRECISION,
+    rsi             DOUBLE PRECISION,
+    macd            DOUBLE PRECISION,
+    bb_upper        DOUBLE PRECISION,
+    bb_lower        DOUBLE PRECISION,
+    sma20           DOUBLE PRECISION,
+    sma50           DOUBLE PRECISION,
+    sma200          DOUBLE PRECISION,
+    atr             DOUBLE PRECISION,
+    technical_score INTEGER,
+    signals         TEXT[]
+);
+
+SELECT create_hypertable('market_signals', 'time', if_not_exists => TRUE);
+SELECT add_compression_policy('market_signals', INTERVAL '7 days');
+
+CREATE INDEX IF NOT EXISTS market_signals_ticker_time_idx ON market_signals (ticker, time DESC);

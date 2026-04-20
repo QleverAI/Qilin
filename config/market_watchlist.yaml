@@ -1,0 +1,53 @@
+equities:
+  defense:
+    - ticker: LMT
+      name: "Lockheed Martin"
+      geo_relevance: [middle_east, europe, asia_pacific]
+    - ticker: RTX
+      name: "Raytheon Technologies"
+      geo_relevance: [middle_east, europe]
+    - ticker: NOC
+      name: "Northrop Grumman"
+      geo_relevance: [asia_pacific, europe]
+    - ticker: BA
+      name: "Boeing"
+      geo_relevance: [global]
+    - ticker: BAESY
+      name: "BAE Systems"
+      geo_relevance: [europe, middle_east]
+    - ticker: AIR.PA
+      name: "Airbus"
+      geo_relevance: [europe, global]
+  energy:
+    - ticker: XOM
+      name: "ExxonMobil"
+      geo_relevance: [middle_east, russia]
+    - ticker: CVX
+      name: "Chevron"
+      geo_relevance: [middle_east]
+    - ticker: BP
+      name: "BP"
+      geo_relevance: [russia, middle_east]
+    - ticker: SHEL
+      name: "Shell"
+      geo_relevance: [europe, middle_east]
+  maritime:
+    - ticker: ZIM
+      name: "ZIM Shipping"
+      geo_relevance: [red_sea, strait_of_hormuz]
+    - ticker: MATX
+      name: "Matson"
+      geo_relevance: [asia_pacific]
+  commodities:
+    - ticker: GLD
+      name: "Gold ETF"
+      geo_relevance: [global]
+    - ticker: USO
+      name: "Oil ETF"
+      geo_relevance: [middle_east, russia]
+
+indices:
+  - ticker: "^VIX"
+    name: "Volatility Index"
+  - ticker: "^GSPC"
+    name: "S&P 500"

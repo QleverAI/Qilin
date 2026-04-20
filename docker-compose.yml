@@ -141,6 +141,22 @@ services:
       - redis
       - timescaledb
 
+  ingestor-market:
+    build: ./services/ingestor_market
+    container_name: qilin_ingestor_market
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      MARKET_POLL_INTERVAL: ${MARKET_POLL_INTERVAL:-900}
+      MARKET_POLL_INTERVAL_OFFHOURS: ${MARKET_POLL_INTERVAL_OFFHOURS:-3600}
+      MARKET_HISTORY_DAYS: ${MARKET_HISTORY_DAYS:-60}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
   report-engine:
     build: ./services/report_engine
     container_name: qilin_report_engine
