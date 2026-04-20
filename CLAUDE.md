@@ -7,14 +7,13 @@ Plataforma de inteligencia geopolítica en tiempo real. Agrega y correlaciona da
 ## Arquitectura
 
 ```
-ingestor-adsb  ──┐
-ingestor-ais   ──┼──► Redis Streams ──► alert-engine ──► Telegram / TimescaleDB
-ingestor-news  ──┘                              │
-                                                ▼
-                                         FastAPI + WS (:8000)
-                                                │
-                                                ▼
-                                    React + MapLibre GL (:3000)
+ingestor-adsb     ──┐
+ingestor-ais      ──┤
+ingestor-news     ──┤
+ingestor-social   ──┼──► Redis Streams ──► alert-engine (LLM) ──► Telegram / TimescaleDB
+ingestor-docs     ──┤
+ingestor-sec      ──┤
+ingestor-sentinel ──┘
 ```
 
 ## Stack
@@ -71,15 +70,19 @@ npm run build
 | `redis` | 6379 | Cache de posiciones actuales + message bus |
 | `timescaledb` | 5432 | Almacenamiento histórico con compresión automática 7d |
 | `ingestor-adsb` | — | Polling Airplanes.live (/mil global + /point por zona), filtra por zonas |
-| `ingestor-ais` | — | Polling AISHub cada 60s, filtra por zonas |
-| `alert-engine` | — | Motor de reglas, notifica por Telegram |
+| `ingestor-ais` | — | WebSocket aisstream.io; filtra tankers/military/unknown; detecta AIS dark |
+| `ingestor-sentinel` | — | Copernicus CDSE OAuth2; monitoriza NO₂/SO₂ por zona; detecta anomalías ≥1.5x baseline |
+| `alert-engine` | — | Motor de reglas + enriquecimiento LLM (claude-haiku-4-5); triage automático; notifica Telegram |
 
 ## Variables de entorno clave (ver .env.example)
 
 - `DB_USER` / `DB_PASSWORD` — credenciales PostgreSQL
-- `AISHUB_USER` — requerido para datos AIS
+- `AISSTREAM_API_KEY` — API key de aisstream.io para datos AIS en tiempo real
+- `CDSE_USER` / `CDSE_PASSWORD` — credenciales Copernicus Data Space (registro gratuito)
 - `TELEGRAM_TOKEN` / `TELEGRAM_CHAT_ID` — bot para alertas
 - `ADSB_POLL_INTERVAL` / `AIS_POLL_INTERVAL` — intervalos en segundos
+- `ANTHROPIC_API_KEY` — clave Anthropic para enriquecimiento LLM de alertas
+- `SENTINEL_POLL_INTERVAL` — intervalo Sentinel-5P en segundos (default 21600 = 6h)
 - `JWT_SECRET` — clave de firma de tokens (cambiar en producción)
 - `AUTH_USER_N` — usuarios con formato `username:$2b$12$bcrypt_hash`
 
@@ -142,3 +145,17 @@ Anti-spam: cooldown de 1h por regla+zona. Ventana de correlación: 6h.
 - **TimescaleDB** requiere que `init.sql` se ejecute solo en la primera creación del volumen
 - **Redis Streams** usan `$` como `last_id` inicial para solo leer mensajes nuevos
 - El frontend tiene datos mock en `src/data/` para desarrollo sin backend
+
+## Roadmap de despliegue
+
+### Hetzner VPS (planificado)
+- VPS CX21 o CX31 (2-4 vCPU, 4-8GB RAM)
+- Docker Compose con Traefik como reverse proxy
+- TimescaleDB con backups automáticos a Hetzner Object Storage
+- Dominio propio con SSL automático (Let's Encrypt vía Traefik)
+
+### Mejoras planificadas
+- **ENTSO-E**: ingestor de datos de generación eléctrica europea (cortes de luz como indicador geopolítico)
+- **Correlación LLM avanzada**: correlación cruzada entre streams (Sentinel + AIS + noticias)
+- **Frontend móvil**: app React Native (Expo) con push notifications
+- **Alertas en tiempo real**: WebSocket en el frontend para alertas sin polling
