@@ -329,6 +329,20 @@ async def enrich_alert(alert: dict, db) -> dict:
             "context_summary": alert.get("description", ""), "related_signals": []}
 
 
+def rule_sentinel_anomaly(zone: str, data: dict) -> dict | None:
+    ratio = data.get("anomaly_ratio")
+    product = data.get("product", "?")
+    if ratio and ratio >= 1.5:
+        return {
+            "zone":        zone,
+            "severity":    "medium" if ratio < 2.5 else "high",
+            "rule":        "sentinel_atmospheric_anomaly",
+            "title":       f"Anomalía atmosférica {product} — {zone.upper()}",
+            "description": f"Concentración de {product} en zona {zone}: {ratio:.1f}x el baseline histórico.",
+            "entities":    [{"type": "sentinel", "product": product, "anomaly_ratio": ratio}],
+        }
+
+
 RULES_AIRCRAFT = [rule_military_aircraft_surge, rule_asw_patrol]
 RULES_VESSELS  = [rule_ais_dark, rule_naval_group]
 
@@ -500,6 +514,7 @@ async def consume_stream(redis, db, stream: str, last_id: str) -> str:
                 key  = f"{stream}:{zone}"
 
                 # Añadir a ventana y limpiar entradas antiguas
+                data["_ts"] = asyncio.get_event_loop().time()
                 window[key].append(data)
                 cutoff = asyncio.get_event_loop().time() - WINDOW_SECONDS
                 window[key] = [
@@ -519,6 +534,11 @@ async def consume_stream(redis, db, stream: str, last_id: str) -> str:
                         if alert:
                             await process_alert(redis, db, alert)
 
+                elif stream == "stream:sentinel":
+                    alert = rule_sentinel_anomaly(zone, data)
+                    if alert:
+                        await process_alert(redis, db, alert)
+
             except Exception as e:
                 log.error(f"Error procesando mensaje {msg_id}: {e}")
 
@@ -535,7 +555,8 @@ async def daily_summary_scheduler(db):
         now  = datetime.now(timezone.utc)
         target = now.replace(hour=7, minute=0, second=0, microsecond=0)
         if now >= target:
-            target = target.replace(day=target.day + 1)
+            from datetime import timedelta
+            target = (target + timedelta(days=1)).replace(hour=7, minute=0, second=0, microsecond=0)
         wait = (target - now).total_seconds()
         log.info(f"Próximo resumen diario en {wait/3600:.1f}h ({target.strftime('%H:%M UTC %d/%m')})")
         await asyncio.sleep(wait)
@@ -557,7 +578,7 @@ async def main():
         except Exception as e:
             log.warning(f"No se pudo conectar a DB: {e}. Alertas no se persistirán.")
 
-    last_ids = {"stream:adsb": "$", "stream:ais": "$"}
+    last_ids = {"stream:adsb": "$", "stream:ais": "$", "stream:sentinel": "$"}
 
     # Lanzar scheduler de resumen diario en background
     asyncio.create_task(daily_summary_scheduler(db))
