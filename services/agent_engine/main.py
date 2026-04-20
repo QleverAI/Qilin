@@ -1,14 +1,17 @@
 import asyncio
 import logging
 import os
+import sys
 
 import asyncpg
+import httpx
 import yaml
 import redis.asyncio as aioredis
 
 from analyst import Analyst
 from orchestrator import Orchestrator
 from rate_limiter import RateLimiter
+from reporter import Reporter
 from tools.geo_tools import load_zones
 
 logging.basicConfig(
@@ -17,12 +20,16 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
-DB_URL = os.getenv("DB_URL", "")
-MAX_ANALYSES_PER_HOUR = int(os.getenv("MAX_ANALYSES_PER_HOUR", "10"))
-MAX_PARALLEL_ANALYSES = int(os.getenv("MAX_PARALLEL_ANALYSES", "3"))
+REDIS_URL              = os.getenv("REDIS_URL", "redis://redis:6379")
+DB_URL                 = os.getenv("DB_URL", "")
+ANTHROPIC_API_KEY      = os.getenv("ANTHROPIC_API_KEY", "")
+TELEGRAM_TOKEN         = os.getenv("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID       = os.getenv("TELEGRAM_CHAT_ID", "")
+MAX_ANALYSES_PER_HOUR  = int(os.getenv("MAX_ANALYSES_PER_HOUR", "10"))
+MAX_PARALLEL_ANALYSES  = int(os.getenv("MAX_PARALLEL_ANALYSES", "3"))
+AGENT_TIMEOUT_SECONDS  = int(os.getenv("AGENT_TIMEOUT_SECONDS", "45"))
 
-ZONES_CONFIG = os.getenv("ZONES_CONFIG", "/app/config/zones.yaml")
+ZONES_CONFIG     = os.getenv("ZONES_CONFIG",     "/app/config/zones.yaml")
 WATCHLIST_CONFIG = os.getenv("WATCHLIST_CONFIG", "/app/config/market_watchlist.yaml")
 
 STREAMS = [
@@ -87,6 +94,7 @@ async def stream_listener(
 async def queue_drainer(
     rate_limiter: RateLimiter,
     orchestrator: Orchestrator,
+    reporter: Reporter,
 ) -> None:
     while True:
         try:
@@ -105,9 +113,11 @@ async def queue_drainer(
             continue
 
         try:
-            await orchestrator.process(event)
+            analysis = await orchestrator.process(event)
+            if analysis:
+                await reporter.report(analysis)
         except Exception as exc:
-            log.error("Orchestrator error (desde cola): %s", exc)
+            log.error("Orchestrator/Reporter error (desde cola): %s", exc)
         finally:
             await rate_limiter.release()
 
@@ -125,8 +135,19 @@ async def metrics_logger(rate_limiter: RateLimiter) -> None:
 
 
 async def main() -> None:
-    log.info("Agent Engine iniciando...")
+    # Guard: cannot run without LLM key
+    if not ANTHROPIC_API_KEY:
+        log.error("[AGENT-ENGINE] ANTHROPIC_API_KEY no configurada — abortando arranque")
+        sys.exit(1)
 
+    log.info(
+        "[AGENT-ENGINE] Arrancando — max_per_hour=%d max_parallel=%d timeout=%ds",
+        MAX_ANALYSES_PER_HOUR,
+        MAX_PARALLEL_ANALYSES,
+        AGENT_TIMEOUT_SECONDS,
+    )
+
+    # Config
     try:
         zones = load_zones(ZONES_CONFIG)
         log.info("Zonas cargadas: %d", len(zones))
@@ -141,7 +162,12 @@ async def main() -> None:
         log.warning("No se pudo cargar market_watchlist.yaml: %s", exc)
         watchlist = {}
 
+    # Connections
     redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+    http_client  = httpx.AsyncClient(
+        timeout=30.0,
+        limits=httpx.Limits(max_connections=10),
+    )
 
     pool: asyncpg.Pool | None = None
     if DB_URL:
@@ -151,11 +177,17 @@ async def main() -> None:
         except Exception as exc:
             log.warning("Sin conexión a DB, continuando sin persistencia: %s", exc)
 
+    # Service objects
     rate_limiter = RateLimiter(
         max_per_hour=MAX_ANALYSES_PER_HOUR,
         max_parallel=MAX_PARALLEL_ANALYSES,
     )
-    analyst = Analyst(pool=pool)
+    analyst      = Analyst(pool=pool)
+    reporter     = Reporter(
+        telegram_token=TELEGRAM_TOKEN,
+        telegram_chat_id=TELEGRAM_CHAT_ID,
+        http_client=http_client,
+    )
     orchestrator = Orchestrator(
         pool=pool,
         rate_limiter=rate_limiter,
@@ -170,7 +202,7 @@ async def main() -> None:
 
         if not acquired:
             event = dict(data)
-            event["_stream"] = stream
+            event["_stream"]   = stream
             event["_severity"] = severity
             if rate_limiter.queue.full():
                 if severity < 5:
@@ -188,12 +220,14 @@ async def main() -> None:
             return
 
         event = dict(data)
-        event["_stream"] = stream
+        event["_stream"]   = stream
         event["_severity"] = severity
         try:
-            await orchestrator.process(event)
+            analysis = await orchestrator.process(event)
+            if analysis:
+                await reporter.report(analysis)
         except Exception as exc:
-            log.error("Orchestrator error: %s", exc)
+            log.error("Orchestrator/Reporter error: %s", exc)
         finally:
             await rate_limiter.release()
 
@@ -202,7 +236,7 @@ async def main() -> None:
         for s in STREAMS
     ] + [
         asyncio.create_task(metrics_logger(rate_limiter)),
-        asyncio.create_task(queue_drainer(rate_limiter, orchestrator)),
+        asyncio.create_task(queue_drainer(rate_limiter, orchestrator, reporter)),
     ]
 
     log.info("Agent Engine listo, escuchando %d streams", len(STREAMS))
@@ -213,6 +247,7 @@ async def main() -> None:
         for t in tasks:
             t.cancel()
         await redis_client.aclose()
+        await http_client.aclose()
         if pool:
             await pool.close()
 
