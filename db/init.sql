@@ -195,7 +195,7 @@ CREATE INDEX IF NOT EXISTS sentinel_product_idx   ON sentinel_observations (prod
 
 -- ─── GENERATED REPORTS ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS reports (
-    id               SERIAL          PRIMARY KEY,
+    id               BIGSERIAL       PRIMARY KEY,
     report_type      TEXT            NOT NULL,   -- 'daily' or 'weekly'
     period_start     TIMESTAMPTZ     NOT NULL,
     period_end       TIMESTAMPTZ     NOT NULL,
@@ -204,7 +204,8 @@ CREATE TABLE IF NOT EXISTS reports (
     file_path        TEXT            NOT NULL,
     file_size_kb     INTEGER,
     alert_count      INTEGER         DEFAULT 0,
-    top_severity     INTEGER         DEFAULT 0
+    top_severity     INTEGER         DEFAULT 0  -- numeric score 0–10 (max alert severity_score)
 );
 
 CREATE INDEX IF NOT EXISTS reports_type_time_idx ON reports (report_type, generated_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS reports_type_period_idx ON reports (report_type, period_start);
