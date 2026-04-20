@@ -266,3 +266,26 @@ SELECT create_hypertable('market_signals', 'time', if_not_exists => TRUE);
 SELECT add_compression_policy('market_signals', INTERVAL '7 days');
 
 CREATE INDEX IF NOT EXISTS market_signals_ticker_time_idx ON market_signals (ticker, time DESC);
+
+-- ─── POLYMARKET SIGNALS ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS polymarket_signals (
+    time            TIMESTAMPTZ     NOT NULL,
+    market_id       TEXT            NOT NULL,
+    question        TEXT            NOT NULL,
+    category        TEXT,
+    yes_price       DOUBLE PRECISION,
+    prev_1h_price   DOUBLE PRECISION,
+    prev_24h_price  DOUBLE PRECISION,
+    change_1h       DOUBLE PRECISION,
+    change_24h      DOUBLE PRECISION,
+    signal_type     TEXT,
+    zones           TEXT[],
+    volume          DOUBLE PRECISION,
+    end_date        TIMESTAMPTZ
+);
+
+SELECT create_hypertable('polymarket_signals', 'time', if_not_exists => TRUE);
+SELECT add_compression_policy('polymarket_signals', INTERVAL '7 days');
+
+CREATE INDEX IF NOT EXISTS polymarket_signals_market_idx ON polymarket_signals (market_id, time DESC);
+CREATE INDEX IF NOT EXISTS polymarket_signals_zones_gin  ON polymarket_signals USING GIN (zones);

@@ -141,6 +141,19 @@ services:
       - redis
       - timescaledb
 
+  ingestor-polymarket:
+    build: ./services/ingestor_polymarket
+    container_name: qilin_ingestor_polymarket
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      POLYMARKET_POLL_INTERVAL: ${POLYMARKET_POLL_INTERVAL:-300}
+      POLYMARKET_MIN_VOLUME: ${POLYMARKET_MIN_VOLUME:-1000}
+    depends_on:
+      - redis
+      - timescaledb
+
   ingestor-market:
     build: ./services/ingestor_market
     container_name: qilin_ingestor_market
