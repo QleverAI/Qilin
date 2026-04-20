@@ -173,3 +173,22 @@ CREATE INDEX        IF NOT EXISTS sec_filings_time_idx      ON sec_filings (time
 CREATE INDEX        IF NOT EXISTS sec_filings_ticker_idx    ON sec_filings (ticker, time DESC);
 CREATE INDEX        IF NOT EXISTS sec_filings_sector_idx    ON sec_filings (sector, time DESC);
 CREATE INDEX        IF NOT EXISTS sec_filings_form_idx      ON sec_filings (form_type, time DESC);
+
+-- ─── SENTINEL-5P OBSERVATIONS ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS sentinel_observations (
+    time            TIMESTAMPTZ      NOT NULL,
+    zone_id         TEXT             NOT NULL,
+    product         TEXT             NOT NULL,  -- 'NO2' or 'SO2'
+    mean_value      DOUBLE PRECISION,
+    max_value       DOUBLE PRECISION,
+    p95_value       DOUBLE PRECISION,
+    baseline_mean   DOUBLE PRECISION,
+    anomaly_ratio   DOUBLE PRECISION,
+    granule_id      TEXT             NOT NULL
+);
+
+SELECT create_hypertable('sentinel_observations', 'time', if_not_exists => TRUE);
+SELECT add_compression_policy('sentinel_observations', INTERVAL '7 days');
+
+CREATE INDEX IF NOT EXISTS sentinel_zone_time_idx ON sentinel_observations (zone_id, time DESC);
+CREATE INDEX IF NOT EXISTS sentinel_product_idx   ON sentinel_observations (product, time DESC);
