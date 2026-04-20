@@ -1,7 +1,14 @@
 """
-Qilin — Ingestor AIS
-Fuente: AISHub API (requiere cuenta gratuita y receptor propio)
-Publica posiciones de embarcaciones en Redis Streams filtradas por zonas.
+Qilin — Ingestor AIS (aisstream.io)
+Fuente: wss://stream.aisstream.io/v0/stream — WebSocket, API key gratuita.
+
+Estrategia:
+  1. Lee zonas desde config/zones.yaml y construye bounding boxes para la suscripción.
+  2. Conecta vía WebSocket y suscribe a todas las bounding boxes en un solo mensaje.
+  3. Filtra por vessel_type: tankers (80-89), military (35), unknown (0).
+  4. Detecta AIS dark: buque que no emite >30 min habiendo estado activo en zona.
+  5. Publica en stream:ais de Redis + persiste en vessel_positions (hypertable).
+  6. Reconexión automática con backoff exponencial si cae el WebSocket.
 """
 
 import asyncio
@@ -10,118 +17,226 @@ import logging
 import os
 from datetime import datetime, timezone
 
-import httpx
+import asyncpg
 import redis.asyncio as aioredis
+import websockets
 import yaml
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [AIS] %(message)s")
 log = logging.getLogger(__name__)
 
-AISHUB_URL    = "https://data.aishub.net/ws.php"
-REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379")
-AISHUB_USER   = os.getenv("AISHUB_USER", "")
-POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "60"))
+AISSTREAM_URL   = "wss://stream.aisstream.io/v0/stream"
+REDIS_URL       = os.getenv("REDIS_URL", "redis://localhost:6379")
+DB_URL          = os.getenv("DB_URL", "")
+AISSTREAM_KEY   = os.getenv("AISSTREAM_API_KEY", "")
 
-# Tipos de barco AIS considerados militares/gobierno
-MILITARY_TYPES = {35, 36}  # 35=military, 36=law enforcement
+# Tipos de buque a monitorizar
+TRACKED_TYPES = set(range(80, 90)) | {35, 0}  # tankers + military + unknown
 
 
-def load_zones() -> list[dict]:
+# ── Config ────────────────────────────────────────────────────────────────────
+
+def load_zones() -> list[tuple[str, dict]]:
     with open("/app/config/zones.yaml") as f:
         cfg = yaml.safe_load(f)
     return [(name, z) for name, z in cfg["zones"].items()]
 
 
-def in_zone(lat, lon, zone: dict) -> bool:
-    if lat is None or lon is None:
-        return False
-    return (
-        zone["lat"][0] <= lat <= zone["lat"][1]
-        and zone["lon"][0] <= lon <= zone["lon"][1]
-    )
+def build_bounding_boxes(zones: list[tuple[str, dict]]) -> list[list[list[float]]]:
+    """Convierte zones.yaml al formato aisstream: [[lat_min,lon_min],[lat_max,lon_max]]"""
+    return [
+        [[z["lat"][0], z["lon"][0]], [z["lat"][1], z["lon"][1]]]
+        for _, z in zones
+    ]
 
+
+def zone_for_position(lat: float, lon: float, zones: list[tuple[str, dict]]) -> str:
+    for zone_name, z in zones:
+        if z["lat"][0] <= lat <= z["lat"][1] and z["lon"][0] <= lon <= z["lon"][1]:
+            return zone_name
+    return "unknown"
+
+
+# ── Clasificación ─────────────────────────────────────────────────────────────
 
 def classify_vessel(ship_type: int) -> str:
-    if ship_type in MILITARY_TYPES:
+    if ship_type == 35:
         return "military"
-    if 70 <= ship_type <= 79:
-        return "cargo"
     if 80 <= ship_type <= 89:
         return "tanker"
+    if 70 <= ship_type <= 79:
+        return "cargo"
     if ship_type == 60:
         return "passenger"
     return "unknown"
 
 
-async def fetch_vessels(client: httpx.AsyncClient, zone_cfg: dict) -> list:
-    """Solicita embarcaciones de AISHub para un bounding box concreto."""
-    try:
-        params = {
-            "username": AISHUB_USER,
-            "format":   "1",      # JSON
-            "output":   "full",
-            "compress": "0",
-            "latmin":   zone_cfg["lat"][0],
-            "latmax":   zone_cfg["lat"][1],
-            "lonmin":   zone_cfg["lon"][0],
-            "lonmax":   zone_cfg["lon"][1],
-        }
-        r = await client.get(AISHUB_URL, params=params, timeout=30)
-        r.raise_for_status()
-        data = r.json()
-        # AISHub devuelve [metadata, [vessels...]]
-        return data[1] if len(data) > 1 else []
-    except Exception as e:
-        log.warning(f"Error fetching AISHub: {e}")
-        return []
+def should_track(ship_type: int) -> bool:
+    return ship_type in TRACKED_TYPES
 
+
+# ── Publicación ───────────────────────────────────────────────────────────────
+
+async def publish_vessel(redis, db, vessel: dict):
+    mmsi = vessel["mmsi"]
+
+    await redis.xadd("stream:ais", {"data": json.dumps(vessel, default=str)}, maxlen=5000)
+    await redis.setex(f"current:vessel:{mmsi}", 300, json.dumps(vessel, default=str))
+
+    if db:
+        try:
+            await db.execute(
+                """
+                INSERT INTO vessel_positions
+                    (time, mmsi, name, lat, lon, speed, course, heading,
+                     ship_type, category, flag, destination, ais_active, zone)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                """,
+                datetime.fromisoformat(vessel["time"]),
+                mmsi, vessel.get("name"), vessel.get("lat"), vessel.get("lon"),
+                vessel.get("speed"), vessel.get("course"), vessel.get("heading"),
+                vessel.get("ship_type"), vessel.get("category"),
+                vessel.get("flag"), vessel.get("destination"),
+                True, vessel.get("zone", "unknown"),
+            )
+        except Exception as e:
+            log.error(f"Error guardando vessel {mmsi} en DB: {e}")
+
+
+async def check_ais_dark(redis, db, zones: list[tuple[str, dict]]):
+    """
+    Escanea buques conocidos que han dejado de emitir.
+    Publica un evento AIS dark en stream:ais cuando el TTL es crítico.
+    """
+    try:
+        keys = await redis.keys("current:vessel:*")
+        for key in keys:
+            raw = await redis.get(key)
+            if not raw:
+                continue
+            vessel = json.loads(raw)
+            category = vessel.get("category", "unknown")
+            if category not in ("tanker", "unknown", "military"):
+                continue
+            ttl = await redis.ttl(key)
+            if ttl < 30:
+                mmsi = vessel.get("mmsi", key.split(":")[-1])
+                dark_vessel = {**vessel, "ais_active": False, "time": datetime.now(timezone.utc).isoformat()}
+                await redis.xadd("stream:ais", {"data": json.dumps(dark_vessel, default=str)}, maxlen=5000)
+                log.info(f"AIS dark detectado: {mmsi} ({category}) en {vessel.get('zone', 'unknown')}")
+    except Exception as e:
+        log.warning(f"Error en check_ais_dark: {e}")
+
+
+# ── WebSocket consumer ────────────────────────────────────────────────────────
+
+async def consume(redis, db, zones: list[tuple[str, dict]]):
+    if not AISSTREAM_KEY:
+        log.error("AISSTREAM_API_KEY no configurada — el ingestor AIS no puede conectar.")
+        return
+
+    bboxes = build_bounding_boxes(zones)
+    subscribe_msg = json.dumps({
+        "APIKey":        AISSTREAM_KEY,
+        "BoundingBoxes": bboxes,
+        "FilterMessageTypes": ["PositionReport", "ShipStaticData"],
+    })
+
+    backoff = 5
+    while True:
+        try:
+            log.info(f"Conectando a aisstream.io ({len(bboxes)} bounding boxes)...")
+            async with websockets.connect(AISSTREAM_URL, ping_interval=30) as ws:
+                await ws.send(subscribe_msg)
+                log.info("Suscrito a aisstream.io — escuchando mensajes AIS")
+                backoff = 5  # reset tras conexión exitosa
+
+                count = 0
+                async for raw_msg in ws:
+                    try:
+                        msg = json.loads(raw_msg)
+                        msg_type = msg.get("MessageType", "")
+                        metadata  = msg.get("MetaData", {})
+                        mmsi      = str(metadata.get("MMSI", ""))
+
+                        if not mmsi:
+                            continue
+
+                        if msg_type == "PositionReport":
+                            pos = msg.get("Message", {}).get("PositionReport", {})
+                            lat = pos.get("Latitude")
+                            lon = pos.get("Longitude")
+                            if lat is None or lon is None:
+                                continue
+
+                            ship_type = metadata.get("ShipType", 0) or 0
+                            if not should_track(ship_type):
+                                continue
+
+                            zone = zone_for_position(lat, lon, zones)
+                            vessel = {
+                                "mmsi":      mmsi,
+                                "name":      metadata.get("ShipName", "").strip() or None,
+                                "lat":       lat,
+                                "lon":       lon,
+                                "speed":     pos.get("Sog"),
+                                "course":    pos.get("Cog"),
+                                "heading":   pos.get("TrueHeading"),
+                                "ship_type": ship_type,
+                                "category":  classify_vessel(ship_type),
+                                "flag":      metadata.get("flag"),
+                                "destination": metadata.get("Destination", "").strip() or None,
+                                "ais_active": True,
+                                "zone":      zone,
+                                "time":      datetime.now(timezone.utc).isoformat(),
+                            }
+                            await publish_vessel(redis, db, vessel)
+                            count += 1
+
+                            if count % 500 == 0:
+                                log.info(f"Procesadas {count} posiciones AIS en este ciclo")
+
+                    except Exception as e:
+                        log.error(f"Error procesando mensaje AIS: {e}")
+
+        except websockets.exceptions.ConnectionClosed as e:
+            log.warning(f"WebSocket aisstream.io cerrado: {e}. Reconectando en {backoff}s...")
+        except Exception as e:
+            log.error(f"Error en WebSocket AIS: {e}. Reconectando en {backoff}s...")
+
+        await asyncio.sleep(backoff)
+        backoff = min(backoff * 2, 300)  # backoff exponencial hasta 5min
+
+
+# ── AIS dark checker loop ─────────────────────────────────────────────────────
+
+async def dark_checker_loop(redis, db, zones):
+    while True:
+        await asyncio.sleep(120)  # comprueba cada 2 minutos
+        await check_ais_dark(redis, db, zones)
+
+
+# ── Main ─────────────────────────────────────────────────────────────────────
 
 async def main():
-    log.info("Qilin AIS ingestor arrancando...")
+    log.info("Qilin AIS ingestor (aisstream.io) arrancando...")
+
     zones = load_zones()
+    log.info(f"Cargadas {len(zones)} zonas")
+
     redis = aioredis.from_url(REDIS_URL, decode_responses=True)
 
-    async with httpx.AsyncClient() as client:
-        while True:
-            total = 0
-            seen_mmsi = set()  # evitar duplicados entre zonas solapadas
+    db = None
+    if DB_URL:
+        try:
+            db = await asyncpg.connect(DB_URL)
+            log.info("Conectado a TimescaleDB.")
+        except Exception as e:
+            log.warning(f"No se pudo conectar a DB: {e}. Vessels no se persistirán.")
 
-            for zone_name, zone_cfg in zones:
-                vessels = await fetch_vessels(client, zone_cfg)
+    asyncio.create_task(dark_checker_loop(redis, db, zones))
 
-                for v in vessels:
-                    mmsi = str(v.get("MMSI", ""))
-                    if not mmsi or mmsi in seen_mmsi:
-                        continue
-                    seen_mmsi.add(mmsi)
-
-                    ship_type = int(v.get("TYPE", 0) or 0)
-                    vessel = {
-                        "mmsi":        mmsi,
-                        "name":        v.get("NAME", "").strip() or None,
-                        "lat":         v.get("LATITUDE"),
-                        "lon":         v.get("LONGITUDE"),
-                        "speed":       v.get("SPEED"),
-                        "course":      v.get("COURSE"),
-                        "heading":     v.get("HEADING"),
-                        "ship_type":   ship_type,
-                        "category":    classify_vessel(ship_type),
-                        "flag":        v.get("COUNTRY"),
-                        "destination": v.get("DESTINATION", "").strip() or None,
-                        "ais_active":  True,
-                        "zone":        zone_name,
-                        "time":        datetime.now(timezone.utc).isoformat(),
-                    }
-
-                    await redis.xadd("stream:ais", {"data": json.dumps(vessel)})
-                    key = f"current:vessel:{mmsi}"
-                    await redis.setex(key, 300, json.dumps(vessel))
-                    total += 1
-
-                await asyncio.sleep(1)  # pausa entre zonas para no saturar AISHub
-
-            log.info(f"Publicadas {total} embarcaciones en zonas monitorizadas")
-            await asyncio.sleep(POLL_INTERVAL)
+    await consume(redis, db, zones)
 
 
 if __name__ == "__main__":
