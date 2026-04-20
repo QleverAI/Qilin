@@ -76,6 +76,93 @@ def load_zone_labels() -> dict[str, str]:
 
 # ── DB queries ────────────────────────────────────────────────────────────────
 
+async def fetch_analyzed_events(db, period_start: datetime, period_end: datetime) -> list[dict]:
+    """Fetch analyzed_events with severity >= 4 (section 3 — replaces raw alerts)."""
+    try:
+        rows = await db.fetch(
+            """
+            SELECT id, time, zone, event_type, severity, confidence,
+                   headline, summary, signals_used, market_implications,
+                   polymarket_implications, recommended_action, tags,
+                   processing_time_ms
+            FROM analyzed_events
+            WHERE time >= $1 AND time < $2
+              AND severity >= 4
+            ORDER BY severity DESC, time DESC
+            LIMIT $3
+            """,
+            period_start, period_end, MAX_ALERTS,
+        )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning(f"[REPORT] analyzed_events no disponible aún: {e}")
+        return []
+
+
+async def fetch_market_signals_report(db, period_start: datetime, period_end: datetime) -> list[dict]:
+    """Fetch top market signals ordered by |technical_score| for section 5."""
+    try:
+        rows = await db.fetch(
+            """
+            SELECT time, ticker, name, sector, asset_type,
+                   price, volume, rsi, macd, technical_score, signals,
+                   sma20, sma50, sma200
+            FROM market_signals
+            WHERE time >= $1 AND time < $2
+            ORDER BY ABS(technical_score) DESC
+            LIMIT 20
+            """,
+            period_start, period_end,
+        )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning(f"[REPORT] Error fetching market signals: {e}")
+        return []
+
+
+async def fetch_market_geo_implications(db, period_start: datetime, period_end: datetime) -> list[dict]:
+    """Fetch analyzed_events that have market_implications for the geo-market table."""
+    try:
+        rows = await db.fetch(
+            """
+            SELECT time, zone, event_type, severity, headline,
+                   market_implications, signals_used
+            FROM analyzed_events
+            WHERE time >= $1 AND time < $2
+              AND market_implications IS NOT NULL
+            ORDER BY severity DESC
+            LIMIT 10
+            """,
+            period_start, period_end,
+        )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning(f"[REPORT] Error fetching market geo implications: {e}")
+        return []
+
+
+async def fetch_polymarket_signals_report(db, period_start: datetime, period_end: datetime) -> list[dict]:
+    """Fetch polymarket signals with significant moves for section 6."""
+    try:
+        rows = await db.fetch(
+            """
+            SELECT time, market_id, question, category, yes_price,
+                   prev_1h_price, prev_24h_price, change_1h, change_24h,
+                   signal_type, zones, volume, end_date
+            FROM polymarket_signals
+            WHERE time >= $1 AND time < $2
+              AND signal_type IS NOT NULL
+            ORDER BY ABS(COALESCE(change_24h, 0)) DESC
+            LIMIT 15
+            """,
+            period_start, period_end,
+        )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning(f"[REPORT] Error fetching polymarket signals: {e}")
+        return []
+
+
 async def fetch_alerts(db, period_start: datetime, period_end: datetime) -> list[dict]:
     try:
         rows = await db.fetch(
@@ -337,12 +424,26 @@ async def build_report_data(
 
     log.info(f"[REPORT] Fetching data for {report_type} report ({period_start.date()} → {period_end.date()})")
 
-    alerts, sentinel_anomalies, top_news, social_highlights, ingestor_stats = await asyncio.gather(
+    (
+        alerts,
+        analyzed_events,
+        sentinel_anomalies,
+        top_news,
+        social_highlights,
+        ingestor_stats,
+        market_signals,
+        market_geo_implications,
+        polymarket_signals,
+    ) = await asyncio.gather(
         fetch_alerts(db, period_start, period_end),
+        fetch_analyzed_events(db, period_start, period_end),
         fetch_sentinel_anomalies(db, period_start, period_end),
         fetch_top_news(db, period_start, period_end),
         fetch_social_highlights(db, period_start, period_end),
         fetch_ingestor_stats(db, period_start, period_end),
+        fetch_market_signals_report(db, period_start, period_end),
+        fetch_market_geo_implications(db, period_start, period_end),
+        fetch_polymarket_signals_report(db, period_start, period_end),
     )
 
     # Per-zone stats
@@ -376,18 +477,49 @@ async def build_report_data(
 
     top_severity = max((a.get("severity_score") or 0 for a in alerts), default=0)
 
+    # Section order for PDF template:
+    # 1. Portada
+    # 2. Executive Summary (executive_summary)
+    # 3. Alertas del periodo (analyzed_events, severity >= 4)
+    # 4. Estadísticas de actividad por zona (zone_stats)
+    # 5. Market Intelligence (market_signals + market_geo_implications)
+    # 6. Polymarket Intelligence (polymarket_signals)
+    # 7. Señales satelitales (sentinel_anomalies)
+    # 8. Actividad en redes y medios (top_news + social_highlights)
+    # 9. Apéndice técnico (ingestor_stats + alerts raw)
     return {
-        "report_type":        report_type,
-        "period_start":       period_start,
-        "period_end":         period_end,
-        "generated_at":       datetime.now(timezone.utc),
-        "executive_summary":  executive_summary,
-        "alerts":             alerts,
-        "alert_count":        len(alerts),
-        "top_severity":       top_severity,
-        "zone_stats":         zone_stats,
-        "sentinel_anomalies": sentinel_anomalies,
-        "top_news":           top_news,
-        "social_highlights":  social_highlights,
-        "ingestor_stats":     ingestor_stats,
+        "report_type":              report_type,
+        "period_start":             period_start,
+        "period_end":               period_end,
+        "generated_at":             datetime.now(timezone.utc),
+        # Section 2
+        "executive_summary":        executive_summary,
+        # Section 3 — analyzed events (agent-engine output, severity >= 4)
+        "analyzed_events":          analyzed_events,
+        "analyzed_event_count":     len(analyzed_events),
+        # Section 4
+        "zone_stats":               zone_stats,
+        # Section 5 — Market Intelligence
+        "market_signals":           market_signals,
+        "market_geo_implications":  market_geo_implications,
+        "market_disclaimer":        (
+            "⚠️ Las señales de mercado son informativas y no "
+            "constituyen recomendación de inversión."
+        ),
+        # Section 6 — Polymarket Intelligence
+        "polymarket_signals":       polymarket_signals,
+        "polymarket_disclaimer":    (
+            "⚠️ Las probabilidades de Polymarket reflejan la "
+            "opinión implícita del mercado, no predicciones garantizadas."
+        ),
+        # Section 7
+        "sentinel_anomalies":       sentinel_anomalies,
+        # Section 8
+        "top_news":                 top_news,
+        "social_highlights":        social_highlights,
+        # Section 9 (appendix)
+        "ingestor_stats":           ingestor_stats,
+        "alerts":                   alerts,          # raw alert-engine alerts
+        "alert_count":              len(alerts),
+        "top_severity":             top_severity,
     }
