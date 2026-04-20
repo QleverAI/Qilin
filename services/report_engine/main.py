@@ -160,7 +160,10 @@ async def run_report(db, report_type: str, period_start: datetime, period_end: d
     )
 
     await deliver_via_telegram(report_data, pdf_path)
-    await send_report_email(email_subject, summary_html, pdf_path, filename)
+    try:
+        await send_report_email(email_subject, summary_html, pdf_path, filename)
+    except Exception as e:
+        log.error(f"[REPORT] Error inesperado en envío email: {e}")
 
     log.info(f"[REPORT] Pipeline completado: {filename} ({file_size_kb} KB, {report_data['alert_count']} alertas)")
 
