@@ -47,7 +47,7 @@ async def generate_pdf(report_data: dict, output_filename: str) -> tuple[str, in
     template = _jinja_env.get_template("report.html.j2")
     html_content = template.render(data=report_data)
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     file_size_kb = await loop.run_in_executor(
         None, _render_pdf_sync, html_content, output_path
     )
