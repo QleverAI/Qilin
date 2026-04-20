@@ -3,8 +3,10 @@ import logging
 import os
 
 import asyncpg
+import yaml
 import redis.asyncio as aioredis
 
+from analyst import Analyst
 from orchestrator import Orchestrator
 from rate_limiter import RateLimiter
 from tools.geo_tools import load_zones
@@ -17,11 +19,11 @@ log = logging.getLogger(__name__)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 DB_URL = os.getenv("DB_URL", "")
-AGENT_TIMEOUT_SECONDS = int(os.getenv("AGENT_TIMEOUT_SECONDS", "45"))
 MAX_ANALYSES_PER_HOUR = int(os.getenv("MAX_ANALYSES_PER_HOUR", "10"))
 MAX_PARALLEL_ANALYSES = int(os.getenv("MAX_PARALLEL_ANALYSES", "3"))
 
 ZONES_CONFIG = os.getenv("ZONES_CONFIG", "/app/config/zones.yaml")
+WATCHLIST_CONFIG = os.getenv("WATCHLIST_CONFIG", "/app/config/market_watchlist.yaml")
 
 STREAMS = [
     "stream:alerts",
@@ -35,8 +37,12 @@ STREAMS = [
 METRICS_INTERVAL = 300  # 5 minutes
 
 
+def load_watchlist(config_path: str) -> dict:
+    with open(config_path, encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
 def parse_severity(stream: str, data: dict) -> int:
-    """Extract a 0-10 severity score from any stream message."""
     raw = data.get("severity") or data.get("technical_score") or "5"
     try:
         val = int(float(raw))
@@ -128,6 +134,13 @@ async def main() -> None:
         log.warning("No se pudo cargar zones.yaml: %s", exc)
         zones = {}
 
+    try:
+        watchlist = load_watchlist(WATCHLIST_CONFIG)
+        log.info("Watchlist cargado")
+    except Exception as exc:
+        log.warning("No se pudo cargar market_watchlist.yaml: %s", exc)
+        watchlist = {}
+
     redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 
     pool: asyncpg.Pool | None = None
@@ -142,11 +155,13 @@ async def main() -> None:
         max_per_hour=MAX_ANALYSES_PER_HOUR,
         max_parallel=MAX_PARALLEL_ANALYSES,
     )
+    analyst = Analyst(pool=pool)
     orchestrator = Orchestrator(
         pool=pool,
-        redis_client=redis_client,
-        zones=zones,
         rate_limiter=rate_limiter,
+        analyst=analyst,
+        zones=zones,
+        watchlist=watchlist,
     )
 
     async def handle_event(stream: str, data: dict) -> None:
