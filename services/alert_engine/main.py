@@ -11,6 +11,7 @@ import os
 from collections import defaultdict
 from datetime import datetime, timezone, time as dtime
 
+import anthropic
 import asyncpg
 import httpx
 import redis.asyncio as aioredis
@@ -22,6 +23,8 @@ REDIS_URL        = os.getenv("REDIS_URL", "redis://localhost:6379")
 DB_URL           = os.getenv("DB_URL", "")
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ENRICH_MODEL      = "claude-haiku-4-5-20251001"
 
 # Ventana de correlación en memoria: últimos vehículos por zona
 window: dict[str, list] = defaultdict(list)
@@ -90,6 +93,233 @@ def rule_asw_patrol(zone: str, aircraft_list: list) -> dict | None:
         }
 
 
+# ── LLM ENRICHMENT ────────────────────────────────────────────────────────────
+
+async def _db_get_recent_news(db, zone: str, hours: int = 24) -> list[dict]:
+    if not db:
+        return []
+    try:
+        rows = await db.fetch(
+            """
+            SELECT title, source, severity, time::text
+            FROM news_events
+            WHERE $1 = ANY(zones)
+              AND time > NOW() - ($2 * INTERVAL '1 hour')
+            ORDER BY severity DESC, time DESC
+            LIMIT 5
+            """,
+            zone, hours,
+        )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning(f"[ENRICH] Error leyendo noticias: {e}")
+        return []
+
+
+async def _db_get_signal_history(db, zone: str, signal_type: str, days: int = 7) -> list[dict]:
+    if not db:
+        return []
+    try:
+        table = "aircraft_positions" if signal_type == "aircraft" else "vessel_positions"
+        rows = await db.fetch(
+            f"""
+            SELECT zone, COUNT(*) as count, MAX(time)::text as last_seen
+            FROM {table}
+            WHERE zone = $1 AND time > NOW() - ($2 * INTERVAL '1 day')
+            GROUP BY zone
+            LIMIT 1
+            """,
+            zone, days,
+        )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning(f"[ENRICH] Error leyendo historial de señales: {e}")
+        return []
+
+
+async def _db_get_active_vessels(db, zone: str) -> list[dict]:
+    if not db:
+        return []
+    try:
+        rows = await db.fetch(
+            """
+            SELECT mmsi, name, category, flag, time::text
+            FROM vessel_positions
+            WHERE zone = $1 AND time > NOW() - INTERVAL '6 hours'
+            ORDER BY time DESC LIMIT 10
+            """,
+            zone,
+        )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning(f"[ENRICH] Error leyendo vessels activos: {e}")
+        return []
+
+
+async def _db_get_sentinel_data(db, zone: str) -> list[dict]:
+    if not db:
+        return []
+    try:
+        rows = await db.fetch(
+            """
+            SELECT product, mean_value, anomaly_ratio, time::text
+            FROM sentinel_observations
+            WHERE zone_id = $1 AND time > NOW() - INTERVAL '24 hours'
+            ORDER BY time DESC LIMIT 4
+            """,
+            zone,
+        )
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning(f"[ENRICH] Error leyendo datos Sentinel: {e}")
+        return []
+
+
+async def enrich_alert(alert: dict, db) -> dict:
+    """
+    Llama a Claude claude-haiku-4-5 con tool use para contextualizar la alerta.
+    Devuelve el alert enriquecido con severity_score, context_summary,
+    related_signals y confidence.
+    Si ANTHROPIC_API_KEY no está configurada, devuelve el alert sin cambios
+    con severity_score=5 (notificación por defecto).
+    """
+    if not ANTHROPIC_API_KEY:
+        log.warning("[ENRICH] ANTHROPIC_API_KEY no configurada — enrichment omitido")
+        return {**alert, "severity_score": 5, "confidence": "low",
+                "context_summary": alert.get("description", ""), "related_signals": []}
+
+    zone = alert.get("zone", "unknown")
+
+    tools = [
+        {
+            "name": "get_recent_news",
+            "description": "Obtiene noticias recientes relacionadas con una zona geopolítica.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "zone":  {"type": "string", "description": "ID de zona (ej: ukraine_black_sea)"},
+                    "hours": {"type": "integer", "description": "Horas hacia atrás a buscar", "default": 24},
+                },
+                "required": ["zone"],
+            },
+        },
+        {
+            "name": "get_signal_history",
+            "description": "Obtiene historial de señales (aeronaves o buques) en una zona.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "zone":        {"type": "string"},
+                    "signal_type": {"type": "string", "enum": ["aircraft", "vessel"]},
+                    "days":        {"type": "integer", "default": 7},
+                },
+                "required": ["zone", "signal_type"],
+            },
+        },
+        {
+            "name": "get_active_vessels",
+            "description": "Lista los buques activos en una zona en las últimas 6 horas.",
+            "input_schema": {
+                "type": "object",
+                "properties": {"zone": {"type": "string"}},
+                "required": ["zone"],
+            },
+        },
+        {
+            "name": "get_sentinel_data",
+            "description": "Obtiene lecturas recientes de emisiones Sentinel-5P para una zona.",
+            "input_schema": {
+                "type": "object",
+                "properties": {"zone": {"type": "string"}},
+                "required": ["zone"],
+            },
+        },
+    ]
+
+    system_prompt = (
+        "Eres un analista de inteligencia geopolítica. Se te proporciona una alerta automática "
+        "de un sistema de monitorización. Usa las herramientas disponibles para buscar contexto "
+        "adicional y evalúa la alerta. Responde EXCLUSIVAMENTE con un JSON con esta estructura: "
+        '{"severity_score": <1-10>, "confidence": "alta"|"media"|"baja", '
+        '"context_summary": "<3-4 líneas>", "related_signals": [<lista de señales relacionadas>]}'
+    )
+
+    user_msg = (
+        f"Evalúa esta alerta:\n\n"
+        f"Regla: {alert.get('rule')}\n"
+        f"Zona: {zone}\n"
+        f"Severidad base: {alert.get('severity')}\n"
+        f"Título: {alert.get('title')}\n"
+        f"Descripción: {alert.get('description')}\n"
+        f"Entidades: {json.dumps(alert.get('entities', []))}"
+    )
+
+    aclient = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+
+    messages = [{"role": "user", "content": user_msg}]
+
+    try:
+        for _ in range(5):  # máximo 5 rondas de tool use
+            response = await aclient.messages.create(
+                model=ENRICH_MODEL,
+                max_tokens=1024,
+                system=system_prompt,
+                tools=tools,
+                messages=messages,
+            )
+
+            if response.stop_reason == "end_turn":
+                for block in response.content:
+                    if hasattr(block, "text"):
+                        try:
+                            enrichment = json.loads(block.text)
+                            log.info(
+                                f"[ENRICH] {alert.get('rule')} en {zone}: "
+                                f"score={enrichment.get('severity_score')} "
+                                f"confidence={enrichment.get('confidence')}"
+                            )
+                            return {**alert, **enrichment}
+                        except json.JSONDecodeError:
+                            pass
+                break
+
+            if response.stop_reason != "tool_use":
+                break
+
+            tool_results = []
+            for block in response.content:
+                if block.type != "tool_use":
+                    continue
+                tool_name = block.name
+                tool_input = block.input
+
+                if tool_name == "get_recent_news":
+                    result = await _db_get_recent_news(db, tool_input["zone"], tool_input.get("hours", 24))
+                elif tool_name == "get_signal_history":
+                    result = await _db_get_signal_history(db, tool_input["zone"], tool_input["signal_type"], tool_input.get("days", 7))
+                elif tool_name == "get_active_vessels":
+                    result = await _db_get_active_vessels(db, tool_input["zone"])
+                elif tool_name == "get_sentinel_data":
+                    result = await _db_get_sentinel_data(db, tool_input["zone"])
+                else:
+                    result = []
+
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": json.dumps(result, default=str),
+                })
+
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "user", "content": tool_results})
+
+    except Exception as e:
+        log.error(f"[ENRICH] Error en Claude enrichment: {e}")
+
+    return {**alert, "severity_score": 5, "confidence": "low",
+            "context_summary": alert.get("description", ""), "related_signals": []}
+
+
 RULES_AIRCRAFT = [rule_military_aircraft_surge, rule_asw_patrol]
 RULES_VESSELS  = [rule_ais_dark, rule_naval_group]
 
@@ -115,13 +345,25 @@ async def _tg_post(client: httpx.AsyncClient, text: str, silent: bool = False):
 
 
 async def send_alert_telegram(alert: dict):
-    """Notificación inmediata al disparar una alerta."""
+    """Notificación inmediata. Usa context_summary del enrichment si disponible."""
     severity_icon = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(alert["severity"], "⚪")
     now = datetime.now(timezone.utc).strftime("%H:%M UTC")
+    score = alert.get("severity_score", "?")
+    confidence = alert.get("confidence", "?")
+
+    description = alert.get("context_summary") or alert.get("description", "")
+
+    related = alert.get("related_signals", [])
+    related_text = ""
+    if related:
+        items = related[:3]
+        related_text = "\n\n<b>Señales relacionadas:</b>\n" + "\n".join(f"• {s}" for s in items)
+
     text = (
         f"{severity_icon} <b>{alert['title']}</b>\n"
-        f"🕐 {now}  |  📍 {alert['zone']}\n\n"
-        f"{alert['description']}"
+        f"🕐 {now}  |  📍 {alert['zone']}  |  Score: {score}/10 ({confidence})\n\n"
+        f"{description}"
+        f"{related_text}"
     )
     async with httpx.AsyncClient() as client:
         await _tg_post(client, text)
@@ -214,10 +456,26 @@ def _can_fire(rule: str, zone: str) -> bool:
 async def process_alert(redis, db, alert: dict):
     if not _can_fire(alert["rule"], alert["zone"]):
         return
-    log.info(f"[{alert['severity'].upper()}] {alert['title']}")
-    await save_alert(db, alert)
-    await publish_alert(redis, alert)
-    await send_alert_telegram(alert)
+
+    enriched = await enrich_alert(alert, db)
+    score = enriched.get("severity_score", 5)
+
+    log.info(
+        f"[{alert['severity'].upper()}] {alert['title']} "
+        f"— LLM score={score} confidence={enriched.get('confidence','?')}"
+    )
+
+    if score < 4:
+        log.info(f"Alerta descartada por LLM (score={score} < 4): {alert['title']}")
+        return
+
+    await save_alert(db, enriched)
+    await publish_alert(redis, enriched)
+
+    if score >= 7:
+        await send_alert_telegram(enriched)
+    else:
+        log.info(f"Alerta guardada sin notificar Telegram (score={score}): {alert['title']}")
 
 
 async def consume_stream(redis, db, stream: str, last_id: str) -> str:
