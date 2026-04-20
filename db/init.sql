@@ -192,3 +192,19 @@ SELECT add_compression_policy('sentinel_observations', INTERVAL '7 days');
 
 CREATE INDEX IF NOT EXISTS sentinel_zone_time_idx ON sentinel_observations (zone_id, time DESC);
 CREATE INDEX IF NOT EXISTS sentinel_product_idx   ON sentinel_observations (product, time DESC);
+
+-- ─── GENERATED REPORTS ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS reports (
+    id               SERIAL          PRIMARY KEY,
+    report_type      TEXT            NOT NULL,   -- 'daily' or 'weekly'
+    period_start     TIMESTAMPTZ     NOT NULL,
+    period_end       TIMESTAMPTZ     NOT NULL,
+    generated_at     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    filename         TEXT            NOT NULL,
+    file_path        TEXT            NOT NULL,
+    file_size_kb     INTEGER,
+    alert_count      INTEGER         DEFAULT 0,
+    top_severity     INTEGER         DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS reports_type_time_idx ON reports (report_type, generated_at DESC);
