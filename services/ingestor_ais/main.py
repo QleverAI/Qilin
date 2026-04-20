@@ -109,7 +109,13 @@ async def check_ais_dark(redis, db, zones: list[tuple[str, dict]]):
     Publica un evento AIS dark en stream:ais cuando el TTL es crítico.
     """
     try:
-        keys = await redis.keys("current:vessel:*")
+        keys = []
+        cursor = 0
+        while True:
+            cursor, batch = await redis.scan(cursor, match="current:vessel:*", count=100)
+            keys.extend(batch)
+            if cursor == 0:
+                break
         for key in keys:
             raw = await redis.get(key)
             if not raw:
@@ -119,7 +125,7 @@ async def check_ais_dark(redis, db, zones: list[tuple[str, dict]]):
             if category not in ("tanker", "unknown", "military"):
                 continue
             ttl = await redis.ttl(key)
-            if ttl < 30:
+            if 0 < ttl < 30:
                 mmsi = vessel.get("mmsi", key.split(":")[-1])
                 dark_vessel = {**vessel, "ais_active": False, "time": datetime.now(timezone.utc).isoformat()}
                 await redis.xadd("stream:ais", {"data": json.dumps(dark_vessel, default=str)}, maxlen=5000)
