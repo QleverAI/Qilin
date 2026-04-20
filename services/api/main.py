@@ -731,6 +731,198 @@ async def generate_report_ondemand(
     return {"status": "accepted", "type": req.type, "date": date_str}
 
 
+# ── ANALYZED EVENTS ──────────────────────────────────────────────────────────
+
+@app.get("/analyzed-events")
+async def get_analyzed_events(
+    zone:         str | None = None,
+    severity_min: int        = 1,
+    event_type:   str | None = None,
+    hours:        int        = 24,
+    limit:        int        = 50,
+    _user: str = Depends(get_current_user),
+):
+    if not app.state.db:
+        return []
+
+    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+    conditions = ["time >= $1", "severity >= $2"]
+    params: list = [since, severity_min]
+
+    if zone:
+        params.append(zone)
+        conditions.append(f"zone = ${len(params)}")
+    if event_type:
+        params.append(event_type)
+        conditions.append(f"event_type = ${len(params)}")
+
+    params.append(min(limit, 200))
+    where = " AND ".join(conditions)
+    rows = await app.state.db.fetch(
+        f"""SELECT id, time, zone, event_type, severity, confidence,
+                   headline, signals_used, recommended_action, tags
+            FROM analyzed_events
+            WHERE {where}
+            ORDER BY time DESC LIMIT ${len(params)}""",
+        *params,
+    )
+    return [dict(r) for r in rows]
+
+
+@app.get("/analyzed-events/{event_id}")
+async def get_analyzed_event(
+    event_id: int,
+    _user: str = Depends(get_current_user),
+):
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    row = await app.state.db.fetchrow(
+        """SELECT id, time, zone, event_type, severity, confidence,
+                  headline, summary, signals_used, market_implications,
+                  polymarket_implications, recommended_action, tags,
+                  raw_input, processing_time_ms
+           FROM analyzed_events WHERE id = $1""",
+        event_id,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+    return dict(row)
+
+
+# ── ANALYTICS ────────────────────────────────────────────────────────────────
+
+@app.get("/analytics/summary")
+async def get_analytics_summary(
+    hours: int = 24,
+    _user: str = Depends(get_current_user),
+):
+    if not app.state.db:
+        return {}
+
+    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+
+    rows = await app.state.db.fetch(
+        "SELECT severity, event_type, zone, tags FROM analyzed_events WHERE time >= $1",
+        since,
+    )
+
+    total = len(rows)
+    by_severity = {"high": 0, "medium": 0, "low": 0}
+    by_type: dict[str, int] = {}
+    zone_counts: dict[str, list] = {}
+    tag_counts: dict[str, int] = {}
+    severity_sum = 0.0
+
+    for r in rows:
+        sev = r["severity"] or 0
+        severity_sum += sev
+        if sev >= 7:
+            by_severity["high"] += 1
+        elif sev >= 4:
+            by_severity["medium"] += 1
+        else:
+            by_severity["low"] += 1
+
+        etype = r["event_type"] or "UNKNOWN"
+        by_type[etype] = by_type.get(etype, 0) + 1
+
+        zone = r["zone"] or "unknown"
+        if zone not in zone_counts:
+            zone_counts[zone] = []
+        zone_counts[zone].append(sev)
+
+        for tag in (r["tags"] or []):
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+    by_zone = sorted(
+        [
+            {"zone": z, "count": len(sevs), "avg_severity": round(sum(sevs) / len(sevs), 1)}
+            for z, sevs in zone_counts.items()
+        ],
+        key=lambda x: x["count"],
+        reverse=True,
+    )
+
+    top_tags = sorted(
+        [{"tag": t, "count": c} for t, c in tag_counts.items()],
+        key=lambda x: x["count"],
+        reverse=True,
+    )[:10]
+
+    # Market and polymarket signal counts for the period
+    market_count = 0
+    poly_count = 0
+    try:
+        row = await app.state.db.fetchrow(
+            "SELECT COUNT(*) AS cnt FROM market_signals WHERE time >= $1", since
+        )
+        market_count = int(row["cnt"]) if row else 0
+    except Exception:
+        pass
+    try:
+        row = await app.state.db.fetchrow(
+            "SELECT COUNT(*) AS cnt FROM polymarket_signals WHERE time >= $1 AND signal_type IS NOT NULL",
+            since,
+        )
+        poly_count = int(row["cnt"]) if row else 0
+    except Exception:
+        pass
+
+    return {
+        "total_events":            total,
+        "by_severity":             by_severity,
+        "by_type":                 by_type,
+        "by_zone":                 by_zone,
+        "top_tags":                top_tags,
+        "market_signals_count":    market_count,
+        "polymarket_signals_count": poly_count,
+        "avg_severity":            round(severity_sum / total, 2) if total else 0.0,
+    }
+
+
+@app.get("/analytics/timeline")
+async def get_analytics_timeline(
+    hours: int        = 24,
+    zone:  str | None = None,
+    _user: str = Depends(get_current_user),
+):
+    if not app.state.db:
+        return []
+
+    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+
+    # Group by hour when ≤72h, by day otherwise
+    trunc = "hour" if hours <= 72 else "day"
+
+    conditions = ["time >= $1"]
+    params: list = [since]
+    if zone:
+        params.append(zone)
+        conditions.append(f"zone = ${len(params)}")
+
+    where = " AND ".join(conditions)
+    rows = await app.state.db.fetch(
+        f"""SELECT DATE_TRUNC('{trunc}', time) AS bucket,
+                   COUNT(*) AS count,
+                   ROUND(AVG(severity)::numeric, 2) AS avg_severity,
+                   MAX(severity) AS max_severity
+            FROM analyzed_events
+            WHERE {where}
+            GROUP BY bucket
+            ORDER BY bucket""",
+        *params,
+    )
+    return [
+        {
+            "timestamp":    r["bucket"].isoformat(),
+            "count":        int(r["count"]),
+            "avg_severity": float(r["avg_severity"] or 0),
+            "max_severity": int(r["max_severity"] or 0),
+        }
+        for r in rows
+    ]
+
+
 # ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 
 class ConnectionManager:
