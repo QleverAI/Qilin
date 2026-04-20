@@ -45,11 +45,11 @@ def generate_activity_svg(daily_counts: list[int], width: int = 200, height: int
     pad = 1.5
     bars = []
     for i, count in enumerate(daily_counts):
-        bar_h = int((count / max_val) * (height - 8)) if max_val > 0 else 0
+        bar_h = int((count / max_val) * (height - 8))
         x = i * bar_w + pad
         y = height - bar_h - 4
         w = max(bar_w - pad * 2, 1)
-        color = "#c0392b" if count == max_val else "#3498db"
+        color = "#c0392b" if (n > 1 and count == max_val) else "#3498db"
         bars.append(
             f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" '
             f'height="{bar_h}" fill="{color}" rx="2"/>'
@@ -65,7 +65,8 @@ def generate_activity_svg(daily_counts: list[int], width: int = 200, height: int
 def load_zone_labels() -> dict[str, str]:
     """Returns {zone_id: label} from zones.yaml."""
     try:
-        with open("/app/config/zones.yaml") as f:
+        zones_path = os.getenv("ZONES_CONFIG", "/app/config/zones.yaml")
+        with open(zones_path) as f:
             cfg = yaml.safe_load(f)
         return {k: v.get("label", k) for k, v in cfg.get("zones", {}).items()}
     except Exception as e:
@@ -152,7 +153,8 @@ async def fetch_zone_prev_aircraft(db, zone: str, prev_start: datetime, prev_end
             zone, prev_start, prev_end,
         )
         return int(row["cnt"]) if row else 0
-    except Exception:
+    except Exception as e:
+        log.warning(f"[REPORT] Error fetching prev aircraft for {zone}: {e}")
         return 0
 
 
@@ -273,7 +275,9 @@ async def generate_executive_summary(
         for n in top_news[:5]
     ) or "Sin noticias relevantes."
 
-    prompt = f"""Eres un analista de inteligencia geopolítica senior. Redacta el resumen ejecutivo de un informe de inteligencia de tipo {report_type.upper()} para el periodo {period_start.strftime(fmt)} a {period_end.strftime(fmt)}.
+    system_prompt = "Eres un analista de inteligencia geopolítica senior especializado en amenazas geopolíticas, correlación de señales militares y redacción de informes de inteligencia en español."
+
+    data_prompt = f"""Redacta el resumen ejecutivo de un informe de inteligencia de tipo {report_type.upper()} para el periodo {period_start.strftime(fmt)} a {period_end.strftime(fmt)}.
 
 DATOS DEL PERIODO:
 
@@ -302,12 +306,13 @@ Tono: profesional, conciso, analítico. No uses bullets. No repitas los datos br
         response = await aclient.messages.create(
             model=LLM_MODEL,
             max_tokens=1200,
-            messages=[{"role": "user", "content": prompt}],
+            system=system_prompt,
+            messages=[{"role": "user", "content": data_prompt}],
         )
         return response.content[0].text.strip()
     except Exception as e:
         log.error(f"[REPORT] Error generando executive summary: {e}")
-        return f"Error generando resumen ejecutivo: {e}"
+        return "Resumen ejecutivo no disponible (error interno)."
 
 
 # ── Main builder function ─────────────────────────────────────────────────────
