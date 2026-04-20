@@ -17,7 +17,8 @@ import bcrypt
 import jwt
 import yaml
 import redis.asyncio as aioredis
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status, BackgroundTasks
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -27,6 +28,7 @@ log = logging.getLogger(__name__)
 
 REDIS_URL   = os.getenv("REDIS_URL", "redis://localhost:6379")
 DB_URL      = os.getenv("DB_URL", "")
+REPORTS_DIR = os.getenv("REPORTS_DIR", "/app/reports")
 JWT_SECRET  = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
 JWT_ALGO    = "HS256"
 JWT_TTL_H   = 24  # horas de validez del token
@@ -621,6 +623,112 @@ async def get_sec_sources(_user: str = Depends(get_current_user)):
     except Exception as e:
         log.warning(f"Error leyendo sec_sources.yaml: {e}")
         return []
+
+
+# ── REPORTS ───────────────────────────────────────────────────────────────────
+
+@app.get("/reports")
+async def list_reports(
+    limit: int = 20,
+    _user: str = Depends(get_current_user),
+):
+    """Lista todos los informes generados, ordenados por fecha desc."""
+    if not app.state.db:
+        return []
+    rows = await app.state.db.fetch(
+        """
+        SELECT id, report_type, period_start, period_end, generated_at,
+               filename, file_size_kb, alert_count, top_severity
+        FROM reports
+        ORDER BY generated_at DESC LIMIT $1
+        """,
+        limit,
+    )
+    return [dict(r) for r in rows]
+
+
+@app.get("/reports/latest/daily")
+async def latest_daily_report(_user: str = Depends(get_current_user)):
+    """Devuelve el último informe diario como FileResponse."""
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    row = await app.state.db.fetchrow(
+        "SELECT file_path, filename FROM reports WHERE report_type='daily' ORDER BY generated_at DESC LIMIT 1"
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="No hay informes diarios generados")
+    path = row["file_path"]
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado en disco")
+    return FileResponse(path, media_type="application/pdf", filename=row["filename"])
+
+
+@app.get("/reports/latest/weekly")
+async def latest_weekly_report(_user: str = Depends(get_current_user)):
+    """Devuelve el último informe semanal como FileResponse."""
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    row = await app.state.db.fetchrow(
+        "SELECT file_path, filename FROM reports WHERE report_type='weekly' ORDER BY generated_at DESC LIMIT 1"
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="No hay informes semanales generados")
+    path = row["file_path"]
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado en disco")
+    return FileResponse(path, media_type="application/pdf", filename=row["filename"])
+
+
+@app.get("/reports/{report_id}/download")
+async def download_report(
+    report_id: int,
+    _user: str = Depends(get_current_user),
+):
+    """Descarga un informe por ID."""
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    row = await app.state.db.fetchrow(
+        "SELECT file_path, filename FROM reports WHERE id=$1", report_id
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Informe no encontrado")
+    path = row["file_path"]
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado en disco")
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        filename=row["filename"],
+        headers={"Content-Disposition": f'attachment; filename="{row["filename"]}"'},
+    )
+
+
+class GenerateReportRequest(BaseModel):
+    type: str = "daily"    # "daily" or "weekly"
+    date: str = ""         # YYYY-MM-DD, defaults to today
+
+
+@app.post("/reports/generate", status_code=202)
+async def generate_report_ondemand(
+    req: GenerateReportRequest,
+    _user: str = Depends(get_current_user),
+):
+    """
+    Triggers on-demand report generation via Redis queue.
+    Returns 202 Accepted immediately; report-engine processes asynchronously.
+    """
+    if req.type not in ("daily", "weekly"):
+        raise HTTPException(status_code=400, detail="type must be 'daily' or 'weekly'")
+    date_str = req.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD format")
+
+    payload = json.dumps({"type": req.type, "date": date_str})
+    await app.state.redis.rpush("reports:queue", payload)
+    log.info(f"[API] Informe on-demand encolado: {req.type} {date_str}")
+    return {"status": "accepted", "type": req.type, "date": date_str}
 
 
 # ── WEBSOCKET ─────────────────────────────────────────────────────────────────

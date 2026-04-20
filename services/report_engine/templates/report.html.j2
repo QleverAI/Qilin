@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ── Reset & base ── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Liberation Sans', Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    color: #1a1a2e;
+    background: #fff;
+    line-height: 1.5;
+  }
+
+  /* ── Page layout ── */
+  @page {
+    size: A4;
+    margin: 18mm 16mm 22mm 16mm;
+    @bottom-center {
+      content: "QILIN INTELLIGENCE  ·  CONFIDENTIAL  ·  Página " counter(page) " de " counter(pages);
+      font-size: 7pt;
+      color: #888;
+      font-family: Arial, sans-serif;
+    }
+  }
+  @page :first { @bottom-center { content: ""; } }
+
+  /* ── Cover page ── */
+  .cover {
+    page: cover;
+    height: 260mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: #0f1923;
+    color: #fff;
+    padding: 40px;
+  }
+  @page cover { margin: 0; @bottom-center { content: ""; } }
+  .cover-logo {
+    font-size: 42pt;
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: #3498db;
+    margin-bottom: 8px;
+  }
+  .cover-subtitle {
+    font-size: 13pt;
+    letter-spacing: 4px;
+    color: #7fb3d3;
+    margin-bottom: 48px;
+    text-transform: uppercase;
+  }
+  .cover-type {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    border-top: 2px solid #3498db;
+    border-bottom: 2px solid #3498db;
+    padding: 14px 40px;
+    margin-bottom: 32px;
+  }
+  .cover-meta {
+    font-size: 9.5pt;
+    color: #aaa;
+    line-height: 2;
+  }
+  .cover-classification {
+    position: absolute;
+    bottom: 30px;
+    font-size: 8pt;
+    letter-spacing: 3px;
+    color: #e74c3c;
+    font-weight: 700;
+  }
+
+  /* ── Section headers ── */
+  .section-title {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #0f1923;
+    border-left: 4px solid #3498db;
+    padding-left: 10px;
+    margin: 20px 0 12px 0;
+    page-break-after: avoid;
+  }
+  .section-subtitle {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 14px 0 6px 0;
+    page-break-after: avoid;
+  }
+
+  /* ── Executive summary ── */
+  .executive-summary {
+    background: #f4f8fc;
+    border-left: 4px solid #3498db;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    line-height: 1.7;
+    font-size: 10pt;
+  }
+  .executive-summary p { margin-bottom: 10px; }
+  .executive-summary p:last-child { margin-bottom: 0; }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-bottom: 16px;
+    page-break-inside: auto;
+  }
+  thead th {
+    background: #0f1923;
+    color: #fff;
+    padding: 7px 8px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 8.5pt;
+  }
+  tbody tr:nth-child(even) { background: #f8f9fa; }
+  tbody tr:nth-child(odd)  { background: #fff; }
+  tbody td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #e8ecf0;
+    vertical-align: top;
+  }
+  tr.severity-high   { background: #fdecea !important; }
+  tr.severity-medium { background: #fef9e7 !important; }
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .badge-high   { background: #e74c3c; color: #fff; }
+  .badge-medium { background: #f39c12; color: #fff; }
+  .badge-low    { background: #27ae60; color: #fff; }
+
+  /* ── Zone stats grid ── */
+  .zone-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .zone-card {
+    border: 1px solid #dde3ea;
+    border-radius: 4px;
+    padding: 10px 12px;
+    width: 48%;
+    page-break-inside: avoid;
+  }
+  .zone-card-name {
+    font-weight: 700;
+    font-size: 9.5pt;
+    color: #0f1923;
+    margin-bottom: 4px;
+  }
+  .zone-card-stats {
+    font-size: 8.5pt;
+    color: #555;
+    line-height: 1.7;
+  }
+  .zone-card-chart {
+    margin-top: 6px;
+  }
+  .change-up   { color: #e74c3c; font-weight: 700; }
+  .change-down { color: #27ae60; font-weight: 700; }
+  .change-flat { color: #7f8c8d; }
+
+  /* ── News / Social items ── */
+  .news-item {
+    border-bottom: 1px solid #eee;
+    padding: 8px 0;
+    page-break-inside: avoid;
+  }
+  .news-item:last-child { border-bottom: none; }
+  .news-title { font-weight: 600; font-size: 9.5pt; color: #0f1923; }
+  .news-meta  { font-size: 8pt; color: #888; margin-top: 2px; }
+  .news-summary { font-size: 8.5pt; color: #444; margin-top: 4px; }
+
+  /* ── Appendix / stats ── */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #eef;
+    font-size: 9pt;
+  }
+  .stat-label { color: #555; }
+  .stat-value { font-weight: 700; color: #0f1923; }
+  .stat-unavailable { color: #aaa; font-style: italic; }
+
+  /* ── No data notice ── */
+  .no-data {
+    background: #f8f9fa;
+    border: 1px dashed #ccc;
+    padding: 12px 16px;
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    font-size: 9pt;
+    border-radius: 3px;
+    margin-bottom: 12px;
+  }
+
+  /* ── Page breaks ── */
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ════════════ COVER ════════════ -->
+<div class="cover">
+  <div class="cover-logo">QILIN</div>
+  <div class="cover-subtitle">Geopolitical Intelligence Platform</div>
+  <div class="cover-type">
+    {% if data.report_type == 'daily' %}Daily Intelligence Brief{% else %}Weekly Intelligence Digest{% endif %}
+  </div>
+  <div class="cover-meta">
+    <strong>Periodo:</strong>
+    {{ data.period_start.strftime('%d %b %Y %H:%M UTC') }} —
+    {{ data.period_end.strftime('%d %b %Y %H:%M UTC') }}<br>
+    <strong>Generado:</strong> {{ data.generated_at.strftime('%d %b %Y %H:%M UTC') }}<br>
+    <strong>Alertas analizadas:</strong> {{ data.alert_count }}<br>
+    <strong>Severidad máxima:</strong> {{ data.top_severity }}/10
+  </div>
+  <div class="cover-classification">&#9632; CONFIDENTIAL &#9632;</div>
+</div>
+
+<!-- ════════════ PAGE 1: EXECUTIVE SUMMARY ════════════ -->
+<div class="page-break">
+<h1 class="section-title">1. Resumen Ejecutivo</h1>
+<div class="executive-summary">
+  {% for paragraph in data.executive_summary.split('\n\n') %}
+    <p>{{ paragraph }}</p>
+  {% endfor %}
+</div>
+
+<!-- ════════════ SECTION 2: ALERTS ════════════ -->
+<h1 class="section-title">2. Alertas del Periodo</h1>
+{% if data.alerts %}
+<table>
+  <thead>
+    <tr>
+      <th style="width:13%">Timestamp</th>
+      <th style="width:14%">Zona</th>
+      <th style="width:18%">Regla</th>
+      <th style="width:8%">Score</th>
+      <th style="width:47%">Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for alert in data.alerts %}
+    {% set score = alert.severity_score or 0 %}
+    {% if score >= 7 %}
+      <tr class="severity-high">
+    {% elif score >= 4 %}
+      <tr class="severity-medium">
+    {% else %}
+      <tr>
+    {% endif %}
+      <td>{{ alert.time.strftime('%d %b %H:%M') if alert.time else '—' }}</td>
+      <td>{{ alert.zone }}</td>
+      <td>{{ alert.rule | replace('_', ' ') | title }}</td>
+      <td>
+        {% if score >= 7 %}
+          <span class="badge badge-high">{{ score }}</span>
+        {% elif score >= 4 %}
+          <span class="badge badge-medium">{{ score }}</span>
+        {% else %}
+          <span class="badge badge-low">{{ score }}</span>
+        {% endif %}
+      </td>
+      <td>{{ (alert.context_summary or alert.description or '—') | truncate(180) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="no-data">Sin incidencias relevantes en el periodo analizado.</div>
+{% endif %}
+</div>
+
+<!-- ════════════ SECTION 3: ZONE STATS ════════════ -->
+<div class="page-break">
+<h1 class="section-title">3. Actividad por Zona</h1>
+<div class="zone-grid">
+{% for zone_id, z in data.zone_stats.items() %}
+  {% if z.aircraft_total > 0 or z.vessel_total > 0 %}
+  <div class="zone-card">
+    <div class="zone-card-name">{{ z.label }}</div>
+    <div class="zone-card-stats">
+      ✈ Aeronaves militares: <strong>{{ z.aircraft_total }}</strong>
+      {% if z.change_pct is not none %}
+        {% if z.change_pct > 0 %}
+          <span class="change-up">(+{{ z.change_pct }}%)</span>
+        {% elif z.change_pct < 0 %}
+          <span class="change-down">({{ z.change_pct }}%)</span>
+        {% else %}
+          <span class="change-flat">(sin cambio)</span>
+        {% endif %}
+      {% endif %}
+      <br>
+      ⚓ Buques: <strong>{{ z.vessel_total }}</strong>
+      {% if z.vessel_dark > 0 %}
+        · <span style="color:#e74c3c">{{ z.vessel_dark }} AIS dark</span>
+      {% endif %}
+    </div>
+    <div class="zone-card-chart">{{ z.aircraft_svg | safe }}</div>
+  </div>
+  {% endif %}
+{% endfor %}
+</div>
+</div>
+
+<!-- ════════════ SECTION 4: SENTINEL ════════════ -->
+{% if data.sentinel_anomalies %}
+<div class="page-break">
+<h1 class="section-title">4. Señales Satelitales Sentinel-5P</h1>
+<table>
+  <thead>
+    <tr>
+      <th>Zona</th>
+      <th>Producto</th>
+      <th>Ratio anomalía</th>
+      <th>Valor medio</th>
+      <th>Detección</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in data.sentinel_anomalies %}
+    <tr {% if s.anomaly_ratio >= 2.5 %}class="severity-high"{% endif %}>
+      <td>{{ s.zone_id }}</td>
+      <td><strong>{{ s.product }}</strong></td>
+      <td>{{ '%.2f' | format(s.anomaly_ratio) }}x</td>
+      <td>{{ '%.4f' | format(s.mean_value) if s.mean_value else '—' }}</td>
+      <td>{{ s.time.strftime('%d %b %H:%M UTC') if s.time else '—' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<!-- ════════════ SECTION 5: NEWS & SOCIAL ════════════ -->
+<div class="page-break">
+<h1 class="section-title">5. Actividad en Redes y Medios</h1>
+
+<h2 class="section-subtitle">Noticias Destacadas</h2>
+{% if data.top_news %}
+  {% for n in data.top_news %}
+  <div class="news-item">
+    <div class="news-title">{{ n.title }}</div>
+    <div class="news-meta">{{ n.source }} · {{ n.time.strftime('%d %b %H:%M UTC') if n.time else '' }} · Relevancia: {{ n.relevance }}</div>
+    {% if n.summary %}
+    <div class="news-summary">{{ n.summary | truncate(200) }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+<div class="no-data">Sin noticias relevantes en el periodo.</div>
+{% endif %}
+
+{% if data.social_highlights %}
+<h2 class="section-subtitle">Menciones Destacadas en X/Twitter</h2>
+{% for s in data.social_highlights %}
+<div class="news-item">
+  <div class="news-title">@{{ s.handle }}{% if s.display %} ({{ s.display }}){% endif %}</div>
+  <div class="news-meta">{{ s.time.strftime('%d %b %H:%M UTC') if s.time else '' }} · ♥ {{ s.likes }} · 🔁 {{ s.retweets }}</div>
+  <div class="news-summary">{{ (s.content or '') | truncate(300) }}</div>
+</div>
+{% endfor %}
+{% endif %}
+</div>
+
+<!-- ════════════ APPENDIX ════════════ -->
+<div class="page-break">
+<h1 class="section-title">Apéndice — Estadísticas Técnicas</h1>
+<h2 class="section-subtitle">Registros procesados por ingestor</h2>
+{% for label, count in data.ingestor_stats.items() %}
+<div class="stat-row">
+  <span class="stat-label">{{ label | upper }}</span>
+  {% if count >= 0 %}
+    <span class="stat-value">{{ '{:,}'.format(count) }} registros</span>
+  {% else %}
+    <span class="stat-unavailable">No disponible</span>
+  {% endif %}
+</div>
+{% endfor %}
+</div>
+
+</body>
+</html>

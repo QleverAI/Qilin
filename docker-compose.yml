@@ -141,6 +141,30 @@ services:
       - redis
       - timescaledb
 
+  report-engine:
+    build: ./services/report_engine
+    container_name: qilin_report_engine
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      REPORT_RECIPIENTS: ${REPORT_RECIPIENTS:-}
+      DAILY_REPORT_HOUR: ${DAILY_REPORT_HOUR:-7}
+      WEEKLY_REPORT_DAY: ${WEEKLY_REPORT_DAY:-mon}
+    volumes:
+      - ./config:/app/config
+      - ./reports:/app/reports
+    depends_on:
+      - redis
+      - timescaledb
+
   api:
     build: ./services/api
     container_name: qilin_api
@@ -152,6 +176,7 @@ services:
       - "8000:8000"
     volumes:
       - ./config:/app/config
+      - ./reports:/app/reports
     depends_on:
       - redis
       - timescaledb
