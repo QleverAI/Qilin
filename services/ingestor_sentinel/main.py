@@ -241,44 +241,49 @@ async def main():
 
     async with httpx.AsyncClient() as client:
         while True:
-            token = await get_access_token(client)
-            if not token:
-                log.warning("Sin token CDSE — esperando próximo ciclo")
-                await asyncio.sleep(POLL_INTERVAL)
-                continue
+            try:
+                token = await get_access_token(client)
+                if not token:
+                    log.warning("Sin token CDSE — esperando próximo ciclo")
+                    await asyncio.sleep(POLL_INTERVAL)
+                    continue
 
-            processed = 0
-            for zone_name, zone_cfg in zones:
-                for product in PRODUCTS:
-                    try:
-                        granule = await find_latest_granule(client, token, zone_cfg, product)
-                        if not granule:
-                            continue
+                processed = 0
+                for zone_name, zone_cfg in zones:
+                    for product in PRODUCTS:
+                        try:
+                            granule = await find_latest_granule(client, token, zone_cfg, product)
+                            if not granule:
+                                continue
 
-                        granule_id = granule.get("Id", "unknown")
+                            granule_id = granule.get("Id", "unknown")
 
-                        # Evitar reprocesar el mismo granule
-                        dedup_key = f"sentinel:seen:{granule_id}"
-                        if await redis.exists(dedup_key):
-                            continue
-                        await redis.setex(dedup_key, 86400 * 2, "1")
+                            # Evitar reprocesar el mismo granule
+                            dedup_key = f"sentinel:seen:{granule_id}"
+                            if await redis.exists(dedup_key):
+                                continue
+                            await redis.setex(dedup_key, 86400 * 2, "1")
 
-                        stats = extract_stats_from_attributes(granule, product)
-                        if not stats:
-                            continue
+                            stats = extract_stats_from_attributes(granule, product)
+                            if not stats:
+                                continue
 
-                        baseline = await get_baseline(db, zone_name, product)
-                        await publish_observation(
-                            redis, db, zone_name, product, stats, baseline, granule_id
-                        )
-                        processed += 1
+                            baseline = await get_baseline(db, zone_name, product)
+                            await publish_observation(
+                                redis, db, zone_name, product, stats, baseline, granule_id
+                            )
+                            processed += 1
 
-                    except Exception as e:
-                        log.error(f"Error procesando {product} en {zone_name}: {e}")
+                        except Exception as e:
+                            log.error(f"Error procesando {product} en {zone_name}: {e}")
 
-                await asyncio.sleep(1)  # cortesía entre zonas
+                    await asyncio.sleep(1)  # cortesía entre zonas
 
-            log.info(f"Ciclo Sentinel completo — {processed} observaciones procesadas")
+                log.info(f"Ciclo Sentinel completo — {processed} observaciones procesadas")
+
+            except Exception as e:
+                log.error(f"Error inesperado en ciclo principal Sentinel: {e}")
+
             await asyncio.sleep(POLL_INTERVAL)
 
 
