@@ -141,6 +141,23 @@ services:
       - redis
       - timescaledb
 
+  agent-engine:
+    build: ./services/agent_engine
+    container_name: qilin_agent_engine
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-45}
+      MAX_ANALYSES_PER_HOUR: ${MAX_ANALYSES_PER_HOUR:-10}
+      MAX_PARALLEL_ANALYSES: ${MAX_PARALLEL_ANALYSES:-3}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
   ingestor-polymarket:
     build: ./services/ingestor_polymarket
     container_name: qilin_ingestor_polymarket

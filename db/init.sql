@@ -289,3 +289,29 @@ SELECT add_compression_policy('polymarket_signals', INTERVAL '7 days');
 
 CREATE INDEX IF NOT EXISTS polymarket_signals_market_idx ON polymarket_signals (market_id, time DESC);
 CREATE INDEX IF NOT EXISTS polymarket_signals_zones_gin  ON polymarket_signals USING GIN (zones);
+
+-- ─── ANALYZED EVENTS (agent-engine) ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS analyzed_events (
+    id                      BIGSERIAL,
+    time                    TIMESTAMPTZ     NOT NULL,
+    zone                    TEXT,
+    event_type              TEXT,
+    severity                INTEGER,
+    confidence              TEXT,
+    headline                TEXT,
+    summary                 TEXT,
+    signals_used            TEXT[],
+    market_implications     JSONB,
+    polymarket_implications JSONB,
+    recommended_action      TEXT,
+    tags                    TEXT[],
+    raw_input               JSONB,
+    processing_time_ms      INTEGER
+);
+
+SELECT create_hypertable('analyzed_events', 'time', if_not_exists => TRUE);
+SELECT add_compression_policy('analyzed_events', INTERVAL '7 days');
+
+CREATE INDEX IF NOT EXISTS analyzed_events_zone_time_idx     ON analyzed_events (zone, time DESC);
+CREATE INDEX IF NOT EXISTS analyzed_events_severity_time_idx ON analyzed_events (severity, time DESC);
+CREATE INDEX IF NOT EXISTS analyzed_events_tags_gin          ON analyzed_events USING GIN (tags);
