@@ -95,22 +95,35 @@ services:
       - redis
       - timescaledb
 
-  # ingestor-ais: deshabilitado — AISHub requiere equipo receptor propio
-  # Alternativa pendiente: MarineTraffic API, aisstream.io u otra fuente AIS
-  # ingestor-ais:
-  #   build: ./services/ingestor_ais
-  #   container_name: qilin_ingestor_ais
-  #   restart: unless-stopped
-  #   environment:
-  #     REDIS_URL: redis://redis:6379
-  #     DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
-  #     AISHUB_USER: ${AISHUB_USER:-}
-  #     POLL_INTERVAL: ${AIS_POLL_INTERVAL:-60}
-  #   volumes:
-  #     - ./config:/app/config
-  #   depends_on:
-  #     - redis
-  #     - timescaledb
+  ingestor-ais:
+    build: ./services/ingestor_ais
+    container_name: qilin_ingestor_ais
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      AISSTREAM_API_KEY: ${AISSTREAM_API_KEY:-}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
+  ingestor-sentinel:
+    build: ./services/ingestor_sentinel
+    container_name: qilin_ingestor_sentinel
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      CDSE_USER: ${CDSE_USER:-}
+      CDSE_PASSWORD: ${CDSE_PASSWORD:-}
+      SENTINEL_POLL_INTERVAL: ${SENTINEL_POLL_INTERVAL:-21600}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
 
   alert-engine:
     build: ./services/alert_engine
@@ -121,6 +134,7 @@ services:
       DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - ./config:/app/config
     depends_on:
