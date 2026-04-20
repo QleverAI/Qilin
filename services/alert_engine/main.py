@@ -272,7 +272,13 @@ async def enrich_alert(alert: dict, db) -> dict:
                 for block in response.content:
                     if hasattr(block, "text"):
                         try:
-                            enrichment = json.loads(block.text)
+                            raw = block.text.strip()
+                            if raw.startswith("```"):
+                                raw = raw.split("```")[1]
+                                if raw.startswith("json"):
+                                    raw = raw[4:]
+                                raw = raw.strip()
+                            enrichment = json.loads(raw)
                             log.info(
                                 f"[ENRICH] {alert.get('rule')} en {zone}: "
                                 f"score={enrichment.get('severity_score')} "
@@ -310,12 +316,15 @@ async def enrich_alert(alert: dict, db) -> dict:
                     "content": json.dumps(result, default=str),
                 })
 
+            if not tool_results:
+                break
             messages.append({"role": "assistant", "content": response.content})
             messages.append({"role": "user", "content": tool_results})
 
     except Exception as e:
         log.error(f"[ENRICH] Error en Claude enrichment: {e}")
 
+    log.warning(f"[ENRICH] Enriquecimiento no completado para {alert.get('rule')} en {alert.get('zone')} — usando score neutro")
     return {**alert, "severity_score": 5, "confidence": "low",
             "context_summary": alert.get("description", ""), "related_signals": []}
 
@@ -461,12 +470,12 @@ async def process_alert(redis, db, alert: dict):
     score = enriched.get("severity_score", 5)
 
     log.info(
-        f"[{alert['severity'].upper()}] {alert['title']} "
-        f"— LLM score={score} confidence={enriched.get('confidence','?')}"
+        f"[ENRICH] [{alert['severity'].upper()}] {alert['title']} "
+        f"— score={score} confidence={enriched.get('confidence','?')}"
     )
 
     if score < 4:
-        log.info(f"Alerta descartada por LLM (score={score} < 4): {alert['title']}")
+        log.info(f"[ENRICH] Alerta descartada (score={score} < 4): {alert['title']}")
         return
 
     await save_alert(db, enriched)
@@ -475,7 +484,7 @@ async def process_alert(redis, db, alert: dict):
     if score >= 7:
         await send_alert_telegram(enriched)
     else:
-        log.info(f"Alerta guardada sin notificar Telegram (score={score}): {alert['title']}")
+        log.info(f"[ENRICH] Alerta guardada sin notificar Telegram (score={score}): {alert['title']}")
 
 
 async def consume_stream(redis, db, stream: str, last_id: str) -> str:
