@@ -31,23 +31,19 @@ log = logging.getLogger(__name__)
 REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379")
 DB_URL        = os.getenv("DB_URL", "")
 POLL_INTERVAL = int(os.getenv("SOCIAL_POLL_INTERVAL", "900"))
-RSSHUB_BASE   = os.getenv("RSSHUB_BASE", "https://rsshub.app").rstrip("/")
+RSSHUB_BASE   = os.getenv("RSSHUB_BASE", "http://rsshub:1200").rstrip("/")
 BATCH_SIZE    = int(os.getenv("SOCIAL_BATCH_SIZE", "15"))
 
-# ── Feeds RSS oficiales por handle (minúsculas) ────────────────────────────
-# None = sin RSS público, se omite la cuenta hasta tener RSSHub configurado
+# ── Feeds RSS directos por handle (minúsculas) ────────────────────────────
+# None = sin RSS directo fiable → usa RSSHub (ver RSSHUB_ROUTES abajo)
 RSS_OVERRIDES: dict[str, str | None] = {
-    # Medios internacionales
-    "reuters":         "https://feeds.reuters.com/reuters/worldNews",
-    "reutersworld":    "https://feeds.reuters.com/reuters/worldNews",
-    "ap":              "https://apnews.com/index.rss",
+    # Medios internacionales — RSS oficial estable
     "bbcworld":        "http://feeds.bbci.co.uk/news/world/rss.xml",
     "nytimes":         "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
     "washingtonpost":  "https://feeds.washingtonpost.com/rss/world",
     "guardian":        "https://www.theguardian.com/world/rss",
     "aljazeera":       "https://www.aljazeera.com/xml/rss/all.xml",
     "ajenglish":       "https://www.aljazeera.com/xml/rss/all.xml",
-    "wsj":             "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
     "politico":        "https://rss.politico.com/politics-news.xml",
     "foreignpolicy":   "https://foreignpolicy.com/feed/",
     "theeconomist":    "https://www.economist.com/international/rss.xml",
@@ -58,11 +54,13 @@ RSS_OVERRIDES: dict[str, str | None] = {
     "irna_english":    "https://en.irna.ir/rss",
     "defense_one":     "https://www.defenseone.com/rss/all/",
     "euractiv":        "https://www.euractiv.com/feed/",
-    "spectatorindex":  None,
-    "disclosetv":      None,
-    "haaretzcom":      None,  # requiere suscripción
-    "afp":             None,  # sin RSS público gratuito
-    # Instituciones y organismos
+    "axios":           "https://api.axios.com/feed/",
+    "thehill":         "https://thehill.com/feed/",
+    "newsweek":        "https://www.newsweek.com/rss",
+    "channel4news":    "https://www.channel4.com/news/feed/dateline/rss.xml",
+    "kyivindependent": "https://kyivindependent.com/feed/",
+    "kyivpost":        "https://www.kyivpost.com/rss",
+    # Instituciones — RSS oficial
     "nato":            "https://www.nato.int/rss/en/news.xml",
     "un":              "https://press.un.org/en/rss.xml",
     "iaea":            "https://www.iaea.org/feeds/topstories.xml",
@@ -70,20 +68,49 @@ RSS_OVERRIDES: dict[str, str | None] = {
     "wfp":             "https://www.wfp.org/rss.xml",
     "eu_commission":   "https://ec.europa.eu/commission/presscorner/rss/en",
     "europarl_en":     "https://www.europarl.europa.eu/rss/doc/press-releases-en.xml",
-    # China medios estado
+    # Rusia / China — medios estado con RSS
+    "rt_com":          "https://www.rt.com/rss/news/",
+    "tass_agency":     "https://tass.com/rss/v2.xml",
     "xhnews":          "https://www.xinhuanet.com/english/rss/worldrss.xml",
     "cgtnofficial":    "https://www.cgtn.com/subscribe/rss/section/world.do",
     "chinadaily":      "https://www.chinadaily.com.cn/rss/world_rss.xml",
-    "rt_com":          "https://www.rt.com/rss/news/",
-    "tass_agency":     "https://tass.com/rss/v2.xml",
+    # Sin RSS directo fiable → usa RSSHub vía RSSHUB_ROUTES
+    "reuters":         None,
+    "reutersworld":    None,
+    "ap":              None,
+    "wsj":             None,
+    "afp":             None,
+    "haaretzcom":      None,
+    "spectatorindex":  None,
+    "disclosetv":      None,
+}
+
+# ── Rutas RSSHub para fuentes sin RSS oficial ─────────────────────────────
+# Si handle está aquí, usa {RSSHUB_BASE}{ruta} en vez de /twitter/user/{handle}
+RSSHUB_ROUTES: dict[str, str] = {
+    "reuters":      "/reuters/world",
+    "reutersworld": "/reuters/world",
+    "ap":           "/apnews/topics/world-news",
+    "wsj":          "/wsj/world-news",
+    "afp":          "/afp/en/world",
 }
 
 
 def get_feed_url(account: dict) -> str | None:
     handle = account["handle"].lower()
+    # 1. RSS directo registrado
     if handle in RSS_OVERRIDES:
-        return RSS_OVERRIDES[handle]  # None → omitir cuenta
-    # Fallback RSSHub para cuentas de Twitter sin RSS oficial
+        url = RSS_OVERRIDES[handle]
+        if url is not None:
+            return url
+        # None pero tiene ruta RSSHub → usar RSSHub
+        if handle in RSSHUB_ROUTES:
+            return f"{RSSHUB_BASE}{RSSHUB_ROUTES[handle]}"
+        return None  # omitir
+    # 2. Ruta RSSHub personalizada (no Twitter)
+    if handle in RSSHUB_ROUTES:
+        return f"{RSSHUB_BASE}{RSSHUB_ROUTES[handle]}"
+    # 3. Fallback: feed de Twitter vía RSSHub
     return f"{RSSHUB_BASE}/twitter/user/{account['handle']}"
 
 

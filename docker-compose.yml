@@ -37,6 +37,22 @@ services:
       - redis
       - timescaledb
 
+  rsshub:
+    image: diygod/rsshub:latest
+    container_name: qilin_rsshub
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      CACHE_TYPE: redis
+      REDIS_URL: redis://redis:6379/1
+      DISALLOW_ROBOT: "1"
+      # Para feeds de Twitter/X: pega los cookies de una sesión activa de X
+      # Instrucciones: https://docs.rsshub.app/deploy/config#twitter
+      TWITTER_AUTH_TOKEN: ${TWITTER_AUTH_TOKEN:-}
+      TWITTER_CSRF_TOKEN: ${TWITTER_CSRF_TOKEN:-}
+    depends_on:
+      - redis
+
   ingestor-social:
     build: ./services/ingestor_social
     container_name: qilin_ingestor_social

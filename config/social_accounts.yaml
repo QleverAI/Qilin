@@ -963,3 +963,189 @@ accounts:
     category: media
     zone: europe
     priority: high
+
+  # ── MEDIOS ADICIONALES ───────────────────────────────────────────────────
+  - handle: axios
+    display: "Axios"
+    category: media
+    zone: north_america
+    priority: medium
+
+  - handle: TheHill
+    display: "The Hill"
+    category: media
+    zone: north_america
+    priority: medium
+
+  - handle: Newsweek
+    display: "Newsweek"
+    category: media
+    zone: north_america
+    priority: medium
+
+  - handle: Channel4News
+    display: "Channel 4 News (UK)"
+    category: media
+    zone: europe
+    priority: medium
+
+  # ── UCRANIA — COBERTURA EN INGLÉS ────────────────────────────────────────
+  - handle: KyivIndependent
+    display: "Kyiv Independent"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: KyivPost
+    display: "Kyiv Post"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: medium
+
+  - handle: wartranslated
+    display: "War Translated (UA/RU)"
+    category: ukraine
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: GirkinGirkin
+    display: "Girkin / Strelkov (milblog RU)"
+    category: russia
+    zone: ukraine_black_sea
+    priority: medium
+
+  # ── ANALISTAS / OSINT ─────────────────────────────────────────────────────
+  - handle: RALee85
+    display: "Rob Lee (FPRI, defensa)"
+    category: think_tank
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: GeoConfirmed
+    display: "GeoConfirmed (geolocalización)"
+    category: think_tank
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: IntelCrab
+    display: "Intel Crab (inteligencia)"
+    category: think_tank
+    zone: europe
+    priority: high
+
+  - handle: WarMonitor3
+    display: "War Monitor"
+    category: think_tank
+    zone: ukraine_black_sea
+    priority: medium
+
+  - handle: clashreport
+    display: "Clash Report (conflictos)"
+    category: think_tank
+    zone: levante
+    priority: high
+
+  - handle: sentdefender
+    display: "Sentinel Defense (OSINT)"
+    category: think_tank
+    zone: ukraine_black_sea
+    priority: high
+
+  - handle: Archer83Able
+    display: "Archer (inteligencia naval)"
+    category: think_tank
+    zone: south_china_sea
+    priority: medium
+
+  # ── MILITARES ADICIONALES ────────────────────────────────────────────────
+  - handle: DefenceHQ
+    display: "UK Ministry of Defence"
+    category: europe
+    zone: europe
+    priority: high
+
+  - handle: USEUCOM
+    display: "US European Command"
+    category: us_mil
+    zone: europe
+    priority: high
+
+  - handle: USAFEAirForces
+    display: "USAFE Air Forces Europe"
+    category: us_mil
+    zone: europe
+    priority: medium
+
+  - handle: PentagonPressSec
+    display: "Pentagon Press Secretary"
+    category: us_mil
+    zone: north_america
+    priority: high
+
+  - handle: NATO_SHAPE
+    display: "SHAPE (SACEUR)"
+    category: nato_eu
+    zone: europe
+    priority: high
+
+  - handle: israelMFA
+    display: "Israel MFA"
+    category: middle_east
+    zone: levante
+    priority: high
+
+  - handle: JakeSullivan46
+    display: "Jake Sullivan (ex Asesor Seg. Nac.)"
+    category: us_gov
+    zone: north_america
+    priority: medium
+
+  # ── ECONOMÍA / MERCADOS ──────────────────────────────────────────────────
+  - handle: economics
+    display: "The Economist (economics)"
+    category: media
+    zone: europe
+    priority: medium
+
+  - handle: business
+    display: "Bloomberg Business"
+    category: media
+    zone: north_america
+    priority: medium
+
+  - handle: FT
+    display: "Financial Times"
+    category: media
+    zone: europe
+    priority: high
+
+  # ── AFRICA / ASIA ADICIONALES ────────────────────────────────────────────
+  - handle: AfricaNewsRoom
+    display: "Africa News Room"
+    category: intl_org
+    zone: sahel
+    priority: medium
+
+  - handle: BBCAFRICA
+    display: "BBC Africa"
+    category: media
+    zone: sahel
+    priority: medium
+
+  - handle: IndoPacificCmd
+    display: "Indo-Pacific Command"
+    category: us_mil
+    zone: south_china_sea
+    priority: high
+
+  - handle: PakistanMFA
+    display: "MFA Pakistán"
+    category: asia_pacific
+    zone: india_pakistan
+    priority: medium
+
+  - handle: MOFA_KSA
+    display: "MFA Arabia Saudí (nuevo)"
+    category: middle_east
+    zone: gulf_ormuz
+    priority: medium
