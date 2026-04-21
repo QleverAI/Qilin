@@ -14,3 +14,7 @@ build/
 CLAUDE.local.md
 .claude/settings.local.json
 .worktrees/
+
+# Superpowers — archivos locales del sistema
+.superpowers/
+docs/superpowers/
