@@ -1,7 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, lazy, Suspense } from 'react'
 import TopBar        from './components/TopBar'
 import AnalystView   from './components/AnalystView'
-import MapView       from './components/MapView'
 import AlertPanel    from './components/AlertPanel'
 import FilterPanel   from './components/FilterPanel'
 import BottomBar     from './components/BottomBar'
@@ -12,7 +11,10 @@ import DocumentsPage from './pages/DocumentsPage'
 import SocialPage    from './pages/SocialPage'
 import FilingsPage   from './pages/FilingsPage'
 import PolymarketPage from './pages/PolymarketPage'
+import LoadingState  from './components/LoadingSkeleton'
 import { useQilinData } from './hooks/useQilinData'
+
+const MapView = lazy(() => import('./components/MapView'))
 
 const DEFAULT_FILTERS = {
   civil:             true,
@@ -20,10 +22,16 @@ const DEFAULT_FILTERS = {
   alerts:            true,
 }
 
+function initUser() {
+  const token    = sessionStorage.getItem('qilin_token')
+  const username = sessionStorage.getItem('qilin_user')
+  return token ? { username, token } : null
+}
+
 export default function App() {
-  const [user,       setUser]       = useState(null)
-  const [activeView, setActiveView] = useState('map')   // map | analyst
-  const [view,       setView]       = useState('home')  // home | tactical | news | documents | social | markets | polymarket
+  const [user,       setUser]       = useState(initUser)
+  const [activeView, setActiveView] = useState('map')
+  const [view,       setView]       = useState('home')
   const [filters,    setFilters]    = useState(DEFAULT_FILTERS)
   const [flyTarget,  setFlyTarget]  = useState(null)
 
@@ -85,7 +93,13 @@ export default function App() {
           activeMode={activeView}
           onModeChange={setActiveView}
         />
-        <MapView aircraft={visibleAircraft} alerts={visibleAlerts} flyTarget={flyTarget} />
+        <Suspense fallback={
+          <div style={{ gridColumn: 1, gridRow: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-0)' }}>
+            <LoadingState message="CARGANDO MAPA..." variant="map" />
+          </div>
+        }>
+          <MapView aircraft={visibleAircraft} alerts={visibleAlerts} flyTarget={flyTarget} />
+        </Suspense>
         <aside style={{
           gridColumn: 2, gridRow: 2,
           display: 'flex', flexDirection: 'column',
