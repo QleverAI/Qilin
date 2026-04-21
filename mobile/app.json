@@ -33,13 +33,7 @@
       "expo-document-picker",
       "expo-asset",
       "expo-font",
-      "expo-secure-store",
-      [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": ""
-        }
-      ]
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

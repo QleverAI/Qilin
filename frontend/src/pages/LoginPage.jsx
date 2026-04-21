@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 function BackgroundCanvas() {
   const ref = useRef(null)
@@ -72,7 +72,7 @@ export default function LoginPage({ onLogin }) {
 
     try {
       const body = new URLSearchParams({ username: user, password: pass })
-      const res  = await fetch(`${API_URL}/auth/login`, {
+      const res  = await fetch(`${API_URL}/api/auth/login`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,

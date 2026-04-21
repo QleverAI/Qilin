@@ -91,6 +91,24 @@ def parse_entry(entry: feedparser.FeedParserDict, source: dict) -> dict | None:
     else:
         time = datetime.now(timezone.utc)
 
+    # Imagen del artículo (media:content, media:thumbnail o enclosure)
+    image_url = None
+    media_content = getattr(entry, "media_content", [])
+    if media_content and isinstance(media_content, list):
+        for m in media_content:
+            if isinstance(m, dict) and m.get("url") and m.get("medium") in ("image", None):
+                image_url = m["url"]
+                break
+    if not image_url:
+        media_thumb = getattr(entry, "media_thumbnail", [])
+        if media_thumb and isinstance(media_thumb, list):
+            image_url = media_thumb[0].get("url") if media_thumb[0] else None
+    if not image_url:
+        for enc in getattr(entry, "enclosures", []):
+            if isinstance(enc, dict) and enc.get("type", "").startswith("image"):
+                image_url = enc.get("href") or enc.get("url")
+                break
+
     sectors   = classify_sectors(title, summary)
     severity  = classify_severity(title, sectors)
     relevance = compute_relevance(source, sectors, severity)
@@ -103,8 +121,9 @@ def parse_entry(entry: feedparser.FeedParserDict, source: dict) -> dict | None:
         "title":          title[:500],
         "url":            url,
         "summary":        summary[:1000] if summary else None,
+        "image_url":      image_url,
         "zones":          [source["zone"]] if source.get("zone") != "global" else [],
-        "keywords":       sectors,  # reutiliza campo keywords existente
+        "keywords":       sectors,
         "severity":       severity,
         "relevance":      relevance,
         "sectors":        sectors,
@@ -141,13 +160,13 @@ async def publish(redis, db, article: dict) -> bool:
             await db.execute(
                 """
                 INSERT INTO news_events
-                    (time, source, title, url, summary, zones, keywords,
+                    (time, source, title, url, summary, image_url, zones, keywords,
                      severity, relevance, source_country, source_type, sectors)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 ON CONFLICT (url) DO NOTHING
                 """,
                 article["time"], article["source"], article["title"],
-                article["url"], article["summary"],
+                article["url"], article["summary"], article["image_url"],
                 article["zones"], article["keywords"],
                 article["severity"], article["relevance"],
                 article["source_country"], article["source_type"],
