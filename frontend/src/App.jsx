@@ -13,6 +13,7 @@ import FilingsPage   from './pages/FilingsPage'
 import PolymarketPage from './pages/PolymarketPage'
 import LoadingState  from './components/LoadingSkeleton'
 import { useQilinData } from './hooks/useQilinData'
+import { useAircraftTrail } from './hooks/useAircraftTrail'
 
 const MapView = lazy(() => import('./components/MapView'))
 
@@ -36,6 +37,7 @@ export default function App() {
   const [flyTarget,  setFlyTarget]  = useState(null)
 
   const { aircraft, alerts, stats, wsStatus } = useQilinData()
+  const { trails, addTrail, removeTrail, clearAll } = useAircraftTrail()
 
   function toggleFilter(key) {
     setFilters(prev => ({ ...prev, [key]: !prev[key] }))
@@ -98,7 +100,15 @@ export default function App() {
             <LoadingState message="CARGANDO MAPA..." variant="map" />
           </div>
         }>
-          <MapView aircraft={visibleAircraft} alerts={visibleAlerts} flyTarget={flyTarget} />
+          <MapView
+            aircraft={visibleAircraft}
+            alerts={visibleAlerts}
+            flyTarget={flyTarget}
+            trails={trails}
+            onAddTrail={addTrail}
+            onRemoveTrail={removeTrail}
+            onClearTrails={clearAll}
+          />
         </Suspense>
         <aside style={{
           gridColumn: 2, gridRow: 2,

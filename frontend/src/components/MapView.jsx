@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { ZONES, CHOKEPOINTS } from '../data/zones'
+import TrailPanel from './TrailPanel'
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
@@ -123,7 +124,7 @@ function alertsGeoJSON(alerts) {
 }
 
 // ── Component ──────────────────────────────────────────────────
-export default function MapView({ aircraft, alerts, flyTarget }) {
+export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAddTrail, onRemoveTrail, onClearTrails }) {
   const containerRef = useRef(null)
   const mapRef       = useRef(null)
   const [ready, setReady]               = useState(false)
@@ -309,6 +310,109 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
     return () => cancelAnimationFrame(animRef.current)
   }, [ready])
 
+  // Manage trail polyline layers per tracked aircraft
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map) return
+
+    const trailIds = Object.keys(trails)
+
+    // Add/update sources and layers for each trail
+    trailIds.forEach(icao24 => {
+      const trail = trails[icao24]
+      const srcId   = `trail-src-${icao24}`
+      const lineId  = `trail-line-${icao24}`
+      const baseId  = `base-src-${icao24}`
+      const baseDot = `base-dot-${icao24}`
+
+      // Trail polyline
+      const pts = trail.points || []
+      const coords = pts.map(p => [p.lon, p.lat])
+      const geojson = {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: coords },
+      }
+
+      try {
+        if (map.getSource(srcId)) {
+          map.getSource(srcId).setData(geojson)
+        } else {
+          map.addSource(srcId, { type: 'geojson', data: geojson })
+          map.addLayer({
+            id: lineId, type: 'line', source: srcId,
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: {
+              'line-color': trail.color,
+              'line-width': 1.5,
+              'line-opacity': 0.75,
+            },
+          }, 'aircraft-layer')
+        }
+      } catch (_) {}
+
+      // Base markers
+      const bases = trail.bases || []
+      const basesGeo = {
+        type: 'FeatureCollection',
+        features: bases.map(b => ({
+          type: 'Feature',
+          properties: { label: b.airfield_icao, is_military: b.is_military },
+          geometry: { type: 'Point', coordinates: [b.lon, b.lat] },
+        })),
+      }
+
+      try {
+        if (map.getSource(baseId)) {
+          map.getSource(baseId).setData(basesGeo)
+        } else {
+          map.addSource(baseId, { type: 'geojson', data: basesGeo })
+          map.addLayer({
+            id: baseDot, type: 'circle', source: baseId,
+            paint: {
+              'circle-radius': 5,
+              'circle-color': ['case', ['get', 'is_military'], '#f43f5e', trail.color],
+              'circle-stroke-width': 1.5,
+              'circle-stroke-color': 'rgba(0,0,0,0.6)',
+              'circle-opacity': 0.85,
+            },
+          })
+          map.addLayer({
+            id: `${baseDot}-label`, type: 'symbol', source: baseId,
+            layout: {
+              'text-field': ['get', 'label'],
+              'text-font': ['Noto Sans Regular'],
+              'text-size': 9, 'text-offset': [0, 1.2], 'text-anchor': 'top',
+            },
+            paint: {
+              'text-color': trail.color,
+              'text-halo-color': 'rgba(0,0,0,0.8)', 'text-halo-width': 1,
+            },
+          })
+        }
+      } catch (_) {}
+    })
+
+    // Remove sources/layers for trails that were removed
+    try {
+      const existing = map.getStyle()?.layers?.map(l => l.id) || []
+      existing.forEach(layerId => {
+        const m = layerId.match(/^trail-line-(.+)$/) || layerId.match(/^base-dot-(.+?)(-label)?$/)
+        if (!m) return
+        const icao24 = layerId.match(/^trail-line-(.+)$/)?.[1] || layerId.match(/^base-dot-([^-]+(?:-[^-]+)*?)(-label)?$/)?.[1]
+        if (icao24 && !trails[icao24]) {
+          try { map.removeLayer(layerId) } catch (_) {}
+        }
+      })
+      const sources = Object.keys(map.getStyle()?.sources || {})
+      sources.forEach(srcId => {
+        const m = srcId.match(/^(trail-src|base-src)-(.+)$/)
+        if (m && !trails[m[2]]) {
+          try { map.removeSource(srcId) } catch (_) {}
+        }
+      })
+    } catch (_) {}
+  }, [trails, ready])
+
   // Fly to target when alert card clicked
   useEffect(() => {
     if (!ready || !flyTarget || !mapRef.current) return
@@ -331,6 +435,16 @@ export default function MapView({ aircraft, alerts, flyTarget }) {
         color:'rgba(0,200,255,0.4)', textTransform:'uppercase',
         pointerEvents:'none', zIndex:2, fontFamily:"'Barlow Condensed',sans-serif",
       }}>TACTICAL DISPLAY · LIVE</div>
+
+      {onAddTrail && (
+        <TrailPanel
+          aircraft={aircraft}
+          trails={trails}
+          onAdd={onAddTrail}
+          onRemove={onRemoveTrail}
+          onClear={onClearTrails}
+        />
+      )}
 
       {/* Entity detail card — anclado al avión */}
       {detail && (() => {

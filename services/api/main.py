@@ -182,6 +182,171 @@ async def get_aircraft(_user: str = Depends(get_current_user)):
     return [json.loads(v) for v in values if v]
 
 
+@app.get("/aircraft/{icao24}/trail")
+async def get_aircraft_trail(
+    icao24: str,
+    hours: int = 6,
+    _user: str = Depends(get_current_user),
+):
+    """Trayectoria histórica de una aeronave desde aircraft_positions."""
+    if not app.state.db:
+        return []
+    hours = max(1, min(hours, 72))
+    rows = await app.state.db.fetch(
+        """
+        SELECT time, lat, lon, altitude, heading, velocity, on_ground, callsign, zone
+        FROM aircraft_positions
+        WHERE icao24 = $1
+          AND time > NOW() - ($2 * INTERVAL '1 hour')
+          AND lat IS NOT NULL AND lon IS NOT NULL
+        ORDER BY time ASC
+        """,
+        icao24.lower(), hours,
+    )
+    return [
+        {
+            "time":      r["time"].isoformat(),
+            "lat":       r["lat"],
+            "lon":       r["lon"],
+            "altitude":  r["altitude"],
+            "heading":   r["heading"],
+            "velocity":  r["velocity"],
+            "on_ground": r["on_ground"],
+            "callsign":  r["callsign"],
+            "zone":      r["zone"],
+        }
+        for r in rows
+    ]
+
+
+@app.get("/aircraft/{icao24}/bases")
+async def get_aircraft_bases(
+    icao24: str,
+    _user: str = Depends(get_current_user),
+):
+    """Bases conocidas de una aeronave ordenadas por visitas."""
+    if not app.state.db:
+        return []
+    try:
+        rows = await app.state.db.fetch(
+            """
+            SELECT airfield_icao, airfield_name, airfield_type,
+                   country, lat, lon, is_military,
+                   first_seen, last_seen, visit_count, callsign, category
+            FROM aircraft_bases
+            WHERE icao24 = $1
+            ORDER BY visit_count DESC, last_seen DESC
+            """,
+            icao24.lower(),
+        )
+        return [
+            {
+                **dict(r),
+                "first_seen": r["first_seen"].isoformat(),
+                "last_seen":  r["last_seen"].isoformat(),
+            }
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+@app.get("/aircraft/{icao24}/routes")
+async def get_aircraft_routes(
+    icao24: str,
+    _user: str = Depends(get_current_user),
+):
+    """Rutas detectadas de una aeronave (origen→destino)."""
+    if not app.state.db:
+        return []
+    try:
+        rows = await app.state.db.fetch(
+            """
+            SELECT r.origin_icao, r.dest_icao, r.origin_name, r.dest_name,
+                   r.flight_count, r.last_seen,
+                   o.lat AS origin_lat, o.lon AS origin_lon,
+                   d.lat AS dest_lat,   d.lon AS dest_lon,
+                   o.is_military AS origin_mil, d.is_military AS dest_mil
+            FROM aircraft_routes r
+            LEFT JOIN airfields o ON o.icao = r.origin_icao
+            LEFT JOIN airfields d ON d.icao = r.dest_icao
+            WHERE r.icao24 = $1
+            ORDER BY r.flight_count DESC
+            """,
+            icao24.lower(),
+        )
+        return [
+            {**dict(r), "last_seen": r["last_seen"].isoformat()}
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+@app.get("/bases/recent")
+async def get_recent_bases(
+    limit: int = 30,
+    military_only: bool = False,
+    _user: str = Depends(get_current_user),
+):
+    """Aterrizajes recientes detectados."""
+    if not app.state.db:
+        return []
+    try:
+        where = "WHERE is_military = TRUE" if military_only else ""
+        rows = await app.state.db.fetch(
+            f"""
+            SELECT icao24, airfield_icao, airfield_name, airfield_type,
+                   country, lat, lon, is_military,
+                   last_seen, visit_count, callsign, category
+            FROM aircraft_bases
+            {where}
+            ORDER BY last_seen DESC
+            LIMIT $1
+            """,
+            limit,
+        )
+        return [
+            {**dict(r), "last_seen": r["last_seen"].isoformat()}
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+@app.get("/airfields/search")
+async def search_airfields(
+    q: str = "",
+    country: str = "",
+    military_only: bool = False,
+    limit: int = 20,
+    _user: str = Depends(get_current_user),
+):
+    """Búsqueda de aeródromos por nombre o código ICAO."""
+    if not app.state.db:
+        return []
+    try:
+        conditions = []
+        params: list = []
+        if q:
+            params.append(f"%{q.upper()}%")
+            conditions.append(f"(UPPER(name) LIKE ${len(params)} OR UPPER(icao) LIKE ${len(params)})")
+        if country:
+            params.append(country.upper())
+            conditions.append(f"country = ${len(params)}")
+        if military_only:
+            conditions.append("is_military = TRUE")
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        params.append(limit)
+        rows = await app.state.db.fetch(
+            f"SELECT icao, iata, name, type, lat, lon, country, is_military FROM airfields {where} LIMIT ${len(params)}",
+            *params,
+        )
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
 @app.get("/vessels")
 async def get_vessels(_user: str = Depends(get_current_user)):
     redis = app.state.redis

@@ -109,6 +109,16 @@ services:
       - redis
       - timescaledb
 
+  ingestor-bases:
+    build: ./services/ingestor_bases
+    container_name: qilin_ingestor_bases
+    restart: unless-stopped
+    environment:
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      BASES_POLL_INTERVAL: ${BASES_POLL_INTERVAL:-300}
+    depends_on:
+      - timescaledb
+
   ingestor-sentinel:
     build: ./services/ingestor_sentinel
     container_name: qilin_ingestor_sentinel
