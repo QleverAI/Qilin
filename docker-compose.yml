@@ -44,9 +44,9 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
-      X_BEARER_TOKEN: ${X_BEARER_TOKEN:-}
       SOCIAL_POLL_INTERVAL: ${SOCIAL_POLL_INTERVAL:-900}
-      TWITTER_DAILY_CAP: ${TWITTER_DAILY_CAP:-300}
+      RSSHUB_BASE: ${RSSHUB_BASE:-https://rsshub.app}
+      SOCIAL_BATCH_SIZE: ${SOCIAL_BATCH_SIZE:-15}
     volumes:
       - ./config:/app/config
     depends_on:
