@@ -226,9 +226,6 @@ export default function HomePage({ aircraft, alerts, onNavigate }) {
           </div>
         ))}
 
-        <div style={{ marginLeft:'auto', fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)', letterSpacing:'.08em' }}>
-          FUSIÓN IA · PRÓXIMAMENTE
-        </div>
       </div>
 
       {/* 2×2 module grid */}

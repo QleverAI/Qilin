@@ -67,6 +67,46 @@ function buildZonesGeoJSON() {
 
 // ── FilterBar ─────────────────────────────────────────────────────────────────
 
+function BtnGroup({ options, value, onChange }) {
+  return (
+    <div style={{
+      display: 'flex',
+      background: 'var(--bg-2)',
+      border: '1px solid var(--border-md)',
+      borderRadius: '3px',
+      overflow: 'hidden',
+    }}>
+      {options.map((opt, i) => {
+        const active = value === opt.value
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            style={{
+              background: active ? 'rgba(79,156,249,0.15)' : 'transparent',
+              border: 'none',
+              borderRight: i < options.length - 1 ? '1px solid var(--border-md)' : 'none',
+              color: active ? 'var(--accent)' : 'var(--txt-3)',
+              fontFamily: 'var(--mono)',
+              fontSize: 'var(--label-xs)',
+              fontWeight: '600',
+              letterSpacing: '.1em',
+              padding: '4px 9px',
+              cursor: 'pointer',
+              transition: 'color .15s, background .15s',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-3)' }}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function FilterBar({
   availableZones, filterZone, setFilterZone,
   filterType, setFilterType,
@@ -74,62 +114,73 @@ function FilterBar({
   filterHours, setFilterHours,
   loading, onRefresh, lastUpdated,
 }) {
+  const zoneOpts = [{ value: '', label: 'TODAS' }, ...availableZones.map(z => ({ value: z, label: z.replace(/_/g, ' ').toUpperCase() }))]
+  const typeOpts = [
+    { value: '', label: 'TODOS' },
+    { value: 'MILITARY', label: 'MIL' },
+    { value: 'MARITIME', label: 'MAR' },
+    { value: 'MARKET', label: 'MKT' },
+    { value: 'ENVIRONMENTAL', label: 'ENV' },
+    { value: 'COMBINED', label: 'COMB' },
+  ]
+  const hoursOpts = [
+    { value: 6, label: '6H' },
+    { value: 24, label: '24H' },
+    { value: 48, label: '48H' },
+    { value: 168, label: '7D' },
+  ]
+
   const sel = {
     background: 'var(--bg-2)', border: '1px solid var(--border-md)',
     color: 'var(--txt-1)', borderRadius: '3px', padding: '4px 8px',
-    fontSize: '11px', fontFamily: 'var(--mono)', cursor: 'pointer',
+    fontSize: 'var(--label-xs)', fontFamily: 'var(--mono)', cursor: 'pointer',
+    outline: 'none',
   }
+
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: '10px',
-      padding: '0 14px', height: '48px', flexShrink: 0,
+      display: 'flex', alignItems: 'center', gap: '8px',
+      padding: '0 14px', height: '44px', flexShrink: 0,
       background: 'var(--bg-1)', borderBottom: '1px solid var(--border-md)',
     }}>
-      <span style={{ fontSize: '10px', color: 'var(--txt-3)', letterSpacing: '.12em', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+      <span style={{ fontSize: 'var(--label-xs)', color: 'var(--txt-3)', letterSpacing: '.15em', fontFamily: 'var(--mono)', flexShrink: 0, fontWeight: '700' }}>
         FILTROS
       </span>
 
+      {/* Zone — styled select (dynamic, too many for button group) */}
       <select value={filterZone} onChange={e => setFilterZone(e.target.value)} style={sel}>
-        <option value="">Todas las zonas</option>
-        {availableZones.map(z => (
-          <option key={z} value={z}>{z.replace(/_/g, ' ').toUpperCase()}</option>
-        ))}
+        {zoneOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
 
-      <select value={filterType} onChange={e => setFilterType(e.target.value)} style={sel}>
-        <option value="">Todos los tipos</option>
-        {['MILITARY', 'MARITIME', 'MARKET', 'ENVIRONMENTAL', 'COMBINED'].map(t => (
-          <option key={t} value={t}>{t}</option>
-        ))}
-      </select>
+      {/* Type — button group */}
+      <BtnGroup options={typeOpts} value={filterType} onChange={setFilterType} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-        <span style={{ fontSize: '10px', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>SEV ≥</span>
-        <select value={filterSeverityMin} onChange={e => setFilterSeverityMin(Number(e.target.value))} style={{ ...sel, width: '52px' }}>
+      {/* Severity min — compact number input */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{ fontSize: 'var(--label-xs)', color: 'var(--txt-3)', fontFamily: 'var(--mono)', fontWeight: '700', letterSpacing: '.1em' }}>SEV≥</span>
+        <select value={filterSeverityMin} onChange={e => setFilterSeverityMin(Number(e.target.value))} style={{ ...sel, width: '46px' }}>
           {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
         </select>
       </div>
 
-      <select value={filterHours} onChange={e => setFilterHours(Number(e.target.value))} style={sel}>
-        <option value={6}>Últimas 6h</option>
-        <option value={24}>Últimas 24h</option>
-        <option value={48}>Últimas 48h</option>
-        <option value={168}>Últimos 7d</option>
-      </select>
+      {/* Hours — button group */}
+      <BtnGroup options={hoursOpts} value={filterHours} onChange={v => setFilterHours(Number(v))} />
 
+      {/* Refresh */}
       <button
         onClick={onRefresh} disabled={loading}
         style={{
           ...sel, cursor: loading ? 'not-allowed' : 'pointer',
-          opacity: loading ? 0.5 : 1, padding: '4px 14px',
-          borderColor: 'var(--accent)', color: 'var(--accent)',
+          opacity: loading ? 0.5 : 1, padding: '4px 12px',
+          border: '1px solid var(--accent)', color: 'var(--accent)',
+          fontWeight: '700', letterSpacing: '.1em',
         }}
       >
-        {loading ? '…' : 'Actualizar'}
+        {loading ? '…' : 'SYNC'}
       </button>
 
       {lastUpdated && (
-        <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>
+        <span style={{ marginLeft: 'auto', fontSize: 'var(--label-xs)', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>
           {lastUpdated}
         </span>
       )}

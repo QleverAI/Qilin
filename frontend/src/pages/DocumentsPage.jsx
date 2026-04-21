@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useDocsFeed } from '../hooks/useDocsFeed'
-
-const SEV_COLOR  = { high: 'var(--red)', medium: 'var(--amber)', low: 'var(--green)' }
-const SEV_BG     = { high: 'rgba(255,59,74,0.10)', medium: 'rgba(255,176,32,0.09)', low: 'rgba(0,229,160,0.08)' }
-const SEV_BORDER = { high: 'rgba(255,59,74,0.28)', medium: 'rgba(255,176,32,0.26)', low: 'rgba(0,229,160,0.2)' }
+import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
+import FilterGroup from '../components/FilterGroup'
+import { LoadingRows } from '../components/LoadingSkeleton'
+import EmptyState from '../components/EmptyState'
 
 const ORG_LABELS = {
   defense:       'Defensa',
@@ -51,31 +51,6 @@ function SectorTag({ sector }) {
     }}>
       {SECTOR_LABELS[sector] || sector}
     </span>
-  )
-}
-
-function FilterGroup({ label, options, value, onChange, labelFn }) {
-  return (
-    <div>
-      <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
-        {label}
-      </div>
-      {['TODOS', ...options].map(opt => (
-        <button key={opt} onClick={() => onChange(opt)} style={{
-          display: 'block', width: '100%', textAlign: 'left',
-          background: value === opt ? 'var(--accent-dim)' : 'none',
-          border: 'none',
-          borderLeft: `2px solid ${value === opt ? 'var(--accent)' : 'transparent'}`,
-          color: value === opt ? 'var(--accent)' : 'var(--txt-3)',
-          fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.06em',
-          padding: '4px 8px', cursor: 'pointer', transition: 'color .15s',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          textTransform: 'uppercase',
-        }}>
-          {opt === 'TODOS' ? 'TODOS' : (labelFn ? labelFn(opt) : opt.replace(/_/g, ' '))}
-        </button>
-      ))}
-    </div>
   )
 }
 
@@ -139,9 +114,7 @@ function DocRow({ doc, selected, onClick }) {
 function DocDetail({ doc }) {
   if (!doc) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--txt-3)', lineHeight: 2 }}>
-        SELECCIONA UN DOCUMENTO<br />PARA VER EL ANÁLISIS
-      </div>
+      <EmptyState title="SELECCIONA UN DOCUMENTO" subtitle="PARA VER EL ANÁLISIS" icon="◧" />
     </div>
   )
 
@@ -312,7 +285,7 @@ export default function DocumentsPage() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Sidebar filtros */}
         <aside style={{
-          width: '160px', flexShrink: 0,
+          width: '180px', flexShrink: 0,
           background: 'var(--bg-1)',
           borderRight: '1px solid var(--border-md)',
           padding: '12px 8px',
@@ -355,15 +328,13 @@ export default function DocumentsPage() {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
-            {loading && (
-              <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
-                Cargando documentos…
-              </div>
-            )}
+            {loading && <LoadingRows count={8} />}
             {!loading && filtered.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
-                {docs.length === 0 ? 'Ingestor de documentos no activo o sin datos aún' : 'Sin resultados para los filtros actuales'}
-              </div>
+              <EmptyState
+                title={docs.length === 0 ? 'SIN DOCUMENTOS' : 'SIN RESULTADOS'}
+                subtitle={docs.length === 0 ? 'INGESTOR INACTIVO O SIN DATOS' : 'AJUSTA LOS FILTROS ACTIVOS'}
+                icon="◧"
+              />
             )}
             {!loading && filtered.map(doc => (
               <DocRow

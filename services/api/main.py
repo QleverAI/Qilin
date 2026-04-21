@@ -625,6 +625,115 @@ async def get_sec_sources(_user: str = Depends(get_current_user)):
         return []
 
 
+# ── POLYMARKET ────────────────────────────────────────────────────────────────
+
+@app.get("/polymarket/feed")
+async def get_polymarket_feed(_user: str = Depends(get_current_user)):
+    try:
+        raw = await app.state.redis.get("cache:polymarket:markets")
+        if raw:
+            return json.loads(raw)
+    except Exception as e:
+        log.warning(f"polymarket feed error: {e}")
+    return []
+
+
+@app.get("/polymarket/analysis")
+async def get_polymarket_analysis(_user: str = Depends(get_current_user)):
+    redis = app.state.redis
+    try:
+        cached = await redis.get("cache:polymarket:analysis")
+        if cached:
+            return json.loads(cached)
+    except Exception as e:
+        log.warning(f"polymarket analysis cache read: {e}")
+
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        return {"picks": [], "summary": "Análisis LLM no disponible (sin API key)", "generated_at": None}
+
+    try:
+        markets_raw = await redis.get("cache:polymarket:markets")
+        markets = json.loads(markets_raw) if markets_raw else []
+    except Exception:
+        markets = []
+
+    if not markets:
+        return {"picks": [], "summary": "Sin datos de mercados disponibles aún", "generated_at": None}
+
+    try:
+        alerts_raw = await redis.xrevrange("stream:alerts", count=10)
+        recent_alerts = []
+        for _, msg in alerts_raw:
+            try:
+                recent_alerts.append(json.loads(msg.get("data", "{}")))
+            except Exception:
+                pass
+    except Exception:
+        recent_alerts = []
+
+    top_markets = markets[:40]
+    market_lines = "\n".join(
+        f"- [{m['category'].upper()}] {m['question']} | YES={m['yes_price']:.0%} | Vol=${m['volume']:,.0f}"
+        for m in top_markets
+    )
+    alert_lines = "\n".join(
+        f"- [{a.get('severity','?').upper()}] {a.get('title','')}"
+        for a in recent_alerts[:5]
+    ) or "Sin alertas activas"
+
+    prompt = f"""Eres un analista de inteligencia geopolítica y mercados de predicción.
+
+ALERTAS ACTIVAS EN QILIN:
+{alert_lines}
+
+TOP MERCADOS DE PREDICCIÓN (Polymarket):
+{market_lines}
+
+TAREA: Selecciona 3-5 mercados que tengan valor especulativo real basado en el contexto geopolítico actual.
+Para cada mercado, indica:
+1. question (texto exacto)
+2. badge: "HIGH VALUE" (precio alejado de extremos con alta incertidumbre real), "WATCH" (movimiento fuerte reciente), o "PRICED IN" (probabilidad ya alta >85%)
+3. reasoning (1-2 frases en español explicando por qué es relevante ahora)
+
+Responde SOLO con JSON válido (sin markdown):
+{{"summary": "...", "picks": [{{"question": "...", "badge": "...", "reasoning": "..."}}]}}"""
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            text = resp.json()["content"][0]["text"].strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+            analysis = json.loads(text)
+    except Exception as e:
+        log.warning(f"polymarket LLM error: {e}")
+        analysis = {"picks": [], "summary": "Error generando análisis", "generated_at": None}
+
+    analysis["generated_at"] = datetime.now(timezone.utc).isoformat()
+    for pick in analysis.get("picks", []):
+        for m in markets:
+            if pick.get("question") == m.get("question"):
+                pick["market_id"] = m["market_id"]
+                pick["yes_price"] = m["yes_price"]
+                pick["volume"] = m["volume"]
+                pick["slug"] = m.get("slug", "")
+                break
+
+    try:
+        await redis.set("cache:polymarket:analysis", json.dumps(analysis), ex=1800)
+    except Exception as e:
+        log.warning(f"polymarket analysis cache write: {e}")
+
+    return analysis
+
+
 # ── REPORTS ───────────────────────────────────────────────────────────────────
 
 @app.get("/reports")

@@ -220,6 +220,7 @@ services:
       DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
       AUTH_USER_1: ${AUTH_USER_1:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8000:8000"
     volumes:

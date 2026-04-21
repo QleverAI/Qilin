@@ -1,25 +1,57 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  /* Backgrounds */
   --bg-0:       #0c0c0e;
   --bg-1:       #131316;
   --bg-2:       #1a1a1f;
   --bg-3:       #222228;
+
+  /* Borders */
   --border:     rgba(255,255,255,0.06);
+  --border-sm:  rgba(255,255,255,0.06);
   --border-md:  rgba(255,255,255,0.11);
   --border-hi:  rgba(255,255,255,0.20);
+
+  /* Accent / brand */
   --accent:     #4f9cf9;
   --accent-dim: rgba(79,156,249,0.12);
   --cyan:       #4f9cf9;
   --cyan-dim:   rgba(79,156,249,0.15);
+
+  /* Semantic */
   --green:      #34d399;
   --amber:      #f59e0b;
   --red:        #f43f5e;
+
+  /* Severity — canonical source, all components must use these */
+  --sev-high:        #f43f5e;
+  --sev-high-bg:     rgba(244,63,94,0.10);
+  --sev-high-border: rgba(244,63,94,0.28);
+  --sev-medium:      #f59e0b;
+  --sev-medium-bg:   rgba(245,158,11,0.09);
+  --sev-medium-border: rgba(245,158,11,0.26);
+  --sev-low:         #34d399;
+  --sev-low-bg:      rgba(52,211,153,0.08);
+  --sev-low-border:  rgba(52,211,153,0.20);
+
+  /* Text — increased contrast on txt-2 */
   --txt-1:      #e8eaf0;
-  --txt-2:      #7a8699;
-  --txt-3:      #3f4a5c;
+  --txt-2:      #94a3b8;
+  --txt-3:      #4a5568;
+
+  /* Typography */
   --mono:       'IBM Plex Mono', monospace;
   --ui:         'Inter', sans-serif;
+
+  /* Type scale — section label / meta / body */
+  --label-xs:   8px;
+  --label-sm:   9px;
+  --label-md:   10px;
+  --body-sm:    11px;
+  --body-md:    12px;
+  --title-sm:   13px;
+  --title-md:   15px;
 }
 
 html, body, #root {
@@ -48,9 +80,21 @@ html, body, #root {
 }
 @keyframes alertPulse {
   0%,100% { box-shadow: 0 0 0 0 transparent; }
-  50%      { box-shadow: 0 0 10px 1px rgba(255,59,74,0.18); }
+  50%      { box-shadow: 0 0 12px 2px rgba(244,63,94,0.22); }
 }
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+@keyframes scanDown {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }

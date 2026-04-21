@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 
 const NAV_ITEMS = [
-  { id: 'home',      label: 'INICIO'     },
-  { id: 'tactical',  label: 'TÁCTICO'    },
-  { id: 'news',      label: 'NOTICIAS'   },
-  { id: 'documents', label: 'DOCUMENTOS' },
-  { id: 'social',    label: 'SOCIAL'     },
-  { id: 'markets',   label: 'MERCADOS'   },
+  { id: 'home',       label: 'INICIO'     },
+  { id: 'tactical',   label: 'TÁCTICO'    },
+  { id: 'news',       label: 'NOTICIAS'   },
+  { id: 'documents',  label: 'DOCUMENTOS' },
+  { id: 'social',     label: 'SOCIAL'     },
+  { id: 'markets',    label: 'MERCADOS'   },
+  { id: 'polymarket', label: 'PREDICCIÓN' },
 ]
 
 function LogoIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
+    <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
       <circle cx="13" cy="13" r="11" stroke="var(--accent)" strokeWidth="1.2" opacity=".4"/>
       <circle cx="13" cy="13" r="7"  stroke="var(--accent)" strokeWidth="1.2" opacity=".6"/>
       <circle cx="13" cy="13" r="3"  fill="var(--accent)" opacity=".9"/>
@@ -23,7 +24,7 @@ function LogoIcon() {
   )
 }
 
-export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate }) {
+export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, activeMode, onModeChange }) {
   const [time, setTime] = useState('')
 
   useEffect(() => {
@@ -40,7 +41,9 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate 
   }, [])
 
   const wsColor = wsStatus === 'connected' ? 'var(--green)' : wsStatus === 'error' ? 'var(--red)' : 'var(--amber)'
-  const wsLabel = wsStatus === 'connected' ? 'LIVE' : wsStatus === 'error' ? 'ERROR' : 'MOCK'
+  const wsLabel = wsStatus === 'connected' ? 'LIVE'  : wsStatus === 'error'     ? 'ERROR' : 'MOCK'
+
+  const isAnalyst = activeMode === 'analyst'
 
   return (
     <header style={{
@@ -50,60 +53,114 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate 
       background: 'var(--bg-1)',
       borderBottom: '1px solid var(--border-md)',
       height: '44px', flexShrink: 0, zIndex: 10,
+      gap: '0',
     }}>
       {/* Logo */}
-      <div style={{ display:'flex', alignItems:'center', gap:'8px', marginRight:'20px', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'8px', marginRight:'16px', flexShrink:0 }}>
         <LogoIcon />
-        <span style={{ fontSize:'18px', fontWeight:'700', letterSpacing:'.25em', color:'var(--cyan)', textTransform:'uppercase' }}>
+        <span style={{
+          fontSize:'16px', fontWeight:'700', letterSpacing:'.28em',
+          color:'var(--cyan)', textTransform:'uppercase', fontFamily:'var(--mono)',
+        }}>
           Qilin
         </span>
       </div>
 
       {/* Separator */}
-      <div style={{ width:'1px', height:'20px', background:'var(--border-md)', marginRight:'16px', flexShrink:0 }} />
+      <div style={{ width:'1px', height:'18px', background:'var(--border-md)', marginRight:'14px', flexShrink:0 }} />
 
-      {/* Navigation tabs */}
-      <nav style={{ display:'flex', alignItems:'stretch', height:'100%', gap:'2px' }}>
-        {NAV_ITEMS.map(item => {
-          const active = currentView === item.id
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              style={{
-                background: 'none',
-                border: 'none',
-                borderBottom: active ? '2px solid var(--cyan)' : '2px solid transparent',
-                color: active ? 'var(--cyan)' : 'var(--txt-3)',
-                fontFamily: 'var(--mono)',
-                fontSize: '10px',
-                fontWeight: '600',
-                letterSpacing: '.14em',
-                padding: '0 12px',
-                cursor: 'pointer',
-                transition: 'color .15s, border-color .15s',
-                marginBottom: active ? '-1px' : 0,
-              }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-3)' }}
-            >
-              {item.label}
-            </button>
-          )
-        })}
-      </nav>
+      {/* Navigation tabs — hidden in analyst mode */}
+      {!isAnalyst && (
+        <nav style={{ display:'flex', alignItems:'stretch', height:'100%', gap:'1px' }}>
+          {NAV_ITEMS.map(item => {
+            const active = currentView === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                style={{
+                  background: 'none', border: 'none',
+                  borderBottom: active ? '2px solid var(--cyan)' : '2px solid transparent',
+                  color: active ? 'var(--cyan)' : 'var(--txt-3)',
+                  fontFamily: 'var(--mono)',
+                  fontSize: 'var(--label-xs)',
+                  fontWeight: '600',
+                  letterSpacing: '.14em',
+                  padding: '0 11px',
+                  cursor: 'pointer',
+                  transition: 'color .15s, border-color .15s',
+                  marginBottom: active ? '-1px' : 0,
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-3)' }}
+              >
+                {item.label}
+              </button>
+            )
+          })}
+        </nav>
+      )}
+
+      {isAnalyst && (
+        <div style={{
+          fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)',
+          letterSpacing: '.18em', color: 'var(--txt-3)', textTransform: 'uppercase',
+        }}>
+          ANALYST VIEW
+        </div>
+      )}
 
       {/* Right side */}
-      <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'14px' }}>
+      <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px' }}>
+
+        {/* MAP / ANALYST toggle */}
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          background: 'var(--bg-2)',
+          border: '1px solid var(--border-md)',
+          borderRadius: '3px',
+          overflow: 'hidden',
+        }}>
+          {[
+            { id: 'map',     label: 'MAP'     },
+            { id: 'analyst', label: 'ANALYST' },
+          ].map(m => {
+            const active = activeMode === m.id
+            return (
+              <button
+                key={m.id}
+                onClick={() => onModeChange(m.id)}
+                style={{
+                  background: active ? 'rgba(79,156,249,0.15)' : 'transparent',
+                  border: 'none',
+                  borderRight: m.id === 'map' ? '1px solid var(--border-md)' : 'none',
+                  color: active ? 'var(--cyan)' : 'var(--txt-3)',
+                  fontFamily: 'var(--mono)',
+                  fontSize: 'var(--label-xs)',
+                  fontWeight: '600',
+                  letterSpacing: '.12em',
+                  padding: '4px 10px',
+                  cursor: 'pointer',
+                  transition: 'color .15s, background .15s',
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-3)' }}
+              >
+                {m.label}
+              </button>
+            )
+          })}
+        </div>
+
         {/* WS status */}
         <div style={{
           display:'flex', alignItems:'center', gap:'5px',
-          fontFamily:'var(--mono)', fontSize:'10px', color: wsColor,
+          fontFamily:'var(--mono)', fontSize:'var(--label-xs)', color: wsColor,
         }}>
           <div style={{
             width:'5px', height:'5px', borderRadius:'50%',
-            background: wsColor,
-            animation: 'blink 2.4s ease-in-out infinite',
+            background: wsColor, animation: 'blink 2.4s ease-in-out infinite',
           }} />
           {wsLabel}
         </div>
@@ -112,23 +169,27 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate 
         {alertsTotal > 0 && (
           <div style={{
             display:'flex', alignItems:'center', gap:'5px',
-            background:'rgba(255,59,74,0.12)', border:'1px solid rgba(255,59,74,0.35)',
-            borderRadius:'3px', padding:'3px 9px',
-            fontFamily:'var(--mono)', fontSize:'10px', fontWeight:'600',
+            background:'rgba(244,63,94,0.10)',
+            border:'1px solid rgba(244,63,94,0.30)',
+            borderRadius:'3px', padding:'3px 8px',
+            fontFamily:'var(--mono)', fontSize:'var(--label-xs)', fontWeight:'600',
             color:'var(--red)',
           }}>
             <div style={{
-              width:'5px', height:'5px', borderRadius:'50%',
-              background:'var(--red)',
-              animation:'blink 1.2s ease-in-out infinite',
+              width:'4px', height:'4px', borderRadius:'50%',
+              background:'var(--red)', animation:'blink 1.2s ease-in-out infinite',
             }} />
-            {alertsTotal} ALERTAS
+            {alertsTotal} ALT
           </div>
         )}
 
         {/* Clock */}
-        <div style={{ fontFamily:'var(--mono)', fontSize:'12px', color:'var(--txt-3)', letterSpacing:'.08em' }}>
-          UTC <span style={{ color:'var(--txt-2)' }}>{time}</span>
+        <div style={{
+          fontFamily:'var(--mono)', fontSize:'var(--label-md)',
+          color:'var(--txt-3)', letterSpacing:'.06em',
+        }}>
+          <span style={{ color:'var(--txt-3)', fontSize:'var(--label-xs)' }}>UTC </span>
+          <span style={{ color:'var(--txt-2)' }}>{time}</span>
         </div>
       </div>
     </header>

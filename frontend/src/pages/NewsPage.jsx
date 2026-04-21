@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNewsFeed } from '../hooks/useNewsFeed'
-
-const SEV_COLOR  = { high: 'var(--red)', medium: 'var(--amber)', low: 'var(--green)' }
-const SEV_BG     = { high: 'rgba(255,59,74,0.10)', medium: 'rgba(255,176,32,0.09)', low: 'rgba(0,229,160,0.08)' }
-const SEV_BORDER = { high: 'rgba(255,59,74,0.28)', medium: 'rgba(255,176,32,0.26)', low: 'rgba(0,229,160,0.2)' }
+import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
+import FilterGroup from '../components/FilterGroup'
+import { LoadingCards } from '../components/LoadingSkeleton'
+import EmptyState from '../components/EmptyState'
 
 const TYPE_LABELS = {
   agency:       'Agencia',
@@ -259,7 +259,7 @@ function NewsCard({ article, onClick }) {
     >
       {/* Imagen del artículo */}
       {article.image_url && (
-        <div style={{ width: '100%', height: '110px', overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ width: '100%', height: '160px', overflow: 'hidden', flexShrink: 0 }}>
           <img
             src={article.image_url}
             alt=""
@@ -312,33 +312,6 @@ function NewsCard({ article, onClick }) {
   )
 }
 
-// ── Filtros ────────────────────────────────────────────────────────────────────
-
-function FilterGroup({ label, options, value, onChange, labelFn }) {
-  return (
-    <div>
-      <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
-        {label}
-      </div>
-      {['TODOS', ...options].map(opt => (
-        <button key={opt} onClick={() => onChange(opt)} style={{
-          display: 'block', width: '100%', textAlign: 'left',
-          background: value === opt ? 'var(--accent-dim)' : 'none',
-          border: 'none',
-          borderLeft: `2px solid ${value === opt ? 'var(--accent)' : 'transparent'}`,
-          color: value === opt ? 'var(--accent)' : 'var(--txt-3)',
-          fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.06em',
-          padding: '4px 8px', cursor: 'pointer', transition: 'color .15s',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          textTransform: 'uppercase',
-        }}>
-          {opt === 'TODOS' ? 'TODOS' : (labelFn ? labelFn(opt) : opt.replace(/_/g, ' '))}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 // ── Página ─────────────────────────────────────────────────────────────────────
 
 export default function NewsPage() {
@@ -374,7 +347,7 @@ export default function NewsPage() {
 
       {/* Sidebar filtros */}
       <aside style={{
-        width: '160px', flexShrink: 0,
+        width: '180px', flexShrink: 0,
         background: 'var(--bg-1)',
         borderRight: '1px solid var(--border-md)',
         padding: '12px 8px',
@@ -423,15 +396,13 @@ export default function NewsPage() {
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
-              Cargando noticias…
-            </div>
-          )}
+          {loading && <LoadingCards count={12} />}
           {!loading && filtered.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
-              {articles.length === 0 ? 'Ingestor de noticias no activo o sin artículos aún' : 'Sin resultados para los filtros actuales'}
-            </div>
+            <EmptyState
+              title={articles.length === 0 ? 'SIN NOTICIAS' : 'SIN RESULTADOS'}
+              subtitle={articles.length === 0 ? 'INGESTOR INACTIVO O SIN DATOS' : 'AJUSTA LOS FILTROS ACTIVOS'}
+              icon="◈"
+            />
           )}
           {!loading && filtered.length > 0 && (
             <div style={{

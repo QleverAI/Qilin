@@ -11,6 +11,7 @@ import NewsPage      from './pages/NewsPage'
 import DocumentsPage from './pages/DocumentsPage'
 import SocialPage    from './pages/SocialPage'
 import FilingsPage   from './pages/FilingsPage'
+import PolymarketPage from './pages/PolymarketPage'
 import { useQilinData } from './hooks/useQilinData'
 
 const DEFAULT_FILTERS = {
@@ -21,8 +22,8 @@ const DEFAULT_FILTERS = {
 
 export default function App() {
   const [user,       setUser]       = useState(null)
-  const [activeView, setActiveView] = useState('map')    // map | analyst
-  const [view,       setView]       = useState('home')   // home | tactical | news | documents | social
+  const [activeView, setActiveView] = useState('map')   // map | analyst
+  const [view,       setView]       = useState('home')  // home | tactical | news | documents | social | markets | polymarket
   const [filters,    setFilters]    = useState(DEFAULT_FILTERS)
   const [flyTarget,  setFlyTarget]  = useState(null)
 
@@ -32,7 +33,6 @@ export default function App() {
     setFilters(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  // Filtered data for tactical view
   const visibleAircraft = useMemo(() => aircraft.filter(a =>
     a.type === 'military' ? filters.military_aircraft : filters.civil
   ), [aircraft, filters])
@@ -47,114 +47,83 @@ export default function App() {
     alerts:            alerts.length,
   }), [aircraft, alerts])
 
-  // ── Login ────────────────────────────────────────────────────────────────────
   if (!user) return <LoginPage onLogin={setUser} />
 
-  // ── Top-level nav bar (fixed, always visible after login) ─────────────────
-  const navBar = (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, height: '40px',
-      background: '#0f172a', zIndex: 100,
-      display: 'flex', alignItems: 'center', padding: '0 16px', gap: '8px',
-      borderBottom: '1px solid rgba(255,255,255,0.08)',
-    }}>
-      {['map', 'analyst'].map(v => (
-        <button
-          key={v}
-          onClick={() => setActiveView(v)}
-          style={{
-            background:   activeView === v ? '#1e40af' : 'transparent',
-            color:        activeView === v ? '#fff'    : '#94a3b8',
-            border:       'none',
-            borderRadius: '4px',
-            padding:      '4px 12px',
-            fontSize:     '12px',
-            cursor:       'pointer',
-            fontFamily:   'var(--ui)',
-          }}
-        >
-          {v === 'map' ? '🗺️ Live Map' : '🔍 Analyst View'}
-        </button>
-      ))}
-    </div>
-  )
-
-  // ── Analyst view ──────────────────────────────────────────────────────────
+  // ── Analyst view ──────────────────────────────────────────────────────────────
   if (activeView === 'analyst') {
     return (
-      <>
-        {navBar}
-        <div style={{ marginTop: '40px', height: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+        <TopBar
+          alertsTotal={stats.alertsTotal}
+          wsStatus={wsStatus}
+          currentView={view}
+          onNavigate={v => { setView(v); setActiveView('map') }}
+          activeMode={activeView}
+          onModeChange={setActiveView}
+        />
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <AnalystView />
         </div>
-      </>
+      </div>
     )
   }
 
-  // ── Tactical view: dedicated full-grid layout ─────────────────────────────
+  // ── Tactical grid layout ──────────────────────────────────────────────────────
   if (view === 'tactical') {
     return (
-      <>
-        {navBar}
-        <div style={{
-          display: 'grid',
-          gridTemplateRows: '44px 1fr 36px',
-          gridTemplateColumns: '1fr 340px',
-          height: 'calc(100vh - 40px)', width: '100vw', overflow: 'hidden',
-          marginTop: '40px',
+      <div style={{
+        display: 'grid',
+        gridTemplateRows: '44px 1fr 36px',
+        gridTemplateColumns: '1fr 340px',
+        height: '100vh', width: '100vw', overflow: 'hidden',
+      }}>
+        <TopBar
+          alertsTotal={stats.alertsTotal}
+          wsStatus={wsStatus}
+          currentView={view}
+          onNavigate={setView}
+          activeMode={activeView}
+          onModeChange={setActiveView}
+        />
+        <MapView aircraft={visibleAircraft} alerts={visibleAlerts} flyTarget={flyTarget} />
+        <aside style={{
+          gridColumn: 2, gridRow: 2,
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--bg-1)',
+          borderLeft: '1px solid var(--border-md)',
+          overflow: 'hidden',
         }}>
-          <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view} onNavigate={setView} />
-
-          <MapView
-            aircraft={visibleAircraft}
+          <FilterPanel filters={filters} onToggle={toggleFilter} counts={counts} />
+          <AlertPanel
             alerts={visibleAlerts}
-            flyTarget={flyTarget}
+            stats={stats}
+            onAlertClick={a => setFlyTarget({ lon: a.lon, lat: a.lat })}
           />
-
-          <aside style={{
-            gridColumn:2, gridRow:2,
-            display:'flex', flexDirection:'column',
-            background:'var(--bg-1)',
-            borderLeft:'1px solid var(--border-md)',
-            overflow:'hidden',
-          }}>
-            <FilterPanel filters={filters} onToggle={toggleFilter} counts={counts} />
-            <AlertPanel
-              alerts={visibleAlerts}
-              stats={stats}
-              onAlertClick={a => setFlyTarget({ lon: a.lon, lat: a.lat })}
-            />
-          </aside>
-
-          <BottomBar stats={stats} />
-        </div>
-      </>
+        </aside>
+        <BottomBar stats={stats} />
+      </div>
     )
   }
 
-  // ── All other views: topbar + content ─────────────────────────────────────
+  // ── All other views ───────────────────────────────────────────────────────────
   return (
-    <>
-      {navBar}
-      <div style={{
-        display: 'flex', flexDirection: 'column',
-        height: 'calc(100vh - 40px)', width: '100vw', overflow: 'hidden',
-        marginTop: '40px',
-      }}>
-        <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view} onNavigate={setView} />
-
-        {view === 'home' && (
-          <HomePage
-            aircraft={aircraft}
-            alerts={alerts}
-            onNavigate={setView}
-          />
-        )}
-        {view === 'news'      && <NewsPage />}
-        {view === 'documents' && <DocumentsPage />}
-        {view === 'social'    && <SocialPage />}
-        {view === 'markets'   && <FilingsPage />}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <TopBar
+        alertsTotal={stats.alertsTotal}
+        wsStatus={wsStatus}
+        currentView={view}
+        onNavigate={setView}
+        activeMode={activeView}
+        onModeChange={setActiveView}
+      />
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {view === 'home'       && <HomePage aircraft={aircraft} alerts={alerts} onNavigate={setView} />}
+        {view === 'news'       && <NewsPage />}
+        {view === 'documents'  && <DocumentsPage />}
+        {view === 'social'     && <SocialPage />}
+        {view === 'markets'    && <FilingsPage />}
+        {view === 'polymarket' && <PolymarketPage />}
       </div>
-    </>
+    </div>
   )
 }

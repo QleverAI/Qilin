@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSocialFeed } from '../hooks/useSocialFeed'
+import FilterGroup from '../components/FilterGroup'
+import { LoadingRows } from '../components/LoadingSkeleton'
+import EmptyState from '../components/EmptyState'
 
 const CAT_LABELS = {
   us_gov:         'US Gov',
@@ -350,7 +353,7 @@ export default function SocialPage() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         <aside style={{
-          width: '160px', flexShrink: 0,
+          width: '180px', flexShrink: 0,
           background: 'var(--bg-1)', borderRight: '1px solid var(--border-md)',
           padding: '12px 8px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px',
         }}>
@@ -373,62 +376,36 @@ export default function SocialPage() {
             />
           </div>
 
-          <div>
-            <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
-              CATEGORÍA
-            </div>
-            {['TODAS', ...categories].map(c => (
-              <button key={c} onClick={() => setCatFilter(c)} style={{
-                display: 'block', width: '100%', textAlign: 'left',
-                background: catFilter === c ? 'rgba(0,200,255,0.08)' : 'none',
-                border: 'none',
-                borderLeft: `2px solid ${catFilter === c ? 'var(--cyan)' : 'transparent'}`,
-                color: catFilter === c ? 'var(--cyan)' : 'var(--txt-3)',
-                fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.06em',
-                padding: '4px 8px', cursor: 'pointer', transition: 'all .15s',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {c === 'TODAS' ? 'TODAS' : (CAT_LABELS[c] || c)}
-              </button>
-            ))}
-          </div>
-
-          <div>
-            <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
-              ZONA
-            </div>
-            {['TODAS', ...zones].map(z => (
-              <button key={z} onClick={() => setZoneFilter(z)} style={{
-                display: 'block', width: '100%', textAlign: 'left',
-                background: zoneFilter === z ? 'rgba(0,200,255,0.08)' : 'none',
-                border: 'none',
-                borderLeft: `2px solid ${zoneFilter === z ? 'var(--cyan)' : 'transparent'}`,
-                color: zoneFilter === z ? 'var(--cyan)' : 'var(--txt-3)',
-                fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.06em',
-                padding: '4px 8px', cursor: 'pointer', transition: 'all .15s',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase',
-              }}>
-                {z.replace(/_/g, ' ')}
-              </button>
-            ))}
-          </div>
+          <FilterGroup
+            label="CATEGORÍA"
+            options={categories}
+            value={catFilter}
+            onChange={setCatFilter}
+            labelFn={c => CAT_LABELS[c] || c}
+            allLabel="TODAS"
+          />
+          <FilterGroup
+            label="ZONA"
+            options={zones}
+            value={zoneFilter}
+            onChange={setZoneFilter}
+            allLabel="TODAS"
+          />
         </aside>
 
         <main style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
-              Cargando feed…
-            </div>
+          {loading && <LoadingRows count={8} />}
+          {!loading && filtered.length === 0 && (
+            <EmptyState
+              title={posts.length === 0 ? 'SIN TWEETS' : 'SIN RESULTADOS'}
+              subtitle={posts.length === 0 ? 'INGESTOR SOCIAL INACTIVO' : 'AJUSTA LOS FILTROS ACTIVOS'}
+              icon="◈"
+            />
           )}
-          {!loading && (
+          {!loading && filtered.length > 0 && (
             <>
-              <div style={{ marginBottom: '10px', fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--txt-3)' }}>
+              <div style={{ marginBottom: '10px', fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>
                 {filtered.length} publicaciones
-                {filtered.length === 0 && posts.length === 0 && (
-                  <span style={{ marginLeft: '12px', color: 'rgba(0,200,255,0.4)' }}>
-                    · Ingestor social no activo o sin tweets aún
-                  </span>
-                )}
               </div>
               {filtered.map(post => (
                 <TweetCard
@@ -437,11 +414,6 @@ export default function SocialPage() {
                   onClick={() => setModalPost(post)}
                 />
               ))}
-              {filtered.length === 0 && posts.length > 0 && (
-                <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
-                  Sin resultados para los filtros actuales
-                </div>
-              )}
             </>
           )}
         </main>

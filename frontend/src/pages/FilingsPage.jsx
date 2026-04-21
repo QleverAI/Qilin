@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useSecFeed } from '../hooks/useSecFeed'
-
-const SEV_COLOR  = { high: 'var(--red)', medium: 'var(--amber)', low: 'var(--green)' }
-const SEV_BG     = { high: 'rgba(255,59,74,0.10)', medium: 'rgba(255,176,32,0.09)', low: 'rgba(0,229,160,0.08)' }
-const SEV_BORDER = { high: 'rgba(255,59,74,0.28)', medium: 'rgba(255,176,32,0.26)', low: 'rgba(0,229,160,0.2)' }
+import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
+import FilterGroup from '../components/FilterGroup'
+import { LoadingRows } from '../components/LoadingSkeleton'
+import EmptyState from '../components/EmptyState'
 
 const SECTOR_LABELS = {
   defense:        'Defensa',
@@ -46,31 +46,6 @@ function TickerBadge({ ticker, sector }) {
     }}>
       {ticker}
     </span>
-  )
-}
-
-function FilterGroup({ label, options, value, onChange, labelFn }) {
-  return (
-    <div>
-      <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
-        {label}
-      </div>
-      {['TODOS', ...options].map(opt => (
-        <button key={opt} onClick={() => onChange(opt)} style={{
-          display: 'block', width: '100%', textAlign: 'left',
-          background: value === opt ? 'rgba(0,200,255,0.08)' : 'none',
-          border: 'none',
-          borderLeft: `2px solid ${value === opt ? 'var(--cyan)' : 'transparent'}`,
-          color: value === opt ? 'var(--cyan)' : 'var(--txt-3)',
-          fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.06em',
-          padding: '4px 8px', cursor: 'pointer', transition: 'all .15s',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          textTransform: 'uppercase',
-        }}>
-          {opt === 'TODOS' ? 'TODOS' : (labelFn ? labelFn(opt) : opt.replace(/_/g, ' '))}
-        </button>
-      ))}
-    </div>
   )
 }
 
@@ -254,7 +229,7 @@ export default function FilingsPage() {
 
       {/* Sidebar */}
       <aside style={{
-        width: '200px', flexShrink: 0,
+        width: '180px', flexShrink: 0,
         background: 'var(--bg-1)',
         borderRight: '1px solid var(--border-md)',
         display: 'flex', flexDirection: 'column',
@@ -322,19 +297,13 @@ export default function FilingsPage() {
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
           {/* Filings list */}
           <div style={{ flex: 1, overflowY: 'auto', borderRight: '1px solid var(--border-md)' }}>
-            {loading && (
-              <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)' }}>
-                Cargando filings...
-              </div>
-            )}
+            {loading && <LoadingRows count={8} />}
             {!loading && filtered.length === 0 && (
-              <div style={{ padding: '40px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--txt-3)', marginBottom: '8px' }}>
-                  {filings.length === 0
-                    ? 'Ingestor SEC no activo o sin filings aún'
-                    : 'Sin resultados con los filtros aplicados'}
-                </div>
-              </div>
+              <EmptyState
+                title={filings.length === 0 ? 'SIN FILINGS' : 'SIN RESULTADOS'}
+                subtitle={filings.length === 0 ? 'INGESTOR SEC INACTIVO' : 'AJUSTA LOS FILTROS ACTIVOS'}
+                icon="◫"
+              />
             )}
             {filtered.map(f => (
               <FilingRow
@@ -353,9 +322,7 @@ export default function FilingsPage() {
             </div>
           ) : (
             <div style={{ width: '380px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--txt-3)', textAlign: 'center' }}>
-                Selecciona un filing<br />para ver el detalle
-              </div>
+              <EmptyState title="SELECCIONA UN FILING" subtitle="PARA VER EL DETALLE" icon="◫" />
             </div>
           )}
         </div>
