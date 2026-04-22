@@ -25,13 +25,62 @@ import yaml
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [AIS] %(message)s")
 log = logging.getLogger(__name__)
 
-AISSTREAM_URL   = "wss://stream.aisstream.io/v0/stream"
-REDIS_URL       = os.getenv("REDIS_URL", "redis://localhost:6379")
-DB_URL          = os.getenv("DB_URL", "")
-AISSTREAM_KEY   = os.getenv("AISSTREAM_API_KEY", "")
+AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
+REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379")
+DB_URL        = os.getenv("DB_URL", "")
+AISSTREAM_KEY = os.getenv("AISSTREAM_API_KEY", "")
 
-# Tipos de buque a monitorizar
-TRACKED_TYPES = set(range(80, 90)) | {35, 0}  # tankers + military + unknown
+# Track: military(35), tankers(80-89), unknown(0), cargo(70-79), passenger(60-69)
+# Cargo/passenger only ingested if they match a known company (filtered in should_track)
+MILITARY_TYPES  = {35}
+TANKER_TYPES    = set(range(80, 90))
+CARGO_TYPES     = set(range(70, 80))
+PASSENGER_TYPES = set(range(60, 70))
+
+COMPANY_PREFIXES = [
+    ('MAERSK',    'maersk'),
+    ('MSC ',      'msc'),
+    ('CMA CGM',   'cma_cgm'),
+    ('EVERGREEN', 'evergreen'),
+    ('COSCO',     'cosco'),
+    ('HAPAG',     'hapag'),
+    ('ONE ',      'one'),
+    ('YANG MING', 'yang_ming'),
+    ('SHELL',     'shell'),
+    ('BP ',       'bp'),
+    ('CHEVRON',   'chevron'),
+    ('QATAR GAS', 'qatar_gas'),
+    ('Q-FLEX',    'qatar_gas'),
+    ('Q-MAX',     'qatar_gas'),
+]
+
+# MMSI MID prefix (first 3 digits) → country for military flag enrichment
+MMSI_FLAG = {
+    '338': 'United States', '367': 'United States', '369': 'United States',
+    '232': 'United Kingdom', '235': 'United Kingdom',
+    '228': 'France', '211': 'Germany', '247': 'Italy',
+    '224': 'Spain', '316': 'Canada', '244': 'Netherlands',
+    '271': 'Turkey', '261': 'Poland', '257': 'Norway',
+    '273': 'Russia',
+    '412': 'China', '413': 'China', '414': 'China',
+    '431': 'Japan', '440': 'South Korea', '477': 'Hong Kong',
+    '525': 'Indonesia', '636': 'Liberia', '255': 'Portugal',
+    '351': 'Panama', '248': 'Malta',
+}
+
+
+def detect_company(name: str | None) -> str | None:
+    if not name:
+        return None
+    upper = name.upper()
+    for prefix, company in COMPANY_PREFIXES:
+        if prefix in upper:
+            return company
+    return None
+
+
+def flag_from_mmsi(mmsi: str) -> str | None:
+    return MMSI_FLAG.get(mmsi[:3]) if len(mmsi) >= 3 else None
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -66,13 +115,21 @@ def classify_vessel(ship_type: int) -> str:
         return "tanker"
     if 70 <= ship_type <= 79:
         return "cargo"
-    if ship_type == 60:
+    if 60 <= ship_type <= 69:
         return "passenger"
     return "unknown"
 
 
-def should_track(ship_type: int) -> bool:
-    return ship_type in TRACKED_TYPES
+def should_track(ship_type: int, name: str | None) -> bool:
+    if ship_type in MILITARY_TYPES:
+        return True
+    if ship_type in TANKER_TYPES:
+        return True
+    if ship_type == 0:
+        return True
+    if ship_type in CARGO_TYPES or ship_type in PASSENGER_TYPES:
+        return detect_company(name) is not None
+    return False
 
 
 # ── Publicación ───────────────────────────────────────────────────────────────
@@ -176,25 +233,31 @@ async def consume(redis, db, zones: list[tuple[str, dict]]):
                                 continue
 
                             ship_type = metadata.get("ShipType", 0) or 0
-                            if not should_track(ship_type):
+                            name      = metadata.get("ShipName", "").strip() or None
+                            company   = detect_company(name)
+                            raw_flag  = metadata.get("flag")
+                            flag      = raw_flag or flag_from_mmsi(mmsi)
+
+                            if not should_track(ship_type, name):
                                 continue
 
                             zone = zone_for_position(lat, lon, zones)
                             vessel = {
-                                "mmsi":      mmsi,
-                                "name":      metadata.get("ShipName", "").strip() or None,
-                                "lat":       lat,
-                                "lon":       lon,
-                                "speed":     pos.get("Sog"),
-                                "course":    pos.get("Cog"),
-                                "heading":   pos.get("TrueHeading"),
-                                "ship_type": ship_type,
-                                "category":  classify_vessel(ship_type),
-                                "flag":      metadata.get("flag"),
+                                "mmsi":        mmsi,
+                                "name":        name,
+                                "lat":         lat,
+                                "lon":         lon,
+                                "speed":       pos.get("Sog"),
+                                "course":      pos.get("Cog"),
+                                "heading":     pos.get("TrueHeading"),
+                                "ship_type":   ship_type,
+                                "category":    classify_vessel(ship_type),
+                                "flag":        flag,
+                                "company":     company,
                                 "destination": metadata.get("Destination", "").strip() or None,
-                                "ais_active": True,
-                                "zone":      zone,
-                                "time":      datetime.now(timezone.utc).isoformat(),
+                                "ais_active":  True,
+                                "zone":        zone,
+                                "time":        datetime.now(timezone.utc).isoformat(),
                             }
                             await publish_vessel(redis, db, vessel)
                             count += 1
