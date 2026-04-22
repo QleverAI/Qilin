@@ -1,57 +1,65 @@
-import { useState, useMemo }                                     from 'react'
-import { View, Text, TextInput, ScrollView,
-         Pressable, StyleSheet, FlatList }                       from 'react-native'
-import { useNewsFeed }                                           from '../../hooks/useNewsFeed'
-import { C, SEV_COLOR }                                         from '../../theme'
+import { useState, useMemo, useCallback }    from 'react'
+import { View, Text, TextInput, Pressable,
+         StyleSheet, FlatList, ScrollView,
+         Image, RefreshControl }             from 'react-native'
+import { useNewsFeed }                       from '../../hooks/useNewsFeed'
+import { PageHeader }                        from '../../components/PageHeader'
+import { FilterPill }                        from '../../components/FilterPill'
+import { SeverityBadge }                     from '../../components/SeverityBadge'
+import { EmptyState }                        from '../../components/EmptyState'
+import { C, T, SEV_COLOR }                   from '../../theme'
 
-const ALL_SEV   = ['TODOS', 'high', 'medium', 'low']
-const SEV_LABEL = { high:'ALTO', medium:'MEDIO', low:'BAJO' }
+const SEV_FILTERS = ['Todos', 'high', 'medium', 'low']
+const SEV_NAMES   = { high: 'Alto', medium: 'Medio', low: 'Bajo' }
 
 function fmt(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' })
-}
-
-function RelevanceBar({ value }) {
-  const color = value >= 90 ? C.red : value >= 75 ? C.amber : C.green
-  return (
-    <View style={{ flexDirection:'row', alignItems:'center', gap:6 }}>
-      <View style={s.barTrack}>
-        <View style={[s.barFill, { width:`${value}%`, backgroundColor:color }]} />
-      </View>
-      <Text style={[s.barVal, { color }]}>{value}</Text>
-    </View>
-  )
+  return new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 function NewsCard({ article, expanded, onPress }) {
-  const zone = article.zones?.[0] || ''
-  const tags = article.keywords || []
+  const zone    = article.zones?.[0] || ''
+  const hasImg  = !!article.image_url
+  const sevColor = SEV_COLOR[article.severity] || C.txt3
+
   return (
-    <Pressable style={[s.card, { borderLeftColor:SEV_COLOR[article.severity] }]} onPress={onPress}>
-      <View style={s.cardMeta}>
-        <View style={[s.sevBadge, { backgroundColor:`${SEV_COLOR[article.severity]}20`, borderColor:`${SEV_COLOR[article.severity]}44` }]}>
-          <Text style={[s.sevText, { color:SEV_COLOR[article.severity] }]}>{SEV_LABEL[article.severity]}</Text>
+    <Pressable
+      style={[s.card, expanded && s.cardExpanded]}
+      onPress={onPress}
+    >
+      {hasImg && (
+        <Image
+          source={{ uri: article.image_url }}
+          style={s.cardImg}
+          resizeMode="cover"
+        />
+      )}
+      <View style={s.cardBody}>
+        <View style={s.cardTop}>
+          <SeverityBadge severity={article.severity} />
+          {zone ? <Text style={s.zone}>{zone}</Text> : null}
         </View>
-        <Text style={s.zone}>{zone}</Text>
-        <Text style={s.time}>{fmt(article.time)} · {article.source}</Text>
-      </View>
-
-      <Text style={s.title}>{article.title}</Text>
-
-      {expanded && article.summary ? (
-        <Text style={s.excerpt}>{article.summary}</Text>
-      ) : null}
-
-      <View style={s.footer}>
-        <View style={{ flexDirection:'row', gap:6, flex:1, flexWrap:'wrap' }}>
-          {tags.slice(0, 4).map(t => (
-            <Text key={t} style={s.tag}>#{t}</Text>
-          ))}
+        <Text style={s.cardTitle} numberOfLines={expanded ? undefined : 3}>
+          {article.title}
+        </Text>
+        {expanded && article.summary ? (
+          <Text style={s.cardSummary}>{article.summary}</Text>
+        ) : null}
+        <View style={s.cardFoot}>
+          <Text style={s.cardSource}>{article.source}</Text>
+          <Text style={s.cardTime}>{fmt(article.time)}</Text>
         </View>
-        <View style={{ width:80 }}>
-          <RelevanceBar value={article.relevance || 0} />
-        </View>
+        {article.relevance != null && (
+          <View style={s.relRow}>
+            <View style={s.relTrack}>
+              <View style={[s.relFill, {
+                width: `${article.relevance}%`,
+                backgroundColor: article.relevance >= 80 ? C.red : article.relevance >= 60 ? C.amber : C.green,
+              }]} />
+            </View>
+            <Text style={s.relVal}>{article.relevance}</Text>
+          </View>
+        )}
       </View>
     </Pressable>
   )
@@ -60,59 +68,74 @@ function NewsCard({ article, expanded, onPress }) {
 export default function NewsScreen() {
   const { articles, zones, loading } = useNewsFeed()
 
-  const [sevFilter,  setSevFilter]  = useState('TODOS')
-  const [zoneFilter, setZoneFilter] = useState('TODAS')
+  const [sevFilter,  setSevFilter]  = useState('Todos')
+  const [zoneFilter, setZoneFilter] = useState('Todas')
   const [search,     setSearch]     = useState('')
   const [expanded,   setExpanded]   = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const ALL_ZONES = ['TODAS', ...zones]
+  const allZones = ['Todas', ...zones]
 
   const filtered = useMemo(() => articles.filter(n => {
-    if (sevFilter  !== 'TODOS' && n.severity !== sevFilter) return false
-    if (zoneFilter !== 'TODAS' && !(n.zones || []).includes(zoneFilter)) return false
+    if (sevFilter !== 'Todos' && n.severity !== sevFilter) return false
+    if (zoneFilter !== 'Todas' && !(n.zones || []).includes(zoneFilter)) return false
     if (search && !n.title.toLowerCase().includes(search.toLowerCase())) return false
     return true
   }), [articles, sevFilter, zoneFilter, search])
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    setTimeout(() => setRefreshing(false), 1200)
+  }, [])
+
   return (
     <View style={s.root}>
-      <View style={s.header}>
-        <Text style={s.headerTitle}>◈ NOTICIAS</Text>
-        <Text style={s.count}>{filtered.length} resultados</Text>
-      </View>
+      <PageHeader
+        title="Noticias"
+        subtitle={`${filtered.length} artículos`}
+      />
 
       <View style={s.searchWrap}>
         <TextInput
           style={s.search}
-          placeholder="Buscar en titulares..."
+          placeholder="Buscar noticias..."
           placeholderTextColor={C.txt3}
           value={search}
           onChangeText={setSearch}
+          clearButtonMode="while-editing"
         />
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap:6, paddingHorizontal:16 }}>
-        {ALL_SEV.map(s2 => (
-          <Pressable key={s2} style={[s.chip, sevFilter===s2 && s.chipActive]} onPress={() => setSevFilter(s2)}>
-            <Text style={[s.chipText, sevFilter===s2 && s.chipTextActive]}>
-              {s2 === 'TODOS' ? 'TODOS' : SEV_LABEL[s2]}
-            </Text>
-          </Pressable>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={s.pillRow}
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 8 }}
+      >
+        {SEV_FILTERS.map(f => (
+          <FilterPill
+            key={f}
+            label={f === 'Todos' ? 'Todos' : SEV_NAMES[f]}
+            active={sevFilter === f}
+            onPress={() => setSevFilter(f)}
+          />
         ))}
-      </ScrollView>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap:6, paddingHorizontal:16, paddingBottom:8 }}>
-        {ALL_ZONES.map(z => (
-          <Pressable key={z} style={[s.chip, zoneFilter===z && s.chipActive]} onPress={() => setZoneFilter(z)}>
-            <Text style={[s.chipText, zoneFilter===z && s.chipTextActive]}>{z}</Text>
-          </Pressable>
+        <View style={s.pillDivider} />
+        {allZones.map(z => (
+          <FilterPill
+            key={z}
+            label={z}
+            active={zoneFilter === z}
+            onPress={() => setZoneFilter(z)}
+          />
         ))}
       </ScrollView>
 
       <FlatList
         data={filtered}
         keyExtractor={a => String(a.id)}
-        contentContainerStyle={{ padding:12, gap:8, paddingBottom:32 }}
+        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.txt3} />}
         renderItem={({ item }) => (
           <NewsCard
             article={item}
@@ -121,9 +144,11 @@ export default function NewsScreen() {
           />
         )}
         ListEmptyComponent={
-          <Text style={s.empty}>
-            {loading ? 'Cargando noticias...' : 'Sin resultados para los filtros seleccionados'}
-          </Text>
+          <EmptyState
+            icon={loading ? null : '📰'}
+            title={loading ? 'Cargando noticias...' : 'Sin resultados'}
+            subtitle={loading ? null : 'Prueba ajustando los filtros'}
+          />
         }
       />
     </View>
@@ -131,29 +156,25 @@ export default function NewsScreen() {
 }
 
 const s = StyleSheet.create({
-  root:          { flex:1, backgroundColor:C.bg0 },
-  header:        { flexDirection:'row', alignItems:'center', padding:16, borderBottomWidth:1, borderBottomColor:C.borderMd },
-  headerTitle:   { color:C.cyan, fontFamily:'SpaceMono', fontSize:12, letterSpacing:3, flex:1 },
-  count:         { color:C.txt3, fontFamily:'SpaceMono', fontSize:9, letterSpacing:1 },
-  searchWrap:    { padding:12, paddingBottom:6 },
-  search:        { backgroundColor:C.bg2, borderWidth:1, borderColor:C.borderMd, color:C.txt1, fontFamily:'SpaceMono', fontSize:11, padding:10, borderRadius:3 },
-  filterRow:     { flexGrow:0, paddingTop:6 },
-  chip:          { paddingHorizontal:10, paddingVertical:5, borderRadius:2, borderWidth:1, borderColor:C.borderMd, backgroundColor:C.bg2 },
-  chipActive:    { borderColor:'rgba(0,200,255,0.5)', backgroundColor:'rgba(0,200,255,0.08)' },
-  chipText:      { color:C.txt3, fontFamily:'SpaceMono', fontSize:8, letterSpacing:1 },
-  chipTextActive:{ color:C.cyan },
-  card:          { backgroundColor:C.bg2, borderWidth:1, borderColor:C.borderMd, borderLeftWidth:3, borderRadius:2, padding:12, gap:8 },
-  cardMeta:      { flexDirection:'row', alignItems:'center', gap:7 },
-  sevBadge:      { borderWidth:1, paddingHorizontal:6, paddingVertical:2, borderRadius:2 },
-  sevText:       { fontFamily:'SpaceMono', fontSize:8, letterSpacing:1 },
-  zone:          { fontFamily:'SpaceMono', fontSize:8, color:C.txt3, letterSpacing:1, flex:1 },
-  time:          { fontFamily:'SpaceMono', fontSize:8, color:C.txt3 },
-  title:         { fontSize:12, fontWeight:'600', color:C.txt1, lineHeight:17 },
-  excerpt:       { fontSize:11, color:C.txt2, lineHeight:17 },
-  footer:        { flexDirection:'row', alignItems:'center', gap:8 },
-  tag:           { fontSize:8, fontFamily:'SpaceMono', color:C.txt3, backgroundColor:C.bg3, paddingHorizontal:5, paddingVertical:2, borderRadius:2 },
-  barTrack:      { flex:1, height:2, backgroundColor:C.borderMd, borderRadius:1, overflow:'hidden' },
-  barFill:       { height:'100%', borderRadius:1 },
-  barVal:        { fontFamily:'SpaceMono', fontSize:8 },
-  empty:         { textAlign:'center', padding:40, fontFamily:'SpaceMono', fontSize:10, color:C.txt3 },
+  root:       { flex: 1, backgroundColor: C.bg0 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  search:     { backgroundColor: C.bg2, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11,
+                fontSize: 15, color: '#ffffff' },
+  pillRow:    { flexGrow: 0, paddingTop: 8 },
+  pillDivider:{ width: 1, backgroundColor: C.separator, alignSelf: 'center', height: 20 },
+  card:       { backgroundColor: C.bg1, borderRadius: 12, overflow: 'hidden' },
+  cardExpanded: {},
+  cardImg:    { width: '100%', height: 180 },
+  cardBody:   { padding: 14, gap: 8 },
+  cardTop:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  zone:       { fontSize: 13, color: C.txt3, flex: 1 },
+  cardTitle:  { fontSize: 17, fontWeight: '600', color: '#ffffff', lineHeight: 23 },
+  cardSummary:{ fontSize: 15, color: C.txt2, lineHeight: 22 },
+  cardFoot:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardSource: { fontSize: 13, color: C.txt3, fontWeight: '500' },
+  cardTime:   { fontSize: 13, color: C.txt3, flex: 1, textAlign: 'right' },
+  relRow:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  relTrack:   { flex: 1, height: 3, backgroundColor: C.bg3, borderRadius: 2, overflow: 'hidden' },
+  relFill:    { height: '100%', borderRadius: 2 },
+  relVal:     { fontSize: 12, color: C.txt3, width: 24, textAlign: 'right' },
 })

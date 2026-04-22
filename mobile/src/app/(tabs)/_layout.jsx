@@ -1,54 +1,32 @@
-import { Tabs }        from 'expo-router'
-import { Text, View }  from 'react-native'
-import { C }           from '../../theme'
+import { Tabs }  from 'expo-router'
+import Ionicons   from '@expo/vector-icons/Ionicons'
+import { C }      from '../../theme'
 
-const TABS = [
-  { name:'index',    label:'INICIO',     icon:'◉' },
-  { name:'tactical', label:'TÁCTICO',    icon:'◎' },
-  { name:'news',     label:'NOTICIAS',   icon:'◈' },
-  { name:'documents',label:'DOCUMENTOS', icon:'▣' },
-  { name:'social',   label:'SOCIAL',     icon:'◈' },
-  { name:'markets',  label:'MERCADOS',   icon:'$' },
-]
-
-function TabIcon({ icon, label, focused }) {
-  const color = focused ? C.accent : C.txt3
-  return (
-    <View style={{ alignItems:'center', gap:2, paddingTop:6 }}>
-      <Text style={{ fontSize:14, color }}>{icon}</Text>
-      <Text style={{ fontSize:7, letterSpacing:1, color, fontFamily:'SpaceMono' }}>{label}</Text>
-    </View>
-  )
+function icon(name) {
+  return ({ color, size }) => <Ionicons name={name} size={size ?? 22} color={color} />
 }
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown:     false,
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor:  C.bg1,
-          borderTopColor:   C.borderMd,
-          borderTopWidth:   1,
-          height:           60,
-          paddingBottom:    0,
+          backgroundColor: 'rgba(28,28,30,0.97)',
+          borderTopColor:  C.separator,
+          borderTopWidth:  0.5,
         },
-        tabBarShowLabel:    false,
-        tabBarActiveTintColor:   C.accent,
+        tabBarActiveTintColor:   C.blue,
         tabBarInactiveTintColor: C.txt3,
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '500', marginBottom: 2 },
       }}
     >
-      {TABS.map(t => (
-        <Tabs.Screen
-          key={t.name}
-          name={t.name}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <TabIcon icon={t.icon} label={t.label} focused={focused} />
-            ),
-          }}
-        />
-      ))}
+      <Tabs.Screen name="index"     options={{ title: 'Inicio',   tabBarIcon: icon('home') }} />
+      <Tabs.Screen name="tactical"  options={{ title: 'Mapa',     tabBarIcon: icon('map') }} />
+      <Tabs.Screen name="news"      options={{ title: 'Noticias', tabBarIcon: icon('newspaper') }} />
+      <Tabs.Screen name="social"    options={{ title: 'Social',   tabBarIcon: icon('people') }} />
+      <Tabs.Screen name="markets"   options={{ title: 'Mercados', tabBarIcon: icon('bar-chart') }} />
+      <Tabs.Screen name="documents" options={{ tabBarButton: () => null }} />
     </Tabs>
   )
 }
