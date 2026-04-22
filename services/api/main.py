@@ -189,10 +189,16 @@ async def register(req: RegisterRequest):
         raise HTTPException(status_code=409, detail="Usuario o email ya registrado")
 
     hashed = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt(12)).decode()
-    await db.execute(
-        "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3)",
-        req.username.lower(), req.email.lower(), hashed
-    )
+    try:
+        await db.execute(
+            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3)",
+            req.username.lower(), req.email.lower(), hashed
+        )
+    except asyncpg.exceptions.UniqueViolationError:
+        raise HTTPException(status_code=409, detail="Usuario o email ya registrado")
+    except Exception as e:
+        log.error(f"Error al registrar usuario: {e}")
+        raise HTTPException(status_code=500, detail="Error al crear la cuenta")
     log.info(f"Nuevo usuario registrado: {req.username.lower()}")
     token = create_token(req.username.lower())
     return {"access_token": token, "token_type": "bearer", "username": req.username.lower()}
