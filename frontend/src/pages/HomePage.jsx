@@ -1,218 +1,126 @@
 import { useMemo } from 'react'
-import { useNewsFeed }  from '../hooks/useNewsFeed'
-import { useDocsFeed }  from '../hooks/useDocsFeed'
-import { useSocialFeed } from '../hooks/useSocialFeed'
-import { SEV_COLOR } from '../lib/severity'
+import { useNewsFeed }        from '../hooks/useNewsFeed'
+import { useDocsFeed }        from '../hooks/useDocsFeed'
+import { useSocialFeed }      from '../hooks/useSocialFeed'
+import { useFavorites }       from '../hooks/useFavorites'
+import { useSourceFavorites } from '../hooks/useSourceFavorites'
+import { useReports }         from '../hooks/useReports'
+import { apiFetchBlob }       from '../hooks/apiClient'
+import { SEV_COLOR }          from '../lib/severity'
 
-function ModuleCard({ title, icon, subtitle, status, statusColor, children, onClick }) {
+// ── Report card ───────────────────────────────────────────────────────────────
+function ReportCard({ report, label }) {
+  async function handleDownload() {
+    if (!report) return
+    try {
+      const blob = await apiFetchBlob(`/api/reports/${report.id}/download`)
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = report.filename
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Download failed:', err)
+    }
+  }
+
+  const date = report
+    ? new Date(report.period_start).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+    : null
+
   return (
-    <div
-      onClick={onClick}
-      style={{
-        background: 'var(--bg-1)',
-        border: '1px solid var(--border)',
-        borderRadius: '3px',
-        display: 'flex',
-        flexDirection: 'column',
-        cursor: 'pointer',
-        overflow: 'hidden',
-        transition: 'border-color .15s',
-        position: 'relative',
-      }}
-      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-md)'}
-      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-    >
+    <div style={{
+      flex: 1, background: 'var(--bg-1)',
+      border: `1px solid ${report ? 'rgba(200,160,60,0.3)' : 'var(--border)'}`,
+      borderRadius: '3px', padding: '10px 14px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      opacity: report ? 1 : 0.5,
+    }}>
+      <div>
+        <div style={{
+          fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+          fontWeight: '700', letterSpacing: '.12em',
+          color: 'var(--accent)', textTransform: 'uppercase',
+        }}>
+          {label}
+        </div>
+        {report ? (
+          <>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-2)', marginTop: '3px' }}>
+              {date} · {report.alert_count} alertas · sev {report.top_severity}/10
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', marginTop: '1px' }}>
+              {report.file_size_kb ? `${(report.file_size_kb / 1024).toFixed(1)} MB` : ''}
+            </div>
+          </>
+        ) : (
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-3)', marginTop: '3px' }}>
+            Sin informe generado
+          </div>
+        )}
+      </div>
+      {report && (
+        <button
+          onClick={handleDownload}
+          style={{
+            background: 'rgba(200,160,60,0.1)', border: '1px solid rgba(200,160,60,0.3)',
+            borderRadius: '3px', color: 'var(--accent)',
+            fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+            padding: '5px 12px', cursor: 'pointer', letterSpacing: '.06em', flexShrink: 0,
+          }}
+        >↓ PDF</button>
+      )}
+    </div>
+  )
+}
+
+// ── Section wrapper ───────────────────────────────────────────────────────────
+function Section({ label, children }) {
+  return (
+    <div style={{
+      background: 'var(--bg-1)', border: '1px solid var(--border)',
+      borderRadius: '3px', padding: '10px 14px', flexShrink: 0,
+    }}>
       <div style={{
-        padding: '18px 18px 14px',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexShrink: 0,
+        fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700',
+        letterSpacing: '.18em', color: 'var(--accent)', textTransform: 'uppercase',
+        marginBottom: '8px',
       }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-          <span style={{ fontSize:'18px', lineHeight:1 }}>{icon}</span>
-          <div>
-            <div style={{ fontSize:'var(--title-sm)', fontWeight:'700', letterSpacing:'.12em', color:'var(--accent)', textTransform:'uppercase' }}>
-              {title}
-            </div>
-            <div style={{ fontSize:'var(--label-sm)', color:'var(--txt-2)', letterSpacing:'.08em', marginTop:'3px' }}>
-              {subtitle}
-            </div>
-          </div>
-        </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-          <div style={{
-            width:'5px', height:'5px', borderRadius:'50%',
-            background: statusColor,
-            animation: 'blink 2.4s ease-in-out infinite',
-          }} />
-          <span style={{ fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color: statusColor, letterSpacing:'.08em' }}>
-            {status}
-          </span>
-        </div>
+        {label}
       </div>
-      <div style={{ flex:1, overflow:'hidden', padding:'8px 0' }}>
-        {children}
-      </div>
-      <div style={{
-        position:'absolute', bottom:10, right:12,
-        fontFamily:'var(--mono)', fontSize:'11px', color:'rgba(74,158,255,0.30)',
-        letterSpacing:'.1em', pointerEvents:'none',
-      }}>
-        ABRIR →
-      </div>
+      {children}
     </div>
   )
 }
 
-function TacticalPreview({ aircraft, alerts }) {
-  const rows = [
-    { label:'AERONAVES',   value: aircraft.length,                                sub:`${aircraft.filter(a=>a.type==='military').length} mil`, color:'var(--cyan)'  },
-    { label:'MIL. AÉREO',  value: aircraft.filter(a=>a.type==='military').length, sub:'detectados',                                           color:'var(--red)'   },
-    { label:'ALT. HIGH',   value: alerts.filter(a=>a.severity==='high').length,   sub:'activas',                                              color:'var(--red)'   },
-    { label:'ALT. MEDIUM', value: alerts.filter(a=>a.severity==='medium').length, sub:'activas',                                              color:'var(--amber)' },
-  ]
-  return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1px', background:'var(--border)', margin:'0 0 8px' }}>
-      {rows.map(r => (
-        <div key={r.label} style={{ background:'var(--bg-2)', padding:'14px 18px' }}>
-          <div style={{ fontFamily:'var(--mono)', fontSize:'28px', fontWeight:'500', color:r.color, lineHeight:1 }}>{r.value}</div>
-          <div style={{ fontSize:'var(--label-sm)', letterSpacing:'.12em', color:'var(--txt-2)', textTransform:'uppercase', marginTop:'4px' }}>{r.label}</div>
-          <div style={{ fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)', marginTop:'2px' }}>{r.sub}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
+// ── HomePage ──────────────────────────────────────────────────────────────────
+export default function HomePage({ aircraft, alerts, onNavigate }) {
+  const { articles, loading: newsLoading }    = useNewsFeed()
+  const { docs,     loading: docsLoading }    = useDocsFeed()
+  const { posts,    loading: socialLoading }  = useSocialFeed()
+  const { favorites: aircraftFavs }           = useFavorites()
+  const { favorites: srcFavs }                = useSourceFavorites()
+  const { daily, weekly, loading: reportsLoading } = useReports()
 
-function NewsPreview({ articles, loading }) {
-  if (loading) return (
-    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>CARGANDO…</div>
-  )
-  const items = articles.slice(0, 4)
-  if (!items.length) return (
-    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>SIN ARTÍCULOS</div>
-  )
-  return (
-    <div>
-      {items.map(n => (
-        <div key={n.id || n.url} style={{
-          padding:'10px 18px', borderBottom:'1px solid var(--border)',
-          display:'flex', alignItems:'flex-start', gap:'10px',
-        }}>
-          <div style={{
-            flexShrink:0, marginTop:'3px',
-            width:'6px', height:'6px', borderRadius:'50%',
-            background: SEV_COLOR[n.severity] || 'var(--txt-3)',
-          }} />
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{
-              fontSize:'10px', color:'var(--txt-1)', lineHeight:1.3,
-              overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
-            }}>{n.title}</div>
-            <div style={{ fontSize:'9px', color:'var(--txt-3)', fontFamily:'var(--mono)', marginTop:'2px' }}>
-              {n.source}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function DocsPreview({ docs, loading }) {
-  if (loading) return (
-    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>CARGANDO…</div>
-  )
-  const items = docs.slice(0, 4)
-  if (!items.length) return (
-    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>SINDOCUMENTOS</div>
-  )
-  return (
-    <div>
-      {items.map(d => (
-        <div key={d.id} style={{
-          padding:'7px 14px', borderBottom:'1px solid var(--border)',
-          display:'flex', alignItems:'center', gap:'8px',
-        }}>
-          <span style={{ fontSize:'10px', flexShrink:0, fontFamily:'var(--mono)', color:'var(--txt-3)' }}>
-            [DOC]
-          </span>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{
-              fontSize:'10px', color:'var(--txt-1)',
-              overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
-            }}>{d.title}</div>
-            <div style={{ fontSize:'8px', color:'var(--txt-3)', fontFamily:'var(--mono)', marginTop:'2px' }}>
-              {d.source}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function SocialPreview({ posts, loading }) {
-  if (loading) return (
-    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>CARGANDO…</div>
-  )
-  const items = posts.slice(0, 4)
-  if (!items.length) return (
-    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>SINTWEETS</div>
-  )
-  return (
-    <div>
-      {items.map(p => (
-        <div key={p.tweet_id} style={{
-          padding:'7px 14px', borderBottom:'1px solid var(--border)',
-          display:'flex', alignItems:'center', justifyContent:'space-between',
-        }}>
-          <div style={{ minWidth:0, flex:1 }}>
-            <div style={{ fontSize:'10px', color:'var(--accent)', fontFamily:'var(--mono)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-              @{p.handle}
-            </div>
-            <div style={{ fontSize:'9px', color:'var(--txt-3)', marginTop:'1px', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-              {p.content}
-            </div>
-          </div>
-          <div style={{ textAlign:'right', flexShrink:0, marginLeft:'8px' }}>
-            <div style={{ fontFamily:'var(--mono)', fontSize:'9px', color:'var(--green)' }}>
-              ❤ {(p.likes || 0).toLocaleString()}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Panel de correlación cruzada ──────────────────────────────────────────────
-
-function CorrelationPanel({ aircraft, alerts, articles, posts }) {
+  // Señales convergentes
   const signals = useMemo(() => {
-    const now = Date.now()
+    const now      = Date.now()
     const window1h = 60 * 60 * 1000
-
-    // Group active signals per zone
-    const zones = {}
+    const zones    = {}
     const add = (zone, source) => {
       if (!zone) return
       if (!zones[zone]) zones[zone] = new Set()
       zones[zone].add(source)
     }
-
     alerts.forEach(a => add(a.zone, 'ALERTAS'))
-
     aircraft.filter(a => a.type === 'military' && a.zone).forEach(a => add(a.zone, 'ADS-B MIL'))
-
     articles
       .filter(a => a.time && (now - new Date(a.time).getTime()) < window1h)
       .forEach(a => (Array.isArray(a.zones) ? a.zones : []).forEach(z => add(z, 'NOTICIAS')))
-
     posts
       .filter(p => p.time && (now - new Date(p.time).getTime()) < window1h && p.zone)
       .forEach(p => add(p.zone, 'SOCIAL'))
-
     return Object.entries(zones)
       .filter(([, srcs]) => srcs.size >= 2)
       .sort((a, b) => b[1].size - a[1].size)
@@ -220,185 +128,225 @@ function CorrelationPanel({ aircraft, alerts, articles, posts }) {
       .map(([zone, srcs]) => ({ zone, sources: [...srcs] }))
   }, [aircraft, alerts, articles, posts])
 
-  if (!signals.length) return null
+  // Noticias personalizadas o generalistas
+  const newsItems = useMemo(() => {
+    if (srcFavs.news.length > 0) {
+      const favSources = new Set(srcFavs.news.map(f => f.source_id))
+      return articles.filter(a => favSources.has(a.source)).slice(0, 4)
+    }
+    return [...articles]
+      .sort((a, b) => {
+        const sev = { high: 3, medium: 2, low: 1 }
+        return (sev[b.severity] || 0) - (sev[a.severity] || 0)
+      })
+      .slice(0, 4)
+  }, [articles, srcFavs.news])
 
-  return (
-    <div style={{
-      flexShrink: 0,
-      background: 'var(--bg-1)',
-      border: '1px solid rgba(244,63,94,0.25)',
-      borderLeft: '3px solid var(--red)',
-      borderRadius: '3px',
-      padding: '10px 14px',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px',
-      }}>
-        <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'var(--red)', animation:'blink 1.2s ease-in-out infinite', flexShrink:0 }} />
-        <span style={{ fontFamily:'var(--mono)', fontSize:'var(--label-xs)', fontWeight:'700', letterSpacing:'.2em', color:'var(--red)', textTransform:'uppercase' }}>
-          SEÑALES CONVERGENTES
-        </span>
-        <span style={{ fontFamily:'var(--mono)', fontSize:'var(--label-xs)', color:'var(--txt-3)', marginLeft:'auto' }}>
-          {signals.length} zona{signals.length > 1 ? 's' : ''}
-        </span>
-      </div>
-      <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
-        {signals.map(({ zone, sources }) => (
-          <div key={zone} style={{
-            background: 'rgba(244,63,94,0.07)',
-            border: '1px solid rgba(244,63,94,0.2)',
-            borderRadius: '3px',
-            padding: '8px 12px',
-            minWidth: '160px',
-          }}>
-            <div style={{ fontFamily:'var(--mono)', fontSize:'var(--label-sm)', fontWeight:'700', color:'var(--txt-1)', letterSpacing:'.08em', marginBottom:'5px', textTransform:'uppercase' }}>
-              {zone.replace(/_/g, ' ')}
-            </div>
-            <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
-              {sources.map(s => (
-                <span key={s} style={{
-                  fontFamily:'var(--mono)', fontSize:'var(--label-xs)',
-                  color:'var(--red)', background:'rgba(244,63,94,0.1)',
-                  border:'1px solid rgba(244,63,94,0.25)',
-                  padding:'1px 6px', borderRadius:'2px', letterSpacing:'.06em',
-                }}>
-                  {s}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+  // Posts de cuentas favoritas
+  const socialItems = useMemo(() => {
+    if (srcFavs.social.length === 0) return []
+    const favHandles = new Set(srcFavs.social.map(f => f.source_id))
+    return posts.filter(p => favHandles.has(p.handle)).slice(0, 4)
+  }, [posts, srcFavs.social])
 
-// ── Página principal ──────────────────────────────────────────────────────────
-
-export default function HomePage({ aircraft, alerts, onNavigate }) {
-  const { articles, loading: newsLoading }  = useNewsFeed()
-  const { docs,     loading: docsLoading }  = useDocsFeed()
-  const { posts,    loading: socialLoading } = useSocialFeed()
-
-  const highNews    = articles.filter(n => n.severity === 'high').length
-  const pendingDocs = docs.filter(d => d.status === 'pending' || d.status === 'analyzing').length
+  // Docs de orgs favoritas
+  const docItems = useMemo(() => {
+    if (srcFavs.docs.length === 0) return []
+    const favOrgs = new Set(srcFavs.docs.map(f => f.source_id))
+    return docs.filter(d => favOrgs.has(d.source)).slice(0, 4)
+  }, [docs, srcFavs.docs])
 
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
-      overflow: 'hidden', background: 'var(--bg-0)',
-      padding: '20px 24px', gap: '16px',
+      overflowY: 'auto', background: 'var(--bg-0)',
+      padding: '16px 20px', gap: '10px',
     }}>
 
-      {/* System status strip */}
+      {/* 1. Status strip */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '20px',
-        padding: '12px 20px',
-        background: 'var(--bg-1)',
-        border: '1px solid var(--border)',
-        borderRadius: '3px',
-        flexShrink: 0,
-        flexWrap: 'wrap',
+        padding: '10px 16px', background: 'var(--bg-1)',
+        border: '1px solid var(--border)', borderRadius: '3px',
+        flexShrink: 0, flexWrap: 'wrap',
       }}>
-        <div style={{ fontSize:'var(--label-sm)', fontWeight:'700', letterSpacing:'.16em', color:'var(--txt-2)', textTransform:'uppercase', marginRight:'4px', flexShrink:0 }}>
+        <div style={{ fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.16em', color: 'var(--txt-2)', textTransform: 'uppercase', flexShrink: 0 }}>
           ESTADO DEL SISTEMA
         </div>
         {[
-          { label:'ADS-B',    color:'var(--green)',  val:`${aircraft.length} entidades` },
-          { label:'NOTICIAS', color: newsLoading   ? 'var(--txt-3)' : articles.length  ? 'var(--green)' : 'var(--amber)', val: newsLoading   ? '…' : `${articles.length} artículos`  },
-          { label:'DOCS',     color: docsLoading   ? 'var(--txt-3)' : pendingDocs      ? 'var(--amber)' : 'var(--green)', val: docsLoading   ? '…' : `${pendingDocs} pendientes`     },
-          { label:'SOCIAL',   color: socialLoading ? 'var(--txt-3)' : posts.length     ? 'var(--green)' : 'var(--amber)', val: socialLoading ? '…' : `${posts.length} posts`          },
-          { label:'ALERTAS',  color: alerts.length > 0 ? 'var(--red)' : 'var(--green)', val: `${alerts.length} activas` },
+          { label: 'ADS-B',    color: 'var(--green)', val: `${aircraft.length} aeronaves` },
+          { label: 'ALERTAS',  color: alerts.length > 0 ? 'var(--red)' : 'var(--green)', val: `${alerts.length} activas` },
+          { label: 'NOTICIAS', color: newsLoading ? 'var(--txt-3)' : articles.length ? 'var(--green)' : 'var(--amber)', val: newsLoading ? '…' : `${articles.length} artículos` },
+          { label: 'INFORMES', color: reportsLoading ? 'var(--txt-3)' : (daily || weekly) ? 'var(--green)' : 'var(--amber)', val: reportsLoading ? '…' : (daily ? 'diario disponible' : 'sin informes') },
         ].map(item => (
-          <div key={item.label} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-            <div style={{ width:'5px', height:'5px', borderRadius:'50%', background: item.color, animation:'blink 2.4s ease-in-out infinite' }} />
-            <span style={{ fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)', letterSpacing:'.1em' }}>
-              {item.label}
-            </span>
-            <span style={{ fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color: item.color }}>
-              {item.val}
-            </span>
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: item.color, animation: 'blink 2.4s ease-in-out infinite' }} />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', letterSpacing: '.1em' }}>{item.label}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: item.color }}>{item.val}</span>
           </div>
         ))}
       </div>
 
-      {/* Señales convergentes */}
-      <CorrelationPanel aircraft={aircraft} alerts={alerts} articles={articles} posts={posts} />
+      {/* 2. Informes (siempre) */}
+      <div style={{ flexShrink: 0 }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
+          INFORMES GENERADOS
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <ReportCard report={daily}  label="INFORME DIARIO"  />
+          <ReportCard report={weekly} label="INFORME SEMANAL" />
+        </div>
+      </div>
 
-      {/* 2×2 module grid */}
-      <div style={{
-        flex: 1, display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
-        gap: '10px', minHeight: 0,
-      }}>
-        <ModuleCard
-          title="Mapa Táctico"
-          icon="◎"
-          subtitle="ADS-B · AIS · ALERTAS EN TIEMPO REAL"
-          status="LIVE"
-          statusColor="var(--green)"
-          onClick={() => onNavigate('tactical')}
-        >
-          <TacticalPreview aircraft={aircraft} alerts={alerts} />
-          <div style={{ padding:'6px 14px 0' }}>
-            {alerts.slice(0, 2).map(a => (
-              <div key={a.id} style={{
-                display:'flex', alignItems:'center', gap:'7px',
-                padding:'5px 0', borderBottom:'1px solid var(--border)',
-              }}>
-                <div style={{ width:'6px', height:'6px', borderRadius:'50%', background: SEV_COLOR[a.severity], flexShrink:0 }} />
-                <span style={{ fontSize:'10px', color:'var(--txt-2)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{a.title}</span>
+      {/* 3. Señales convergentes (condicional) */}
+      {signals.length > 0 && (
+        <div style={{
+          background: 'var(--bg-1)', border: '1px solid rgba(244,63,94,0.25)',
+          borderLeft: '3px solid var(--red)', borderRadius: '3px',
+          padding: '10px 14px', flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--red)', animation: 'blink 1.2s ease-in-out infinite', flexShrink: 0 }} />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--red)', textTransform: 'uppercase' }}>SEÑALES CONVERGENTES</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', color: 'var(--txt-3)', marginLeft: 'auto' }}>{signals.length} zona{signals.length > 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {signals.map(({ zone, sources }) => (
+              <div key={zone} style={{ background: 'rgba(244,63,94,0.07)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: '3px', padding: '8px 12px', minWidth: '160px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700', color: 'var(--txt-1)', letterSpacing: '.08em', marginBottom: '5px', textTransform: 'uppercase' }}>
+                  {zone.replace(/_/g, ' ')}
+                </div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {sources.map(s => (
+                    <span key={s} style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', color: 'var(--red)', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.25)', padding: '1px 6px', borderRadius: '2px', letterSpacing: '.06em' }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
-        </ModuleCard>
+        </div>
+      )}
 
-        <ModuleCard
-          title="Inteligencia de Noticias"
-          icon="◈"
-          subtitle="FUENTES ABIERTAS · OSINT · PRENSA INTERNACIONAL"
-          status={highNews > 0 ? `${highNews} CRÍTICAS` : newsLoading ? 'CARGANDO' : `${articles.length} ARTS`}
-          statusColor={highNews > 0 ? 'var(--red)' : newsLoading ? 'var(--txt-3)' : 'var(--green)'}
-          onClick={() => onNavigate('news')}
-        >
-          <NewsPreview articles={articles} loading={newsLoading} />
-        </ModuleCard>
+      {/* 4. Aeronaves favoritas o stats genéricos */}
+      {aircraftFavs.length > 0 ? (
+        <Section label={`★ MIS AERONAVES · ${aircraftFavs.length}`}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {aircraftFavs.map(fav => {
+              const live = aircraft.find(a => a.id === fav.icao24)
+              return (
+                <div
+                  key={fav.icao24}
+                  style={{
+                    background: 'var(--bg-2)', borderRadius: '3px', padding: '6px 12px',
+                    border: `1px solid ${live ? 'rgba(79,156,249,0.35)' : 'var(--border)'}`,
+                    opacity: live ? 1 : 0.55,
+                  }}
+                >
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', fontWeight: '700', color: 'var(--accent)' }}>
+                    {fav.callsign || fav.icao24}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', marginTop: '2px' }}>
+                    {live ? (live.altitude != null ? `${live.altitude} ft` : 'En tierra') : 'Sin datos recientes'}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Section>
+      ) : (
+        <Section label="SITUACIÓN AÉREA">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            {[
+              { label: 'AERONAVES', value: aircraft.length,                                color: 'var(--accent)' },
+              { label: 'MILITARES', value: aircraft.filter(a => a.type === 'military').length, color: 'var(--red)'    },
+              { label: 'CIVILES',   value: aircraft.filter(a => a.type === 'civil').length,    color: 'var(--txt-2)'  },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ background: 'var(--bg-2)', padding: '10px 12px', borderRadius: '2px', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '24px', fontWeight: '500', color, lineHeight: 1 }}>{value}</div>
+                <div style={{ fontSize: 'var(--label-sm)', letterSpacing: '.12em', color: 'var(--txt-3)', textTransform: 'uppercase', marginTop: '3px' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
-        <ModuleCard
-          title="Ingesta de Documentos"
-          icon="▣"
-          subtitle="PDF · DOCX · ANÁLISIS AUTOMÁTICO"
-          status={docsLoading ? 'CARGANDO' : pendingDocs > 0 ? `${pendingDocs} PENDIENTES` : 'AL DÍA'}
-          statusColor={docsLoading ? 'var(--txt-3)' : pendingDocs > 0 ? 'var(--amber)' : 'var(--green)'}
-          onClick={() => onNavigate('documents')}
-        >
-          <DocsPreview docs={docs} loading={docsLoading} />
-        </ModuleCard>
+      {/* 5. Cuentas sociales favoritas (condicional) */}
+      {srcFavs.social.length > 0 && (
+        <Section label={`★ MIS CUENTAS SOCIALES · ${srcFavs.social.slice(0, 3).map(f => f.source_name || f.source_id).join(', ')}`}>
+          {socialLoading ? (
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>Cargando…</div>
+          ) : socialItems.length === 0 ? (
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>Sin publicaciones recientes de tus cuentas favoritas</div>
+          ) : socialItems.map((p, i) => (
+            <div key={p.tweet_id} style={{
+              display: 'flex', gap: '10px', padding: '5px 0',
+              borderBottom: i < socialItems.length - 1 ? '1px solid var(--border)' : 'none',
+            }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--accent)', flexShrink: 0, minWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                @{p.handle}
+              </span>
+              <span style={{ fontSize: 'var(--label-sm)', color: 'var(--txt-2)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                {p.content}
+              </span>
+            </div>
+          ))}
+        </Section>
+      )}
 
-        <ModuleCard
-          title="Redes Sociales"
-          icon="◉"
-          subtitle="X · TELEGRAM · MONITORIZACIÓN ZONAS"
-          status={socialLoading ? 'CARGANDO' : `${posts.length} POSTS`}
-          statusColor={socialLoading ? 'var(--txt-3)' : posts.length ? 'var(--accent)' : 'var(--amber)'}
-          onClick={() => onNavigate('social')}
-        >
-          <SocialPreview posts={posts} loading={socialLoading} />
-        </ModuleCard>
-      </div>
+      {/* 6. Noticias (siempre: personalizado o generalista) */}
+      <Section label={srcFavs.news.length > 0 ? `★ MIS PORTALES · ${srcFavs.news.slice(0, 2).map(f => f.source_name || f.source_id).join(', ')}` : 'ÚLTIMAS NOTICIAS'}>
+        {newsLoading ? (
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>Cargando…</div>
+        ) : newsItems.length === 0 ? (
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>Sin artículos disponibles</div>
+        ) : newsItems.map((n, i) => (
+          <div key={n.id || n.url} style={{
+            display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '5px 0',
+            borderBottom: i < newsItems.length - 1 ? '1px solid var(--border)' : 'none',
+          }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: SEV_COLOR[n.severity] || 'var(--txt-3)', flexShrink: 0, marginTop: '4px' }} />
+            <span style={{ fontSize: 'var(--label-sm)', color: 'var(--txt-1)', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+              {n.title}
+            </span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', flexShrink: 0 }}>
+              {n.source}
+            </span>
+          </div>
+        ))}
+      </Section>
 
-      {/* Recent alerts strip */}
+      {/* 7. Organizaciones de docs favoritas (condicional) */}
+      {srcFavs.docs.length > 0 && (
+        <Section label={`★ MIS ORGANIZACIONES · ${srcFavs.docs.slice(0, 2).map(f => f.source_name || f.source_id).join(', ')}`}>
+          {docsLoading ? (
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>Cargando…</div>
+          ) : docItems.length === 0 ? (
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>Sin documentos recientes de tus organizaciones favoritas</div>
+          ) : docItems.map((d, i) => (
+            <div key={d.id} style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0',
+              borderBottom: i < docItems.length - 1 ? '1px solid var(--border)' : 'none',
+            }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', flexShrink: 0 }}>[DOC]</span>
+              <span style={{ fontSize: 'var(--label-sm)', color: 'var(--txt-1)', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{d.title}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', flexShrink: 0 }}>{d.source}</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* 8. Alertas activas (condicional) */}
       {alerts.length > 0 && (
         <div style={{
           flexShrink: 0, background: 'var(--bg-1)',
-          border: '1px solid var(--border)', borderRadius: '3px',
-          padding: '8px 14px',
+          border: '1px solid var(--border)', borderRadius: '3px', padding: '10px 14px',
         }}>
-          <div style={{ fontSize:'var(--label-xs)', fontWeight:'700', letterSpacing:'.2em', color:'var(--txt-3)', textTransform:'uppercase', marginBottom:'8px' }}>
-            ALERTAS RECIENTES
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--red)', textTransform: 'uppercase', marginBottom: '8px' }}>
+            ALERTAS ACTIVAS · {alerts.length}
           </div>
-          <div style={{ display:'flex', gap:'8px', overflowX:'auto', paddingBottom:'4px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             {alerts.map(a => (
               <div
                 key={a.id}
@@ -412,10 +360,10 @@ export default function HomePage({ aircraft, alerts, onNavigate }) {
                   minWidth: '200px', maxWidth: '280px',
                 }}
               >
-                <div style={{ fontFamily:'var(--mono)', fontSize:'var(--label-xs)', color: SEV_COLOR[a.severity], letterSpacing:'.1em', textTransform:'uppercase' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', color: SEV_COLOR[a.severity], letterSpacing: '.1em', textTransform: 'uppercase' }}>
                   {a.severity} · {a.zone}
                 </div>
-                <div style={{ fontSize:'10px', color:'var(--txt-1)', marginTop:'2px', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+                <div style={{ fontSize: 'var(--label-sm)', color: 'var(--txt-1)', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                   {a.title}
                 </div>
               </div>
@@ -423,6 +371,7 @@ export default function HomePage({ aircraft, alerts, onNavigate }) {
           </div>
         </div>
       )}
+
     </div>
   )
 }
