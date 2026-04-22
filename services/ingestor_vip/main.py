@@ -27,12 +27,13 @@ log = logging.getLogger(__name__)
 BASE_URL      = "https://api.airplanes.live/v2"
 REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379")
 DB_URL        = os.getenv("DB_URL", "")
-POLL_INTERVAL = int(os.getenv("VIP_POLL_INTERVAL", "300"))
-WATCHLIST     = "/app/config/vip_aircraft.yaml"
+POLL_INTERVAL  = int(os.getenv("VIP_POLL_INTERVAL", "300"))
+WATCHLIST      = "/app/config/vip_aircraft.yaml"
 
-# Delay entre peticiones a Airplanes.live — generoso para no saturar la IP
-# compartida con ingestor-adsb (que hace 1 req/5s al mismo host)
-REQUEST_DELAY = 4.0
+# Delay entre peticiones — configurable para no saturar IP compartida con ADSB.
+# Con 70 aeronaves: 70 × delay = tiempo total del scan.
+# ADSB hace 12 req/min; a 8s = 7.5 req/min de VIP → ~19 req/min combinados.
+REQUEST_DELAY = float(os.getenv("VIP_REQUEST_DELAY", "8.0"))
 
 
 def load_watchlist() -> list[dict]:

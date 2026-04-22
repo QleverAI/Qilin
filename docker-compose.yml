@@ -44,7 +44,8 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
-      VIP_POLL_INTERVAL: ${VIP_POLL_INTERVAL:-60}
+      VIP_POLL_INTERVAL: ${VIP_POLL_INTERVAL:-300}
+      VIP_REQUEST_DELAY: ${VIP_REQUEST_DELAY:-8.0}
     volumes:
       - ./config:/app/config
     depends_on:
