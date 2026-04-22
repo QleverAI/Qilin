@@ -1412,14 +1412,18 @@ async def get_sentinel_zones(_user: str = Depends(get_current_user)):
 async def get_favorites(user: str = Depends(get_current_user)):
     if not app.state.db:
         return []
-    rows = await app.state.db.fetch(
-        "SELECT icao24, callsign, added_at FROM user_favorites WHERE username=$1 ORDER BY added_at DESC",
-        user,
-    )
-    return [
-        {"icao24": r["icao24"], "callsign": r["callsign"], "added_at": r["added_at"].isoformat()}
-        for r in rows
-    ]
+    try:
+        rows = await app.state.db.fetch(
+            "SELECT icao24, callsign, added_at FROM user_favorites WHERE username=$1 ORDER BY added_at DESC",
+            user,
+        )
+        return [
+            {"icao24": r["icao24"], "callsign": r["callsign"], "added_at": r["added_at"].isoformat()}
+            for r in rows
+        ]
+    except Exception as e:
+        log.error(f"get_favorites error: {e}")
+        return []
 
 
 @app.post("/favorites/{icao24}")
@@ -1433,6 +1437,7 @@ async def add_favorite(icao24: str, req: FavoriteRequest, user: str = Depends(ge
         )
     except Exception as e:
         log.error(f"add_favorite error: {e}")
+        return {"ok": False}
     return {"ok": True}
 
 
@@ -1440,10 +1445,14 @@ async def add_favorite(icao24: str, req: FavoriteRequest, user: str = Depends(ge
 async def remove_favorite(icao24: str, user: str = Depends(get_current_user)):
     if not app.state.db:
         return {"ok": False}
-    await app.state.db.execute(
-        "DELETE FROM user_favorites WHERE username=$1 AND icao24=$2",
-        user, icao24.lower(),
-    )
+    try:
+        await app.state.db.execute(
+            "DELETE FROM user_favorites WHERE username=$1 AND icao24=$2",
+            user, icao24.lower(),
+        )
+    except Exception as e:
+        log.error(f"remove_favorite error: {e}")
+        return {"ok": False}
     return {"ok": True}
 
 
