@@ -886,7 +886,7 @@ async def get_social_feed(
             conditions.append(f"time >= ${len(params)}")
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-        params.append(min(limit, 200))
+        params.append(min(limit, 1000))
         rows = await app.state.db.fetch(
             f"SELECT * FROM social_posts {where} ORDER BY time DESC LIMIT ${len(params)}",
             *params,
@@ -895,7 +895,7 @@ async def get_social_feed(
 
     # Fallback Redis
     redis = app.state.redis
-    entries = await redis.xrevrange("stream:social", count=min(limit, 200))
+    entries = await redis.xrevrange("stream:social", count=min(limit, 1000))
     return [json.loads(msg["data"]) for _, msg in entries]
 
 
@@ -958,7 +958,7 @@ async def get_news_feed(
             conditions.append(f"time >= ${len(params)}")
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-        params.append(min(limit, 200))
+        params.append(min(limit, 1000))
         rows = await app.state.db.fetch(
             f"SELECT * FROM news_events {where} ORDER BY time DESC LIMIT ${len(params)}",
             *params,
@@ -966,7 +966,7 @@ async def get_news_feed(
         return [dict(r) for r in rows]
 
     # Fallback Redis
-    entries = await app.state.redis.xrevrange("stream:news", count=min(limit, 200))
+    entries = await app.state.redis.xrevrange("stream:news", count=min(limit, 1000))
     return [json.loads(msg["data"]) for _, msg in entries]
 
 
