@@ -27,7 +27,7 @@ function LogoIcon() {
 
 export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, activeMode, onModeChange, onLogout }) {
   const [time, setTime] = useState('')
-  const username = sessionStorage.getItem('qilin_user') || ''
+  const [username] = useState(() => sessionStorage.getItem('qilin_user') || '')
   const [ddOpen, setDdOpen] = useState(false)
   const ddRef = useRef(null)
 
