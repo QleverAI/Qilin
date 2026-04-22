@@ -234,6 +234,10 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
 
 
+class FavoriteRequest(BaseModel):
+    callsign: str | None = None
+
+
 _LANDING_CHAT_SYSTEM = """Eres Qilin, el asistente de la plataforma de inteligencia geopolítica Qilin.
 
 Tu función es ayudar a visitantes de la web a entender la plataforma y elegir el plan correcto.
@@ -1402,6 +1406,45 @@ async def get_sentinel_zones(_user: str = Depends(get_current_user)):
         })
 
     return {"zones": list(zones_map.values())}
+
+
+@app.get("/favorites")
+async def get_favorites(user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return []
+    rows = await app.state.db.fetch(
+        "SELECT icao24, callsign, added_at FROM user_favorites WHERE username=$1 ORDER BY added_at DESC",
+        user,
+    )
+    return [
+        {"icao24": r["icao24"], "callsign": r["callsign"], "added_at": r["added_at"].isoformat()}
+        for r in rows
+    ]
+
+
+@app.post("/favorites/{icao24}")
+async def add_favorite(icao24: str, req: FavoriteRequest, user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return {"ok": False}
+    try:
+        await app.state.db.execute(
+            "INSERT INTO user_favorites (username, icao24, callsign) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+            user, icao24.lower(), req.callsign,
+        )
+    except Exception as e:
+        log.error(f"add_favorite error: {e}")
+    return {"ok": True}
+
+
+@app.delete("/favorites/{icao24}")
+async def remove_favorite(icao24: str, user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return {"ok": False}
+    await app.state.db.execute(
+        "DELETE FROM user_favorites WHERE username=$1 AND icao24=$2",
+        user, icao24.lower(),
+    )
+    return {"ok": True}
 
 
 # ── WEBSOCKET ─────────────────────────────────────────────────────────────────

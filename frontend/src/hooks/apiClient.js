@@ -12,8 +12,12 @@ export function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-export async function apiFetch(path) {
-  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() })
+export async function apiFetch(path, options = {}) {
+  const { headers: extraHeaders, ...rest } = options
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...rest,
+    headers: { ...authHeaders(), ...extraHeaders },
+  })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

@@ -328,3 +328,14 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS users_username_idx ON users (username);
 CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
+
+-- ─── FAVORITOS DE USUARIO ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_favorites (
+    username   TEXT        NOT NULL,
+    icao24     TEXT        NOT NULL,
+    callsign   TEXT,
+    added_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (username, icao24)
+);
+
+CREATE INDEX IF NOT EXISTS favorites_username_idx ON user_favorites (username);
