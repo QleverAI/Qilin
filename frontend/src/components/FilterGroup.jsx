@@ -1,4 +1,4 @@
-// Shared sidebar filter group — used by NewsPage, DocumentsPage, SocialPage, FilingsPage
+// Shared sidebar filter group — used by NewsPage, DocumentsPage, SocialPage, MarketsPage
 
 export default function FilterGroup({ label, options, value, onChange, labelFn, accentColor, allLabel = 'TODOS' }) {
   const accent = accentColor || 'var(--accent)'

@@ -14,7 +14,7 @@ import NewsPage          from './pages/NewsPage'
 import DocumentsPage     from './pages/DocumentsPage'
 import SocialPage        from './pages/SocialPage'
 import SentinelPage      from './pages/SentinelPage'
-import FilingsPage       from './pages/FilingsPage'
+import MarketsPage       from './pages/MarketsPage'
 import PolymarketPage    from './pages/PolymarketPage'
 import ProfilePage       from './pages/ProfilePage'
 import PlansPage         from './pages/PlansPage'
@@ -120,7 +120,7 @@ function AppShell() {
         {view === 'documents'  && <DocumentsPage />}
         {view === 'social'     && <SocialPage />}
         {view === 'sentinel'   && <SentinelPage />}
-        {view === 'markets'    && <FilingsPage />}
+        {view === 'markets'    && <MarketsPage />}
         {view === 'polymarket' && <PolymarketPage />}
         {view === 'profile'   && <ProfilePage onNavigate={setView} />}
         {view === 'plans'     && <PlansPage   onNavigate={setView} />}
