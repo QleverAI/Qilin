@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSocialFeed } from '../hooks/useSocialFeed'
 import { useSourceFavorites } from '../hooks/useSourceFavorites'
 import FilterGroup from '../components/FilterGroup'
@@ -39,12 +39,53 @@ const CAT_COLOR = {
   media:          '#bdbdbd',
 }
 
+const PAGE_SIZE = 100
+
 function timeAgo(isoString) {
   const diff = Math.floor((Date.now() - new Date(isoString)) / 1000)
   if (diff < 60)    return `${diff}s`
   if (diff < 3600)  return `${Math.floor(diff / 60)}m`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`
   return `${Math.floor(diff / 86400)}d`
+}
+
+// ── Paginación ─────────────────────────────────────────────────────────────────
+
+function Pagination({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      gap: '16px', padding: '16px 0 8px',
+      fontFamily: 'var(--mono)',
+    }}>
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        style={{
+          background: 'var(--bg-2)', border: '1px solid var(--border)',
+          borderRadius: '2px', color: page === 1 ? 'var(--txt-3)' : 'var(--txt-2)',
+          fontFamily: 'var(--mono)', fontSize: '11px',
+          padding: '5px 14px', cursor: page === 1 ? 'default' : 'pointer',
+          opacity: page === 1 ? 0.4 : 1,
+        }}
+      >← Anterior</button>
+      <span style={{ fontSize: '11px', color: 'var(--txt-2)' }}>
+        Página {page} de {totalPages}
+      </span>
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page === totalPages}
+        style={{
+          background: 'var(--bg-2)', border: '1px solid var(--border)',
+          borderRadius: '2px', color: page === totalPages ? 'var(--txt-3)' : 'var(--txt-2)',
+          fontFamily: 'var(--mono)', fontSize: '11px',
+          padding: '5px 14px', cursor: page === totalPages ? 'default' : 'pointer',
+          opacity: page === totalPages ? 0.4 : 1,
+        }}
+      >Siguiente →</button>
+    </div>
+  )
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────────
@@ -319,6 +360,12 @@ export default function SocialPage() {
   const [zoneFilter, setZoneFilter] = useState('TODAS')
   const [query,      setQuery]      = useState('')
   const [modalPost,  setModalPost]  = useState(null)
+  const [page,       setPage]       = useState(1)
+
+  const scrollRef = useRef(null)
+
+  useEffect(() => { setPage(1) }, [catFilter, zoneFilter, query])
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0 }, [page])
 
   const filtered = useMemo(() => posts.filter(p => {
     if (catFilter  !== 'TODAS' && p.category !== catFilter)               return false
@@ -326,6 +373,11 @@ export default function SocialPage() {
     if (query && !p.content?.toLowerCase().includes(query.toLowerCase())) return false
     return true
   }), [posts, catFilter, zoneFilter, query])
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const rangeEnd   = Math.min(page * PAGE_SIZE, filtered.length)
 
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: 'var(--bg-0)' }}>
@@ -383,11 +435,16 @@ export default function SocialPage() {
             SOCIAL INTELLIGENCE · X/TWITTER
           </span>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-3)', marginLeft: 'auto' }}>
-            {loading ? 'Cargando…' : `${posts.length} tweets · actualizado ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`}
+            {loading
+              ? 'Cargando…'
+              : filtered.length > 0
+                ? `${rangeStart}–${rangeEnd} de ${filtered.length} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+                : `0 tweets · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+            }
           </span>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
           {loading && <LoadingCards count={12} />}
           {!loading && filtered.length === 0 && (
             <EmptyState
@@ -397,24 +454,27 @@ export default function SocialPage() {
             />
           )}
           {!loading && filtered.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '10px',
-            }}>
-              {filtered.map(post => (
-                <SocialCard
-                  key={post.tweet_id}
-                  post={post}
-                  onClick={() => setModalPost(post)}
-                  isFav={isFavorite('social', post.handle)}
-                  onToggleFav={() => {
-                    if (!isFavorite('social', post.handle) && !canAddMore('social')) return
-                    toggleFavorite('social', post.handle, post.display || post.handle)
-                  }}
-                />
-              ))}
-            </div>
+            <>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5, 1fr)',
+                gap: '10px',
+              }}>
+                {paginated.map(post => (
+                  <SocialCard
+                    key={post.tweet_id}
+                    post={post}
+                    onClick={() => setModalPost(post)}
+                    isFav={isFavorite('social', post.handle)}
+                    onToggleFav={() => {
+                      if (!isFavorite('social', post.handle) && !canAddMore('social')) return
+                      toggleFavorite('social', post.handle, post.display || post.handle)
+                    }}
+                  />
+                ))}
+              </div>
+              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+            </>
           )}
         </div>
       </main>

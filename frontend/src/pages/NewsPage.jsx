@@ -527,7 +527,7 @@ export default function NewsPage() {
             <>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gridTemplateColumns: 'repeat(5, 1fr)',
                 gap: '10px',
               }}>
                 {paginated.map(article => (

@@ -13,7 +13,7 @@ export function useSocialFeed() {
     async function fetchAll() {
       try {
         const [rawPosts, rawAccounts] = await Promise.all([
-          apiFetch('/api/social/feed?limit=100'),
+          apiFetch('/api/social/feed?limit=1000'),
           apiFetch('/api/social/accounts'),
         ])
         if (cancelled) return
