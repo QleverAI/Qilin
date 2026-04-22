@@ -150,6 +150,20 @@ services:
     depends_on:
       - timescaledb
 
+  ingestor-vessel-ports:
+    build: ./services/ingestor_vessel_ports
+    container_name: qilin_ingestor_vessel_ports
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      VESSEL_POLL_INTERVAL: ${VESSEL_POLL_INTERVAL:-300}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
   ingestor-sentinel:
     build: ./services/ingestor_sentinel
     container_name: qilin_ingestor_sentinel
