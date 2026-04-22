@@ -39,28 +39,34 @@ export default function TacticalPanel({
 
   useEffect(() => {
     if (!icao24) { setBases([]); setRoutes([]); return }
+    let cancelled = false
     setLoadingExtra(true)
     Promise.all([
       apiFetch(`/api/aircraft/${icao24}/bases`).catch(() => []),
       apiFetch(`/api/aircraft/${icao24}/routes`).catch(() => []),
     ]).then(([b, r]) => {
+      if (cancelled) return
       setBases(Array.isArray(b) ? b : [])
       setRoutes(Array.isArray(r) ? r : [])
-    }).finally(() => setLoadingExtra(false))
+    }).finally(() => { if (!cancelled) setLoadingExtra(false) })
+    return () => { cancelled = true }
   }, [icao24])
 
   const mmsi = selectedVessel?.mmsi || selectedVessel?.id
   useEffect(() => {
     if (!mmsi) { setVesselPorts([]); setVesselRoutes([]); setVesselInfo(null); return }
+    let cancelled = false
     Promise.all([
       apiFetch(`/api/vessels/${mmsi}/ports`).catch(() => []),
       apiFetch(`/api/vessels/${mmsi}/routes`).catch(() => []),
       apiFetch(`/api/vessels/${mmsi}/info`).catch(() => null),
     ]).then(([p, r, info]) => {
+      if (cancelled) return
       setVesselPorts(Array.isArray(p) ? p : [])
       setVesselRoutes(Array.isArray(r) ? r : [])
       setVesselInfo(info)
     })
+    return () => { cancelled = true }
   }, [mmsi])
 
   return (
@@ -181,8 +187,8 @@ export default function TacticalPanel({
             <SectionBlock label="RUTAS DETECTADAS">
               {loadingExtra ? <Muted>Cargando…</Muted>
                 : routes.length === 0 ? <Muted>Sin rutas detectadas</Muted>
-                : routes.slice(0, 5).map((r, i) => (
-                  <Row key={i}>
+                : routes.slice(0, 5).map((r) => (
+                  <Row key={`${r.origin_icao}-${r.dest_icao}`}>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-1)' }}>
                       <span style={{ color: 'var(--accent)' }}>{r.origin_icao}</span>
                       <span style={{ color: 'var(--txt-3)' }}> → </span>
@@ -202,7 +208,7 @@ export default function TacticalPanel({
       {/* ── Vessel detail ── */}
       {selectedVessel && (() => {
         const vc = VESSEL_TYPE_META[selectedVessel.type] || VESSEL_TYPE_META.unknown
-        const vid = selectedVessel.mmsi || selectedVessel.id
+        const vid = mmsi
         return (
           <div style={{ borderBottom: '1px solid var(--border-md)', overflowY: 'auto', flexShrink: 0, maxHeight: '65%' }}>
             {/* Header */}
@@ -234,7 +240,7 @@ export default function TacticalPanel({
               <SectionBlock label="IDENTIFICACIÓN">
                 <Row><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>MMSI </span><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-1)' }}>{vid}</span></Row>
                 {selectedVessel.flag && <Row><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>BANDERA </span><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-1)' }}>{selectedVessel.flag}</span></Row>}
-                {selectedVessel.company && <Row><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>COMPAÑÍA </span><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--accent)' }}>{selectedVessel.company.toUpperCase().replace(/_/g, ' ')}</span></Row>}
+                {typeof selectedVessel.company === 'string' && <Row><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>COMPAÑÍA </span><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--accent)' }}>{selectedVessel.company.toUpperCase().replace(/_/g, ' ')}</span></Row>}
                 {selectedVessel.destination && <Row><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>DESTINO </span><span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-1)' }}>{selectedVessel.destination}</span></Row>}
               </SectionBlock>
               <SectionBlock label="MOVIMIENTO">
@@ -255,8 +261,8 @@ export default function TacticalPanel({
               )}
               {vesselRoutes.length > 0 && (
                 <SectionBlock label="RUTAS">
-                  {vesselRoutes.slice(0, 3).map((r, i) => (
-                    <Row key={i}>
+                  {vesselRoutes.slice(0, 3).map((r) => (
+                    <Row key={`${r.origin_name}-${r.dest_name}`}>
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-1)' }}>
                         <span style={{ color: 'var(--accent)' }}>{r.origin_name}</span>
                         <span style={{ color: 'var(--txt-3)' }}> → </span>
