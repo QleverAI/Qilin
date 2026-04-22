@@ -242,6 +242,11 @@ class SourceFavoriteRequest(BaseModel):
     source_name: str | None = None
 
 
+class VesselFavoriteRequest(BaseModel):
+    mmsi: str
+    name: str | None = None
+
+
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
@@ -521,6 +526,141 @@ async def get_vessels(_user: str = Depends(get_current_user)):
         return []
     values = await redis.mget(*keys)
     return [json.loads(v) for v in values if v]
+
+
+# ── VESSEL ENDPOINTS ──────────────────────────────────────────────────────────
+
+@app.get("/api/vessels")
+async def get_vessels_api(_user: str = Depends(get_current_user)):
+    redis = app.state.redis
+    keys  = await redis.keys("current:vessel:*")
+    if not keys:
+        return []
+    values = await redis.mget(*keys)
+    return [json.loads(v) for v in values if v]
+
+
+@app.get("/api/vessels/{mmsi}/info")
+async def get_vessel_info(mmsi: str, _user: str = Depends(get_current_user)):
+    """Fetch ship photo from Wikipedia. Result cached 24h in Redis."""
+    redis = app.state.redis
+    cache_key = f"meta:vessel:{mmsi}"
+
+    cached = await redis.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
+    raw = await redis.get(f"current:vessel:{mmsi}")
+    if not raw:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+    vessel = json.loads(raw)
+    name = vessel.get("name", "")
+    if not name:
+        result = {}
+        await redis.setex(cache_key, 86400, json.dumps(result))
+        return result
+
+    result = {}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"https://en.wikipedia.org/api/rest_v1/page/summary/{name.replace(' ', '_')}",
+                headers={"User-Agent": "QilinIntelligence/1.0 carlosqc.work@gmail.com"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                result = {
+                    "thumbnail": data.get("thumbnail", {}).get("source"),
+                    "extract":   data.get("extract", ""),
+                    "url":       data.get("content_urls", {}).get("desktop", {}).get("page"),
+                }
+    except Exception as e:
+        log.warning(f"Wikipedia lookup failed for vessel {mmsi} ({name}): {e}")
+
+    await redis.setex(cache_key, 86400, json.dumps(result))
+    return result
+
+
+@app.get("/api/vessels/{mmsi}/ports")
+async def get_vessel_ports(mmsi: str, _user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return []
+    try:
+        rows = await app.state.db.fetch(
+            """
+            SELECT port_id, port_name, country, lat, lon, is_military,
+                   first_seen, last_seen, visit_count
+            FROM vessel_ports
+            WHERE mmsi = $1
+            ORDER BY visit_count DESC, last_seen DESC
+            """,
+            mmsi,
+        )
+        return [
+            {**dict(r), "first_seen": r["first_seen"].isoformat(), "last_seen": r["last_seen"].isoformat()}
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+@app.get("/api/vessels/{mmsi}/routes")
+async def get_vessel_routes(mmsi: str, _user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return []
+    try:
+        rows = await app.state.db.fetch(
+            """
+            SELECT origin_port, dest_port, origin_name, dest_name, route_count, last_seen
+            FROM vessel_routes
+            WHERE mmsi = $1
+            ORDER BY route_count DESC
+            """,
+            mmsi,
+        )
+        return [
+            {**dict(r), "last_seen": r["last_seen"].isoformat()}
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+@app.get("/api/vessel-favorites")
+async def list_vessel_favorites(_user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return []
+    rows = await app.state.db.fetch(
+        "SELECT mmsi, name, added_at FROM vessel_favorites WHERE username=$1 ORDER BY added_at DESC",
+        _user
+    )
+    return [{"mmsi": r["mmsi"], "name": r["name"], "added_at": r["added_at"].isoformat()} for r in rows]
+
+
+@app.post("/api/vessel-favorites")
+async def add_vessel_favorite(req: VesselFavoriteRequest, _user: str = Depends(get_current_user)):
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    try:
+        await app.state.db.execute(
+            "INSERT INTO vessel_favorites (username, mmsi, name) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
+            _user, req.mmsi, req.name
+        )
+    except Exception as e:
+        log.error(f"Error adding vessel favorite: {e}")
+        raise HTTPException(status_code=500, detail="Error guardando favorito")
+    return {"status": "ok"}
+
+
+@app.delete("/api/vessel-favorites/{mmsi}")
+async def remove_vessel_favorite(mmsi: str, _user: str = Depends(get_current_user)):
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="DB no disponible")
+    await app.state.db.execute(
+        "DELETE FROM vessel_favorites WHERE username=$1 AND mmsi=$2",
+        _user, mmsi
+    )
+    return {"status": "ok"}
 
 
 # ── RUTAS DE VUELO ───────────────────────────────────────────────────────────
