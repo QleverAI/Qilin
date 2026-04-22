@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useProfile } from '../hooks/useProfile'
-import { authHeaders } from '../hooks/apiClient'
+import { authHeaders, getApiBase } from '../hooks/apiClient'
 
 const FIELD = {
   background: 'rgba(0,200,255,0.04)',
@@ -56,7 +56,7 @@ export default function ProfilePage({ onNavigate }) {
     if (newPass.length < 8)     { setPwError('Mínimo 8 caracteres'); return }
     setPwLoading(true)
     try {
-      const res = await fetch('/api/me/password', {
+      const res = await fetch(`${getApiBase()}/api/me/password`, {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ current_password: currentPass, new_password: newPass }),
@@ -113,7 +113,7 @@ export default function ProfilePage({ onNavigate }) {
                 type="password"
                 placeholder="Contraseña actual"
                 value={currentPass}
-                onChange={e => setCurrentPass(e.target.value)}
+                onChange={e => { setCurrentPass(e.target.value); setPwSuccess(''); setPwError('') }}
                 required
                 style={FIELD}
               />
@@ -121,7 +121,7 @@ export default function ProfilePage({ onNavigate }) {
                 type="password"
                 placeholder="Nueva contraseña (mín. 8 caracteres)"
                 value={newPass}
-                onChange={e => setNewPass(e.target.value)}
+                onChange={e => { setNewPass(e.target.value); setPwSuccess(''); setPwError('') }}
                 required
                 style={FIELD}
               />
@@ -129,7 +129,7 @@ export default function ProfilePage({ onNavigate }) {
                 type="password"
                 placeholder="Confirmar nueva contraseña"
                 value={confirmPass}
-                onChange={e => setConfirmPass(e.target.value)}
+                onChange={e => { setConfirmPass(e.target.value); setPwSuccess(''); setPwError('') }}
                 required
                 style={FIELD}
               />
