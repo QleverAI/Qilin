@@ -88,7 +88,7 @@ export function useQilinData() {
         if (cancelled) return
         setAircraft((rawAircraft || []).filter(a => a.lat && a.lon).map(normalizeAircraft))
         setAlerts((rawAlerts || []).map(normalizeAlert))
-        setVessels((rawVessels || []).filter(v => v.lat && v.lon).map(normalizeVessel))
+        setVessels((rawVessels || []).filter(v => v.lat && v.lon && v.category !== 'unknown').map(normalizeVessel))
       } catch (err) {
         console.warn('[useQilinData] fetch failed:', err.message)
       }
@@ -108,7 +108,7 @@ export function useQilinData() {
       try {
         const raw = await apiFetch('/api/vessels')
         if (cancelled) return
-        setVessels((raw || []).filter(v => v.lat && v.lon).map(normalizeVessel))
+        setVessels((raw || []).filter(v => v.lat && v.lon && v.category !== 'unknown').map(normalizeVessel))
       } catch (err) {
         console.warn('[useQilinData] vessel poll failed:', err.message)
       }

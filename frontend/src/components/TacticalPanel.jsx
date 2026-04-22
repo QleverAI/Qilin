@@ -21,6 +21,7 @@ export default function TacticalPanel({
   selectedAircraft, onClose,
   selectedVessel, onSelectVessel,
   trails, onAddTrail, onRemoveTrail,
+  vesselTrails, onAddVesselTrail, onRemoveVesselTrail,
   onFlyTo, onFlyToVessel,
 }) {
   const { favorites, isFavorite, toggleFavorite } = useFavorites()
@@ -53,6 +54,8 @@ export default function TacticalPanel({
   }, [icao24])
 
   const mmsi = selectedVessel?.mmsi || selectedVessel?.id
+  const vesselHasTrail = !!(mmsi && vesselTrails?.[mmsi])
+
   useEffect(() => {
     if (!mmsi) { setVesselPorts([]); setVesselRoutes([]); setVesselInfo(null); return }
     let cancelled = false
@@ -272,6 +275,24 @@ export default function TacticalPanel({
                     </Row>
                   ))}
                 </SectionBlock>
+              )}
+              {onAddVesselTrail && (
+                <button
+                  onClick={() => vesselHasTrail ? onRemoveVesselTrail(mmsi) : onAddVesselTrail(selectedVessel)}
+                  style={{
+                    width: '100%', padding: '7px 0', marginBottom: 8,
+                    background: vesselHasTrail ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${vesselHasTrail ? 'rgba(245,158,11,0.5)' : 'var(--border)'}`,
+                    borderRadius: 2,
+                    color: vesselHasTrail ? '#f59e0b' : 'var(--txt-2)',
+                    fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+                    fontWeight: 700, letterSpacing: '.1em', cursor: 'pointer',
+                  }}
+                >
+                  {vesselHasTrail
+                    ? `RUTA ON (${vesselTrails[mmsi]?.points?.length || 0} pts) — DESACTIVAR`
+                    : 'RUTA — MOSTRAR TRAYECTORIA'}
+                </button>
               )}
               {onFlyToVessel && (
                 <button

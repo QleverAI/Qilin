@@ -61,6 +61,20 @@ cd frontend
 npm run build
 ```
 
+## API — Endpoints de posicionamiento
+
+| Endpoint | Descripción |
+|----------|-------------|
+| `GET /api/aircraft` | Posiciones actuales de aeronaves (desde Redis) |
+| `GET /api/aircraft/{icao24}/trail?hours=N` | Trayectoria histórica de aeronave (TimescaleDB, max 72h) |
+| `GET /api/aircraft/{icao24}/bases` | Bases detectadas por aeronave |
+| `GET /api/aircraft/{icao24}/routes` | Rutas detectadas por aeronave |
+| `GET /api/vessels` | Posiciones actuales de buques (desde Redis, sin `unknown`) |
+| `GET /api/vessels/{mmsi}/trail?hours=N` | Trayectoria histórica de buque (TimescaleDB, max 72h, default 12h) |
+| `GET /api/vessels/{mmsi}/info` | Foto y resumen Wikipedia del buque (caché 24h) |
+| `GET /api/vessels/{mmsi}/ports` | Puertos visitados por buque |
+| `GET /api/vessels/{mmsi}/routes` | Rutas detectadas por buque |
+
 ## Servicios
 
 | Servicio | Puerto | Descripción |
@@ -103,6 +117,8 @@ npm run build
 - `aircraft_bases` — bases/aeródromos conocidos por aeronave (icao24 + airfield_icao)
 - `aircraft_routes` — rutas origen→destino detectadas por aeronave
 - `airfields` — catálogo OurAirports (~70k aeródromos con lat/lon e indicador militar)
+- `vessel_ports` — puertos visitados por buque (mmsi + port_id + visit_count)
+- `vessel_routes` — rutas origen→destino detectadas por buque
 
 Redis keys:
 - `stream:adsb` — stream de posiciones de aeronaves
@@ -163,6 +179,16 @@ Anti-spam: cooldown de 1h por regla+zona. Ventana de correlación: 6h.
 - Docker Compose con nginx como reverse proxy (puerto 80)
 - Frontend: `npm run build` → `frontend/dist/` servido por nginx
 - Git push desde local (el servidor no tiene credenciales GitHub)
+
+## Mapa táctico — comportamiento esperado
+
+- **Filtro de buques**: el frontend solo muestra buques con `category !== 'unknown'` — se muestran military, tanker, cargo, passenger. Los desconocidos se descartan en `useQilinData.js` antes de pasarlos al mapa.
+- **Iconos diferenciados por tipo**:
+  - Aeronaves: `plane-civil` (cyan), `plane-military` (rojo, flecha), `plane-fighter` (rojo, delta), `plane-helicopter` (naranja, rotor), `plane-transport` (rojo, ala ancha), `plane-surveillance` (violeta), `plane-vip` (dorado)
+  - Buques: `ship-military` (rojo, proa aguda), `ship-tanker` (ámbar, casco fino), `ship-cargo` (azul, casco ancho)
+  - La clasificación de subtipo de aeronave se hace en `MapView.jsx → getAircraftIcon()` usando el campo `type_code` del ADS-B
+- **Trayectoria de buques**: al seleccionar un buque en el panel táctico aparece el botón "RUTA — MOSTRAR TRAYECTORIA". Activa/desactiva una línea discontinua ámbar con las últimas N horas de posiciones (default 12h). Hook: `useVesselTrail`. Renderizado: capas `vessel-trail-line-{mmsi}` en MapView.
+- **Trayectoria de aeronaves**: panel TRAYECTORIAS (arriba-izquierda del mapa). Hasta 6 trails simultáneos. Hook: `useAircraftTrail`. Incluye marcadores de bases. Refresco cada 30s.
 
 ### Mejoras planificadas
 - **ENTSO-E**: ingestor de datos de generación eléctrica europea (cortes de luz como indicador geopolítico)

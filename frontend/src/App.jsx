@@ -22,6 +22,7 @@ import LoadingState      from './components/LoadingSkeleton'
 import { useQilinData }  from './hooks/useQilinData'
 import { clearProfileCache } from './hooks/useProfile'
 import { useAircraftTrail } from './hooks/useAircraftTrail'
+import { useVesselTrail }   from './hooks/useVesselTrail'
 
 const MapView = lazy(() => import('./components/MapView'))
 
@@ -50,6 +51,7 @@ function AppShell() {
 
   const { aircraft, vessels, alerts, stats, wsStatus } = useQilinData()
   const { trails, addTrail, removeTrail, clearAll } = useAircraftTrail()
+  const { vesselTrails, addVesselTrail, removeVesselTrail, clearAllVesselTrails } = useVesselTrail()
 
   // Analyst view
   if (activeView === 'analyst') {
@@ -81,6 +83,7 @@ function AppShell() {
         }>
           <MapView aircraft={aircraft} vessels={vessels} alerts={[]} flyTarget={flyTarget}
             trails={trails} onAddTrail={addTrail} onRemoveTrail={removeTrail} onClearTrails={clearAll}
+            vesselTrails={vesselTrails}
             onSelectAircraft={setSelectedAircraft} onSelectVessel={handleSelectVessel} />
         </Suspense>
         <aside style={{ gridColumn:2, gridRow:2, display:'flex', flexDirection:'column',
@@ -97,6 +100,9 @@ function AppShell() {
             }}
             selectedVessel={selectedVessel}
             onSelectVessel={handleSelectVessel}
+            vesselTrails={vesselTrails}
+            onAddVesselTrail={addVesselTrail}
+            onRemoveVesselTrail={removeVesselTrail}
             onFlyToVessel={(mmsi) => {
               const v = vessels.find(x => (x.mmsi || x.id) === mmsi)
               if (v) setFlyTarget({ lon: v.lon, lat: v.lat })

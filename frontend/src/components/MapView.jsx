@@ -6,7 +6,6 @@ import TrailPanel from './TrailPanel'
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
-// Country name → ISO 3166-1 alpha-2 code (for flag CDN)
 const COUNTRY_ISO2 = {
   'Afghanistan':'af','Albania':'al','Algeria':'dz','Argentina':'ar','Australia':'au',
   'Austria':'at','Azerbaijan':'az','Bahrain':'bh','Belarus':'by','Belgium':'be',
@@ -32,7 +31,8 @@ function flagUrl(country) {
   return code ? `https://flagcdn.com/20x15/${code}.png` : null
 }
 
-// ── Icon factories ─────────────────────────────────────────────
+// ── Icon factories ─────────────────────────────────────────────────────────────
+
 function makePlaneIcon(color, size = 24) {
   const c = document.createElement('canvas')
   c.width = size; c.height = size
@@ -51,25 +51,167 @@ function makePlaneIcon(color, size = 24) {
   return ctx.getImageData(0, 0, size, size)
 }
 
-function makeShipIcon(color, size = 20) {
+// Fighter: sharp delta wing, narrow body
+function makeFighterIcon(color, size = 22) {
   const c = document.createElement('canvas')
   c.width = size; c.height = size
   const ctx = c.getContext('2d')
   const cx = size / 2
-  const hw = Math.round(size * 0.25)
-  ctx.fillStyle = color; ctx.globalAlpha = 0.92
+  ctx.fillStyle = color; ctx.globalAlpha = 0.95
   ctx.beginPath()
-  ctx.moveTo(cx, 1)               // bow
-  ctx.lineTo(cx + hw, size * 0.3) // starboard bow shoulder
-  ctx.lineTo(cx + hw, size - 3)   // starboard stern
-  ctx.lineTo(cx - hw, size - 3)   // port stern
-  ctx.lineTo(cx - hw, size * 0.3) // port bow shoulder
+  ctx.moveTo(cx, 1)                          // nose
+  ctx.lineTo(cx + size * 0.42, size * 0.72)  // right wingtip
+  ctx.lineTo(cx + size * 0.12, size * 0.58)  // right fuselage shoulder
+  ctx.lineTo(cx + size * 0.08, size - 3)     // right tail
+  ctx.lineTo(cx - size * 0.08, size - 3)     // left tail
+  ctx.lineTo(cx - size * 0.12, size * 0.58)  // left fuselage shoulder
+  ctx.lineTo(cx - size * 0.42, size * 0.72)  // left wingtip
   ctx.closePath()
   ctx.fill()
   return ctx.getImageData(0, 0, size, size)
 }
 
-// ── GeoJSON helpers ────────────────────────────────────────────
+// Helicopter: wide rotor disc + compact body
+function makeHelicopterIcon(color, size = 22) {
+  const c = document.createElement('canvas')
+  c.width = size; c.height = size
+  const ctx = c.getContext('2d')
+  const cx = size / 2
+  ctx.fillStyle = color; ctx.globalAlpha = 0.95
+  // Rotor blade (wide horizontal bar)
+  ctx.fillRect(2, size * 0.18, size - 4, size * 0.13)
+  // Body (compact oval)
+  ctx.beginPath()
+  ctx.ellipse(cx, size * 0.6, size * 0.2, size * 0.28, 0, 0, Math.PI * 2)
+  ctx.fill()
+  // Tail boom
+  ctx.fillRect(cx - 1, size * 0.82, 2, size * 0.16)
+  return ctx.getImageData(0, 0, size, size)
+}
+
+// Tanker/transport aircraft: wide-body elongated
+function makeTransportIcon(color, size = 24) {
+  const c = document.createElement('canvas')
+  c.width = size; c.height = size
+  const ctx = c.getContext('2d')
+  const cx = size / 2
+  ctx.fillStyle = color; ctx.globalAlpha = 0.95
+  // Wide fuselage
+  ctx.beginPath()
+  ctx.moveTo(cx, 1)                         // nose
+  ctx.lineTo(cx + size * 0.3, size * 0.45)  // right wing root
+  ctx.lineTo(cx + size * 0.45, size * 0.38) // right wingtip
+  ctx.lineTo(cx + size * 0.22, size * 0.65) // right wing trailing
+  ctx.lineTo(cx + size * 0.1, size - 3)     // right tail
+  ctx.lineTo(cx - size * 0.1, size - 3)     // left tail
+  ctx.lineTo(cx - size * 0.22, size * 0.65) // left wing trailing
+  ctx.lineTo(cx - size * 0.45, size * 0.38) // left wingtip
+  ctx.lineTo(cx - size * 0.3, size * 0.45)  // left wing root
+  ctx.closePath()
+  ctx.fill()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+// Surveillance/AWACS: wide low-wing + rotodome disc hint
+function makeSurveillanceIcon(color, size = 22) {
+  const c = document.createElement('canvas')
+  c.width = size; c.height = size
+  const ctx = c.getContext('2d')
+  const cx = size / 2
+  ctx.fillStyle = color; ctx.globalAlpha = 0.95
+  // Body
+  ctx.beginPath()
+  ctx.moveTo(cx, 2)
+  ctx.lineTo(cx + size * 0.38, size * 0.52)
+  ctx.lineTo(cx + size * 0.1, size * 0.58)
+  ctx.lineTo(cx, size - 3)
+  ctx.lineTo(cx - size * 0.1, size * 0.58)
+  ctx.lineTo(cx - size * 0.38, size * 0.52)
+  ctx.closePath()
+  ctx.fill()
+  // Rotodome stripe across middle
+  ctx.globalAlpha = 0.7
+  ctx.fillRect(cx - size * 0.28, size * 0.36, size * 0.56, size * 0.09)
+  return ctx.getImageData(0, 0, size, size)
+}
+
+// ── Vessel icons ───────────────────────────────────────────────────────────────
+
+// Military warship: sharp bow, narrow stern
+function makeWarshipIcon(color, size = 20) {
+  const c = document.createElement('canvas')
+  c.width = size; c.height = size
+  const ctx = c.getContext('2d')
+  const cx = size / 2
+  ctx.fillStyle = color; ctx.globalAlpha = 0.92
+  ctx.beginPath()
+  ctx.moveTo(cx, 1)                          // sharp bow
+  ctx.lineTo(cx + size * 0.28, size * 0.28)
+  ctx.lineTo(cx + size * 0.2,  size - 3)    // stern
+  ctx.lineTo(cx - size * 0.2,  size - 3)
+  ctx.lineTo(cx - size * 0.28, size * 0.28)
+  ctx.closePath()
+  ctx.fill()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+// Tanker: long thin cigar hull
+function makeTankerShipIcon(color, size = 20) {
+  const c = document.createElement('canvas')
+  c.width = size; c.height = size
+  const ctx = c.getContext('2d')
+  const cx = size / 2
+  const hw = Math.round(size * 0.18)  // thinner than generic
+  ctx.fillStyle = color; ctx.globalAlpha = 0.92
+  ctx.beginPath()
+  ctx.moveTo(cx, 1)
+  ctx.lineTo(cx + hw, size * 0.22)
+  ctx.lineTo(cx + hw, size - 3)
+  ctx.lineTo(cx - hw, size - 3)
+  ctx.lineTo(cx - hw, size * 0.22)
+  ctx.closePath()
+  ctx.fill()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+// Cargo: wide boxy hull with notched bow
+function makeCargoShipIcon(color, size = 20) {
+  const c = document.createElement('canvas')
+  c.width = size; c.height = size
+  const ctx = c.getContext('2d')
+  const cx = size / 2
+  const hw = Math.round(size * 0.32)  // wider
+  ctx.fillStyle = color; ctx.globalAlpha = 0.92
+  ctx.beginPath()
+  ctx.moveTo(cx, 1)
+  ctx.lineTo(cx + hw, size * 0.35)
+  ctx.lineTo(cx + hw, size - 3)
+  ctx.lineTo(cx - hw, size - 3)
+  ctx.lineTo(cx - hw, size * 0.35)
+  ctx.closePath()
+  ctx.fill()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+// ── Classify aircraft military sub-type ───────────────────────────────────────
+
+function getAircraftIcon(ac) {
+  if (ac.type === 'vip') return 'plane-vip'
+  if (ac.type !== 'military') return 'plane-civil'
+  const tc = (ac.type_code || '').toUpperCase()
+  // Helicopters
+  if (/^(AH6|AH64|UH6|UH72|CH47|SH60|MH6|NH90|EC13|EC14|EC15|EC72|H225|H160|MI8|MI24|MI26|MI28|KA52|KA50|LYNX|MERL|PUMA|COUG|OH6|OH58|RAH6|WAH|BELL|CHIC|SEAH|TIGR)/.test(tc)) return 'plane-helicopter'
+  // Fighters / interceptors
+  if (/^(F16|F15|F22|F35|F18|FA18|F14|MIG2|MIG3|SU2[7-9]|SU3[0-7]|JAS3|EF20|M2KC|JF17|T50|TYPHO|RAFAL|GRHK|HA22|EURO|SU57|J10|J20)/.test(tc)) return 'plane-fighter'
+  // Tanker / transport
+  if (/^(KC13|KC10|KC46|IL78|MRTT|VC10|K130|KC76|C17|C130|C5|IL76|AN12|AN26|AN72|AN1|C2|C9|A400|CN23|CASA)/.test(tc)) return 'plane-transport'
+  // Surveillance / AWACS / ISR
+  if (/^(E3|E767|RC13|P8|P3|EP3|U2|RQ4|ATL2|NIM|BR11|JSTAR|TR1|ER2|S3)/.test(tc)) return 'plane-surveillance'
+  return 'plane-military'
+}
+
+// ── GeoJSON helpers ────────────────────────────────────────────────────────────
+
 function zonesToGeoJSON() {
   return {
     type: 'FeatureCollection',
@@ -141,10 +283,11 @@ function vesselsToGeoJSON(vessels) {
         destination: v.destination,
         ais_active:  v.ais_active,
         zone:        v.zone,
-        icon: v.type === 'military' ? 'ship-military'
-             : v.type === 'tanker'  ? 'ship-tanker'
-             : v.type === 'cargo'   ? 'ship-cargo'
-             : 'ship-unknown',
+        icon: v.type === 'military'  ? 'ship-military'
+             : v.type === 'tanker'   ? 'ship-tanker'
+             : v.type === 'cargo'    ? 'ship-cargo'
+             : v.type === 'passenger'? 'ship-cargo'
+             : 'ship-cargo',
       },
       geometry: { type: 'Point', coordinates: [v.lon, v.lat] },
     })),
@@ -162,11 +305,16 @@ function alertsGeoJSON(alerts) {
   }
 }
 
-// ── Component ──────────────────────────────────────────────────
-export default function MapView({ aircraft, vessels = [], alerts, flyTarget, trails = {}, onAddTrail, onRemoveTrail, onClearTrails, onSelectAircraft, onSelectVessel }) {
+// ── Component ──────────────────────────────────────────────────────────────────
+export default function MapView({
+  aircraft, vessels = [], alerts, flyTarget,
+  trails = {}, onAddTrail, onRemoveTrail, onClearTrails,
+  vesselTrails = {},
+  onSelectAircraft, onSelectVessel,
+}) {
   const containerRef = useRef(null)
   const mapRef       = useRef(null)
-  const [ready, setReady]               = useState(false)
+  const [ready, setReady] = useState(false)
 
   // Init map
   useEffect(() => {
@@ -185,16 +333,21 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right')
 
     map.on('load', () => {
-      // ── Register icons ──
-      map.addImage('plane-civil',    makePlaneIcon('#00c8ff'))
-      map.addImage('plane-military', makePlaneIcon('#ff3b4a', 26))
-      map.addImage('plane-vip',      makePlaneIcon('#ffd60a', 26))
-      map.addImage('ship-military', makeShipIcon('#f43f5e', 20))
-      map.addImage('ship-tanker',   makeShipIcon('#f59e0b', 18))
-      map.addImage('ship-cargo',    makeShipIcon('#60a5fa', 18))
-      map.addImage('ship-unknown',  makeShipIcon('#64748b', 16))
+      // ── Register aircraft icons ──
+      map.addImage('plane-civil',        makePlaneIcon('#00c8ff'))
+      map.addImage('plane-military',     makePlaneIcon('#ff3b4a', 26))
+      map.addImage('plane-vip',          makePlaneIcon('#ffd60a', 26))
+      map.addImage('plane-fighter',      makeFighterIcon('#ff3b4a', 22))
+      map.addImage('plane-helicopter',   makeHelicopterIcon('#ff7a45', 22))
+      map.addImage('plane-transport',    makeTransportIcon('#ff3b4a', 24))
+      map.addImage('plane-surveillance', makeSurveillanceIcon('#c084fc', 22))
 
-      // ── Zones (label only) ──
+      // ── Register vessel icons ──
+      map.addImage('ship-military',  makeWarshipIcon('#f43f5e', 20))
+      map.addImage('ship-tanker',    makeTankerShipIcon('#f59e0b', 20))
+      map.addImage('ship-cargo',     makeCargoShipIcon('#60a5fa', 20))
+
+      // ── Zones ──
       map.addSource('zones', { type: 'geojson', data: zonesToGeoJSON() })
       map.addLayer({ id:'zones-label', type:'symbol', source:'zones',
         layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'],
@@ -202,27 +355,12 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
         paint:{ 'text-color':['get','stroke'], 'text-halo-color':'rgba(0,0,0,0.7)', 'text-halo-width':1.5 },
       })
 
-      // ── Chokepoints (label only) ──
+      // ── Chokepoints ──
       map.addSource('chokes', { type: 'geojson', data: chokesToGeoJSON() })
       map.addLayer({ id:'chokes-label', type:'symbol', source:'chokes',
         layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'], 'text-size':9, 'text-anchor':'center', 'text-allow-overlap':true },
         paint:{ 'text-color':'rgba(255,176,32,0.65)', 'text-halo-color':'rgba(0,0,0,0.6)', 'text-halo-width':1 },
       })
-
-      // ── Aircraft ──
-      map.addSource('aircraft-src', { type:'geojson', data:{ type:'FeatureCollection', features:[] } })
-      map.addLayer({ id:'aircraft-layer', type:'symbol', source:'aircraft-src',
-        layout:{ 'icon-image':['get','icon'], 'icon-rotate':['get','heading'],
-          'icon-rotation-alignment':'map', 'icon-allow-overlap':true, 'icon-ignore-placement':true,
-          'icon-size':1 },
-        paint:{ 'icon-opacity':0.9 } })
-
-      // ── Callsign labels (only at zoom >= 5) ──
-      map.addLayer({ id:'aircraft-labels', type:'symbol', source:'aircraft-src',
-        minzoom: 5,
-        layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'],
-          'text-size':9, 'text-offset':[0,1.2], 'text-anchor':'top', 'text-allow-overlap':false },
-        paint:{ 'text-color':'rgba(200,216,232,0.7)', 'text-halo-color':'rgba(0,0,0,0.8)', 'text-halo-width':1 } })
 
       // ── Vessels ──
       map.addSource('vessels-src', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -237,7 +375,6 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
         },
         paint: { 'icon-opacity': 0.9 },
       })
-
       map.addLayer({ id: 'vessels-labels', type: 'symbol', source: 'vessels-src',
         minzoom: 6,
         layout: {
@@ -251,21 +388,30 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
         paint: { 'text-color': 'rgba(200,216,232,0.65)', 'text-halo-color': 'rgba(0,0,0,0.8)', 'text-halo-width': 1 },
       })
 
+      // ── Aircraft ──
+      map.addSource('aircraft-src', { type:'geojson', data:{ type:'FeatureCollection', features:[] } })
+      map.addLayer({ id:'aircraft-layer', type:'symbol', source:'aircraft-src',
+        layout:{ 'icon-image':['get','icon'], 'icon-rotate':['get','heading'],
+          'icon-rotation-alignment':'map', 'icon-allow-overlap':true, 'icon-ignore-placement':true,
+          'icon-size':1 },
+        paint:{ 'icon-opacity':0.9 } })
+      map.addLayer({ id:'aircraft-labels', type:'symbol', source:'aircraft-src',
+        minzoom: 5,
+        layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'],
+          'text-size':9, 'text-offset':[0,1.2], 'text-anchor':'top', 'text-allow-overlap':false },
+        paint:{ 'text-color':'rgba(200,216,232,0.7)', 'text-halo-color':'rgba(0,0,0,0.8)', 'text-halo-width':1 } })
+
+      // ── Click handlers ──
       map.on('click', 'vessels-layer', e => {
         const props = e.features[0]?.properties
-        if (props && onSelectVessel) {
-          onSelectVessel({ ...props, lon: e.lngLat.lng, lat: e.lngLat.lat })
-        }
+        if (props && onSelectVessel) onSelectVessel({ ...props, lon: e.lngLat.lng, lat: e.lngLat.lat })
       })
       map.on('mouseenter', 'vessels-layer', () => { map.getCanvas().style.cursor = 'pointer' })
       map.on('mouseleave', 'vessels-layer', () => { map.getCanvas().style.cursor = '' })
 
-      // ── Click handlers ──
       map.on('click', 'aircraft-layer', e => {
         const props = e.features[0]?.properties
-        if (props && onSelectAircraft) {
-          onSelectAircraft({ ...props, lon: e.lngLat.lng, lat: e.lngLat.lat })
-        }
+        if (props && onSelectAircraft) onSelectAircraft({ ...props, lon: e.lngLat.lng, lat: e.lngLat.lat })
       })
       map.on('mouseenter', 'aircraft-layer', () => { map.getCanvas().style.cursor = 'pointer' })
       map.on('mouseleave', 'aircraft-layer', () => { map.getCanvas().style.cursor = '' })
@@ -288,9 +434,7 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
   useEffect(() => {
     if (!ready || !mapRef.current) return
     try {
-      mapRef.current.getSource('aircraft-src')?.setData(
-        toGeoJSON(aircraft, a => a.type === 'military' ? 'plane-military' : a.type === 'vip' ? 'plane-vip' : 'plane-civil')
-      )
+      mapRef.current.getSource('aircraft-src')?.setData(toGeoJSON(aircraft, getAircraftIcon))
     } catch (_) {}
   }, [aircraft, ready])
 
@@ -302,28 +446,23 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
     } catch (_) {}
   }, [vessels, ready])
 
-  // Manage trail polyline layers per tracked aircraft
+  // Aircraft trail layers
   useEffect(() => {
     const map = mapRef.current
     if (!ready || !map) return
 
     const trailIds = Object.keys(trails)
 
-    // Add/update sources and layers for each trail
     trailIds.forEach(icao24 => {
-      const trail = trails[icao24]
-      const srcId   = `trail-src-${icao24}`
-      const lineId  = `trail-line-${icao24}`
-      const baseId  = `base-src-${icao24}`
+      const trail  = trails[icao24]
+      const srcId  = `trail-src-${icao24}`
+      const lineId = `trail-line-${icao24}`
+      const baseId = `base-src-${icao24}`
       const baseDot = `base-dot-${icao24}`
 
-      // Trail polyline
-      const pts = trail.points || []
+      const pts    = trail.points || []
       const coords = pts.map(p => [p.lon, p.lat])
-      const geojson = {
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: coords },
-      }
+      const geojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
 
       try {
         if (map.getSource(srcId)) {
@@ -333,16 +472,11 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
           map.addLayer({
             id: lineId, type: 'line', source: srcId,
             layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: {
-              'line-color': trail.color,
-              'line-width': 1.5,
-              'line-opacity': 0.75,
-            },
+            paint: { 'line-color': trail.color, 'line-width': 1.5, 'line-opacity': 0.75 },
           }, 'aircraft-layer')
         }
       } catch (_) {}
 
-      // Base markers
       const bases = trail.bases || []
       const basesGeo = {
         type: 'FeatureCollection',
@@ -352,7 +486,6 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
           geometry: { type: 'Point', coordinates: [b.lon, b.lat] },
         })),
       }
-
       try {
         if (map.getSource(baseId)) {
           map.getSource(baseId).setData(basesGeo)
@@ -363,40 +496,29 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
             paint: {
               'circle-radius': 5,
               'circle-color': ['case', ['get', 'is_military'], '#f43f5e', trail.color],
-              'circle-stroke-width': 1.5,
-              'circle-stroke-color': 'rgba(0,0,0,0.6)',
-              'circle-opacity': 0.85,
+              'circle-stroke-width': 1.5, 'circle-stroke-color': 'rgba(0,0,0,0.6)', 'circle-opacity': 0.85,
             },
           })
           map.addLayer({
             id: `${baseDot}-label`, type: 'symbol', source: baseId,
-            layout: {
-              'text-field': ['get', 'label'],
-              'text-font': ['Noto Sans Regular'],
-              'text-size': 9, 'text-offset': [0, 1.2], 'text-anchor': 'top',
-            },
-            paint: {
-              'text-color': trail.color,
-              'text-halo-color': 'rgba(0,0,0,0.8)', 'text-halo-width': 1,
-            },
+            layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 9, 'text-offset': [0, 1.2], 'text-anchor': 'top' },
+            paint: { 'text-color': trail.color, 'text-halo-color': 'rgba(0,0,0,0.8)', 'text-halo-width': 1 },
           })
         }
       } catch (_) {}
     })
 
-    // Remove sources/layers for trails that were removed
     try {
       const existing = map.getStyle()?.layers?.map(l => l.id) || []
       existing.forEach(layerId => {
-        const m = layerId.match(/^trail-line-(.+)$/) || layerId.match(/^base-dot-(.+?)(-label)?$/)
-        if (!m) return
-        const icao24 = layerId.match(/^trail-line-(.+)$/)?.[1] || layerId.match(/^base-dot-([^-]+(?:-[^-]+)*?)(-label)?$/)?.[1]
+        const m1 = layerId.match(/^trail-line-(.+)$/)
+        const m2 = layerId.match(/^base-dot-([^-]+(?:-[^-]+)*?)(-label)?$/)
+        const icao24 = m1?.[1] || m2?.[1]
         if (icao24 && !trails[icao24]) {
           try { map.removeLayer(layerId) } catch (_) {}
         }
       })
-      const sources = Object.keys(map.getStyle()?.sources || {})
-      sources.forEach(srcId => {
+      Object.keys(map.getStyle()?.sources || {}).forEach(srcId => {
         const m = srcId.match(/^(trail-src|base-src)-(.+)$/)
         if (m && !trails[m[2]]) {
           try { map.removeSource(srcId) } catch (_) {}
@@ -405,7 +527,58 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
     } catch (_) {}
   }, [trails, ready])
 
-  // Fly to target when alert card clicked
+  // Vessel trail layers
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map) return
+
+    Object.keys(vesselTrails).forEach(mmsi => {
+      const trail  = vesselTrails[mmsi]
+      const srcId  = `vessel-trail-src-${mmsi}`
+      const lineId = `vessel-trail-line-${mmsi}`
+      const pts    = trail.points || []
+      const geojson = {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: pts.map(p => [p.lon, p.lat]) },
+      }
+      try {
+        if (map.getSource(srcId)) {
+          map.getSource(srcId).setData(geojson)
+        } else {
+          map.addSource(srcId, { type: 'geojson', data: geojson })
+          map.addLayer({
+            id: lineId, type: 'line', source: srcId,
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: {
+              'line-color': trail.color,
+              'line-width': 2,
+              'line-opacity': 0.8,
+              'line-dasharray': [3, 1.5],
+            },
+          }, 'vessels-layer')
+        }
+      } catch (_) {}
+    })
+
+    // Remove stale vessel trail layers
+    try {
+      const existing = map.getStyle()?.layers?.map(l => l.id) || []
+      existing.forEach(layerId => {
+        const m = layerId.match(/^vessel-trail-line-(.+)$/)
+        if (m && !vesselTrails[m[1]]) {
+          try { map.removeLayer(layerId) } catch (_) {}
+        }
+      })
+      Object.keys(map.getStyle()?.sources || {}).forEach(srcId => {
+        const m = srcId.match(/^vessel-trail-src-(.+)$/)
+        if (m && !vesselTrails[m[1]]) {
+          try { map.removeSource(srcId) } catch (_) {}
+        }
+      })
+    } catch (_) {}
+  }, [vesselTrails, ready])
+
+  // Fly to target
   useEffect(() => {
     if (!ready || !flyTarget || !mapRef.current) return
     mapRef.current.flyTo({
@@ -420,7 +593,6 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
     <div style={{ position:'relative', gridColumn:1, gridRow:2, overflow:'hidden', minHeight:0 }}>
       <div ref={containerRef} style={{ width:'100%', height:'100%' }} />
 
-      {/* Map overlay: mode label */}
       <div style={{
         position:'absolute', top:10, left:'50%', transform:'translateX(-50%)',
         fontSize:'10px', fontWeight:'600', letterSpacing:'.2em',
@@ -438,8 +610,6 @@ export default function MapView({ aircraft, vessels = [], alerts, flyTarget, tra
         />
       )}
 
-
-      {/* Custom MapLibre style overrides */}
       <style>{`
         .maplibregl-ctrl-bottom-left .maplibregl-ctrl { background: rgba(7,14,28,0.92) !important; border: 1px solid rgba(0,200,255,0.2) !important; border-radius:3px !important; }
         .maplibregl-ctrl-bottom-right .maplibregl-ctrl-scale { border-color: rgba(0,200,255,0.3) !important; color: rgba(0,200,255,0.5) !important; background: rgba(3,8,17,0.8) !important; font-family:'IBM Plex Mono',monospace !important; font-size:9px !important; }
