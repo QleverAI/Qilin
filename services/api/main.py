@@ -1523,6 +1523,8 @@ async def remove_source_favorite(
     source_id: str,
     user: str = Depends(get_current_user),
 ):
+    if source_type not in VALID_SOURCE_TYPES:
+        raise HTTPException(status_code=422, detail="source_type must be news, social, or docs")
     if not app.state.db:
         return {"ok": False}
     try:
