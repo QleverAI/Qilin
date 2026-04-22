@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useProfile } from '../hooks/useProfile'
 import { authHeaders, getApiBase } from '../hooks/apiClient'
+import { useLang } from '../hooks/useLanguage'
 
 const FIELD = {
   background: 'rgba(0,200,255,0.04)',
@@ -40,6 +41,7 @@ function Section({ label, children }) {
 }
 
 export default function ProfilePage({ onNavigate }) {
+  const { t } = useLang()
   const { profile, loading, error } = useProfile()
 
   const [currentPass,  setCurrentPass]  = useState('')
@@ -52,8 +54,8 @@ export default function ProfilePage({ onNavigate }) {
   async function handlePasswordChange(e) {
     e.preventDefault()
     setPwError(''); setPwSuccess('')
-    if (newPass !== confirmPass) { setPwError('Las contraseñas no coinciden'); return }
-    if (newPass.length < 8)     { setPwError('Mínimo 8 caracteres'); return }
+    if (newPass !== confirmPass) { setPwError(t('profile.pw.mismatch')); return }
+    if (newPass.length < 8)     { setPwError(t('profile.pw.too_short')); return }
     setPwLoading(true)
     try {
       const res = await fetch(`${getApiBase()}/api/me/password`, {
@@ -62,11 +64,11 @@ export default function ProfilePage({ onNavigate }) {
         body: JSON.stringify({ current_password: currentPass, new_password: newPass }),
       })
       const data = await res.json()
-      if (!res.ok) { setPwError(data.detail || 'Error al cambiar contraseña'); return }
-      setPwSuccess('Contraseña actualizada correctamente')
+      if (!res.ok) { setPwError(data.detail || t('profile.pw.error')); return }
+      setPwSuccess(t('profile.pw.success'))
       setCurrentPass(''); setNewPass(''); setConfirmPass('')
     } catch (_) {
-      setPwError('Error de conexión')
+      setPwError(t('login.error_connection'))
     } finally {
       setPwLoading(false)
     }
@@ -80,11 +82,11 @@ export default function ProfilePage({ onNavigate }) {
     <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-0)', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
       <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.22em', color: 'var(--txt-3)', textTransform: 'uppercase', flexShrink: 0 }}>
-        MI CUENTA
+        {t('profile.title')}
       </div>
 
       {loading && (
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>Cargando…</div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>{t('profile.loading')}</div>
       )}
 
       {error && (
@@ -93,25 +95,25 @@ export default function ProfilePage({ onNavigate }) {
 
       {profile && (
         <>
-          <Section label="Datos de cuenta">
+          <Section label={t('profile.section.account')}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <Row label="Usuario"       value={profile.username} />
+              <Row label={t('profile.field.username')} value={profile.username} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', letterSpacing: '.12em', color: 'var(--txt-3)', textTransform: 'uppercase' }}>Plan</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', letterSpacing: '.12em', color: 'var(--txt-3)', textTransform: 'uppercase' }}>{t('profile.field.plan')}</span>
                 <span style={{ display: 'inline-flex', alignSelf: 'flex-start', fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.1em', color: 'var(--accent)', background: 'rgba(0,200,255,0.10)', border: '1px solid rgba(0,200,255,0.30)', borderRadius: '3px', padding: '2px 8px' }}>
                   {profile.plan?.toUpperCase()}
                 </span>
               </div>
-              <Row label="Email"         value={profile.email} />
-              <Row label="Miembro desde" value={createdAt} />
+              <Row label={t('profile.field.email')}        value={profile.email} />
+              <Row label={t('profile.field.member_since')} value={createdAt} />
             </div>
           </Section>
 
-          <Section label="Cambiar contraseña">
+          <Section label={t('profile.section.password')}>
             <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <input
                 type="password"
-                placeholder="Contraseña actual"
+                placeholder={t('profile.pw.current')}
                 value={currentPass}
                 onChange={e => { setCurrentPass(e.target.value); setPwSuccess(''); setPwError('') }}
                 required
@@ -119,7 +121,7 @@ export default function ProfilePage({ onNavigate }) {
               />
               <input
                 type="password"
-                placeholder="Nueva contraseña (mín. 8 caracteres)"
+                placeholder={t('profile.pw.new')}
                 value={newPass}
                 onChange={e => { setNewPass(e.target.value); setPwSuccess(''); setPwError('') }}
                 required
@@ -127,7 +129,7 @@ export default function ProfilePage({ onNavigate }) {
               />
               <input
                 type="password"
-                placeholder="Confirmar nueva contraseña"
+                placeholder={t('profile.pw.confirm')}
                 value={confirmPass}
                 onChange={e => { setConfirmPass(e.target.value); setPwSuccess(''); setPwError('') }}
                 required
@@ -158,19 +160,19 @@ export default function ProfilePage({ onNavigate }) {
                   transition: 'opacity .15s',
                 }}
               >
-                {pwLoading ? 'GUARDANDO…' : 'ACTUALIZAR CONTRASEÑA'}
+                {pwLoading ? t('profile.pw.saving') : t('profile.pw.submit')}
               </button>
             </form>
           </Section>
 
-          <Section label="Plan de suscripción">
+          <Section label={t('profile.section.plan')}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: '20px', fontWeight: '700', color: 'var(--accent)', letterSpacing: '.1em' }}>
                   {profile.plan?.toUpperCase()}
                 </div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', marginTop: '3px' }}>
-                  Plan actual
+                  {t('profile.field.current_plan')}
                 </div>
               </div>
               <button
@@ -191,7 +193,7 @@ export default function ProfilePage({ onNavigate }) {
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--txt-2)' }}
               >
-                CAMBIAR PLAN →
+                {t('profile.plan.change')}
               </button>
             </div>
           </Section>

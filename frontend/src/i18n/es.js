@@ -68,6 +68,28 @@ export const es = {
   'social.fav_add':             'Añadir a favoritos',
   'social.fav_remove':          'Quitar de favoritos',
 
+  // Profile
+  'profile.title':              'MI CUENTA',
+  'profile.loading':            'Cargando…',
+  'profile.section.account':    'Datos de cuenta',
+  'profile.section.password':   'Cambiar contraseña',
+  'profile.section.plan':       'Plan de suscripción',
+  'profile.field.username':     'Usuario',
+  'profile.field.plan':         'Plan',
+  'profile.field.email':        'Email',
+  'profile.field.member_since': 'Miembro desde',
+  'profile.field.current_plan': 'Plan actual',
+  'profile.pw.current':         'Contraseña actual',
+  'profile.pw.new':             'Nueva contraseña (mín. 8 caracteres)',
+  'profile.pw.confirm':         'Confirmar nueva contraseña',
+  'profile.pw.mismatch':        'Las contraseñas no coinciden',
+  'profile.pw.too_short':       'Mínimo 8 caracteres',
+  'profile.pw.error':           'Error al cambiar contraseña',
+  'profile.pw.success':         'Contraseña actualizada correctamente',
+  'profile.pw.saving':          'GUARDANDO…',
+  'profile.pw.submit':          'ACTUALIZAR CONTRASEÑA',
+  'profile.plan.change':        'CAMBIAR PLAN →',
+
   // Documents
   'docs.header':           'DOCUMENTOS OFICIALES',
   'docs.no_docs':          'SIN DOCUMENTOS',
