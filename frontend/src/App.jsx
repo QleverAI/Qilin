@@ -14,6 +14,7 @@ import HomePage          from './pages/HomePage'
 import NewsPage          from './pages/NewsPage'
 import DocumentsPage     from './pages/DocumentsPage'
 import SocialPage        from './pages/SocialPage'
+import SentinelPage      from './pages/SentinelPage'
 import FilingsPage       from './pages/FilingsPage'
 import PolymarketPage    from './pages/PolymarketPage'
 import LoadingState      from './components/LoadingSkeleton'
@@ -121,6 +122,7 @@ function AppShell() {
         {view === 'news'       && <NewsPage />}
         {view === 'documents'  && <DocumentsPage />}
         {view === 'social'     && <SocialPage />}
+        {view === 'sentinel'   && <SentinelPage />}
         {view === 'markets'    && <FilingsPage />}
         {view === 'polymarket' && <PolymarketPage />}
       </div>
