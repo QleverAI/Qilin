@@ -14,6 +14,7 @@ import PolymarketPage from './pages/PolymarketPage'
 import LoadingState  from './components/LoadingSkeleton'
 import { useQilinData } from './hooks/useQilinData'
 import { useAircraftTrail } from './hooks/useAircraftTrail'
+import ChatBot from './components/ChatBot'
 
 const MapView = lazy(() => import('./components/MapView'))
 
@@ -78,6 +79,7 @@ export default function App() {
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <AnalystView />
         </div>
+        <ChatBot />
       </div>
     )
   }
@@ -129,6 +131,7 @@ export default function App() {
           />
         </aside>
         <BottomBar stats={stats} />
+        <ChatBot />
       </div>
     )
   }
@@ -152,6 +155,7 @@ export default function App() {
         {view === 'markets'    && <FilingsPage />}
         {view === 'polymarket' && <PolymarketPage />}
       </div>
+      <ChatBot />
     </div>
   )
 }

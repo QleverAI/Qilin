@@ -1222,6 +1222,59 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+# ── CHATBOT ───────────────────────────────────────────────────────────────────
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+
+_CHAT_SYSTEM = """Eres el asistente de Qilin, una plataforma de inteligencia geopolítica en tiempo real.
+
+Responde SOLO sobre estos temas:
+- Qué es Qilin y cómo funciona
+- Secciones del dashboard: Inicio (resumen estadístico), Mapa táctico (aviones y buques en tiempo real con trails), Alertas geopolíticas, Noticias (104 medios geopolíticos), Social (cuentas X/Twitter relevantes), Mercados (Polymarket — predicciones), Documentos y filings SEC
+- Interpretación de datos: aviones militares (triángulo rojo), civiles (cyan), VIP/billonarios/presidentes (dorado), buques AIS, alertas con severidad alta/media/baja
+- Fuentes de datos: ADS-B vía Airplanes.live (aeronaves militares globales), AIS vía AISStream (buques), RSS de 104 medios geopolíticos, RSSHub para Twitter/X, Polymarket, Copernicus Sentinel-5P (NO₂/SO₂ por zona), filings SEC de empresas de defensa
+- Aeronaves VIP monitorizadas: jefes de estado, billonarios tech (Musk, Bezos, Zuckerberg...), magnates financieros, oligarcas rusos
+- Reglas de alerta: surge militar (≥5 aviones en zona), patrullas ASW, AIS dark (buques tanker que apagan señal), grupos navales (≥3 buques militares)
+- Motor de alertas: correlación con LLM (Claude Haiku), notificaciones Telegram, cooldown 1h por regla+zona
+
+Si te preguntan algo fuera de Qilin o inteligencia geopolítica, responde amablemente que solo puedes ayudar con la plataforma.
+Sé conciso. Responde en el idioma del usuario."""
+
+
+@app.post("/chat")
+async def chat(req: ChatRequest, _user: str = Depends(get_current_user)):
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        raise HTTPException(status_code=503, detail="Chatbot no disponible (sin API key)")
+
+    messages = [{"role": m.role, "content": m.content} for m in req.messages[-10:]]
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={
+                    "model": "claude-haiku-4-5-20251001",
+                    "max_tokens": 400,
+                    "system": _CHAT_SYSTEM,
+                    "messages": messages,
+                },
+                timeout=30,
+            )
+            resp.raise_for_status()
+            reply = resp.json()["content"][0]["text"].strip()
+            return {"reply": reply}
+    except Exception as e:
+        log.warning(f"chat error: {e}")
+        raise HTTPException(status_code=500, detail="Error del chatbot")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket, token: str | None = None):
     """
