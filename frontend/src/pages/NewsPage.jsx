@@ -48,7 +48,7 @@ function SectorTag({ sector, large }) {
   const label = SECTOR_LABELS[sector] || sector
   return (
     <span style={{
-      fontSize: large ? '10px' : '8px',
+      fontSize: large ? '12px' : '10px',
       fontFamily: 'var(--mono)',
       color: 'var(--bg-0)',
       background: color,
@@ -269,18 +269,18 @@ function NewsCard({ article, onClick }) {
         </div>
       )}
 
-      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* Meta: favicon + fuente + país */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '7px' }}>
           {favicon && (
-            <img src={favicon} alt="" width={13} height={13} style={{ borderRadius: '2px', flexShrink: 0 }}
+            <img src={favicon} alt="" width={14} height={14} style={{ borderRadius: '2px', flexShrink: 0 }}
               onError={e => { e.currentTarget.style.display = 'none' }} />
           )}
-          <span style={{ fontSize: '8px', fontFamily: 'var(--mono)', color: 'var(--txt-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          <span style={{ fontSize: 'var(--label-md)', fontFamily: 'var(--mono)', color: 'var(--txt-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
             {article.source}
           </span>
           {article.source_country && (
-            <span style={{ fontSize: '8px', fontFamily: 'var(--mono)', color: 'var(--accent)', flexShrink: 0 }}>
+            <span style={{ fontSize: 'var(--label-md)', fontFamily: 'var(--mono)', color: 'var(--accent)', flexShrink: 0 }}>
               {article.source_country}
             </span>
           )}
@@ -288,7 +288,7 @@ function NewsCard({ article, onClick }) {
 
         {/* Titular */}
         <div style={{
-          fontSize: '11px', fontWeight: '600', color: 'var(--txt-1)', lineHeight: 1.4,
+          fontSize: 'var(--body-sm)', fontWeight: '600', color: 'var(--txt-1)', lineHeight: 1.4,
           flex: 1, marginBottom: '8px',
           overflow: 'hidden', display: '-webkit-box',
           WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
@@ -300,8 +300,8 @@ function NewsCard({ article, onClick }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
           {sectors.slice(0, 2).map(s => <SectorTag key={s} sector={s} />)}
           <span style={{
-            marginLeft: 'auto', fontSize: '7px', fontWeight: '700',
-            padding: '1px 5px', borderRadius: '2px',
+            marginLeft: 'auto', fontSize: 'var(--label-sm)', fontWeight: '700',
+            padding: '2px 6px', borderRadius: '2px',
             background: SEV_BG[severity], color: SEV_COLOR[severity],
             border: `1px solid ${SEV_BORDER[severity]}`,
             fontFamily: 'var(--mono)', flexShrink: 0,
@@ -355,7 +355,7 @@ export default function NewsPage() {
         overflowY: 'auto',
       }}>
         <div>
-          <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
+          <div style={{ fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-2)', textTransform: 'uppercase', marginBottom: '6px' }}>
             BUSCAR
           </div>
           <input
@@ -366,7 +366,7 @@ export default function NewsPage() {
               width: '100%', boxSizing: 'border-box',
               background: 'var(--bg-2)', border: '1px solid var(--border)',
               borderRadius: '2px', color: 'var(--txt-1)',
-              fontFamily: 'var(--mono)', fontSize: '9px',
+              fontFamily: 'var(--mono)', fontSize: 'var(--label-md)',
               padding: '5px 7px', outline: 'none',
             }}
           />
@@ -382,15 +382,15 @@ export default function NewsPage() {
       {/* Feed principal */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{
-          padding: '8px 16px',
+          padding: '10px 18px',
           borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
           background: 'var(--bg-1)',
         }}>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase' }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-2)', textTransform: 'uppercase' }}>
             NEWS INTELLIGENCE · RSS
           </span>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', marginLeft: 'auto' }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-3)', marginLeft: 'auto' }}>
             {loading ? 'Cargando…' : `${filtered.length} artículos · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`}
           </span>
         </div>

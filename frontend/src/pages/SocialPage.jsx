@@ -256,7 +256,7 @@ function TweetCard({ post, onClick }) {
     <div
       onClick={onClick}
       style={{
-        padding: '11px 14px',
+        padding: '13px 16px',
         background: 'var(--bg-2)',
         border: '1px solid var(--border)',
         borderRadius: '3px',
@@ -269,42 +269,42 @@ function TweetCard({ post, onClick }) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '7px' }}>
         <span style={{
-          fontFamily: 'var(--mono)', fontSize: '8px', fontWeight: '700',
+          fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700',
           color, background: `${color}18`, border: `1px solid ${color}44`,
-          padding: '1px 6px', borderRadius: '2px', letterSpacing: '.08em', flexShrink: 0,
+          padding: '2px 7px', borderRadius: '2px', letterSpacing: '.08em', flexShrink: 0,
         }}>
           {CAT_LABELS[post.category] || post.category}
         </span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--cyan)', letterSpacing: '.04em' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--cyan)', letterSpacing: '.04em' }}>
           @{post.handle}
         </span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', marginLeft: 'auto', flexShrink: 0 }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', marginLeft: 'auto', flexShrink: 0 }}>
           {timeAgo(post.time)}
         </span>
       </div>
 
-      <div style={{ fontSize: '9px', color: 'var(--txt-3)', fontFamily: 'var(--mono)', marginBottom: '6px' }}>
+      <div style={{ fontSize: 'var(--label-sm)', color: 'var(--txt-2)', fontFamily: 'var(--mono)', marginBottom: '6px' }}>
         {post.display}
       </div>
 
       <MediaBlock url={post.media_url} type={post.media_type} tweetUrl={post.url} />
 
-      <div style={{ fontSize: '11px', color: 'var(--txt-1)', lineHeight: 1.6, marginBottom: '8px', wordBreak: 'break-word' }}>
+      <div style={{ fontSize: 'var(--body-sm)', color: 'var(--txt-1)', lineHeight: 1.6, marginBottom: '8px', wordBreak: 'break-word' }}>
         {post.content}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>
           ❤ {(post.likes || 0).toLocaleString()}
         </span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>
           🔁 {(post.retweets || 0).toLocaleString()}
         </span>
         <a
           href={post.url} target="_blank" rel="noopener noreferrer"
           onClick={e => e.stopPropagation()}
           style={{
-            marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: '9px',
+            marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
             color: 'var(--cyan)', textDecoration: 'none', letterSpacing: '.06em',
           }}
         >
@@ -340,12 +340,12 @@ export default function SocialPage() {
 
       <div style={{
         background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
-        padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0,
+        padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0,
       }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-2)', textTransform: 'uppercase' }}>
           SOCIAL INTELLIGENCE · X/TWITTER
         </span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', marginLeft: 'auto' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-3)', marginLeft: 'auto' }}>
           {loading ? 'Cargando…' : `${posts.length} tweets · actualizado ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`}
         </span>
       </div>
@@ -359,7 +359,7 @@ export default function SocialPage() {
         }}>
 
           <div>
-            <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
+            <div style={{ fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-2)', textTransform: 'uppercase', marginBottom: '6px' }}>
               BUSCAR
             </div>
             <input
@@ -370,7 +370,7 @@ export default function SocialPage() {
                 width: '100%', boxSizing: 'border-box',
                 background: 'var(--bg-2)', border: '1px solid var(--border)',
                 borderRadius: '2px', color: 'var(--txt-1)',
-                fontFamily: 'var(--mono)', fontSize: '9px',
+                fontFamily: 'var(--mono)', fontSize: 'var(--label-md)',
                 padding: '5px 7px', outline: 'none',
               }}
             />

@@ -52,14 +52,14 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
       padding: '0 16px',
       background: 'var(--bg-1)',
       borderBottom: '1px solid var(--border-md)',
-      height: '44px', flexShrink: 0, zIndex: 10,
+      height: '52px', flexShrink: 0, zIndex: 10,
       gap: '0',
     }}>
       {/* Logo */}
       <div style={{ display:'flex', alignItems:'center', gap:'8px', marginRight:'16px', flexShrink:0 }}>
         <LogoIcon />
         <span style={{
-          fontSize:'16px', fontWeight:'700', letterSpacing:'.28em',
+          fontSize:'18px', fontWeight:'700', letterSpacing:'.22em',
           color:'var(--cyan)', textTransform:'uppercase', fontFamily:'var(--mono)',
         }}>
           Qilin
@@ -81,19 +81,19 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
                 style={{
                   background: 'none', border: 'none',
                   borderBottom: active ? '2px solid var(--cyan)' : '2px solid transparent',
-                  color: active ? 'var(--cyan)' : 'var(--txt-3)',
+                  color: active ? 'var(--cyan)' : 'var(--txt-2)',
                   fontFamily: 'var(--mono)',
-                  fontSize: 'var(--label-xs)',
+                  fontSize: 'var(--label-sm)',
                   fontWeight: '600',
-                  letterSpacing: '.14em',
-                  padding: '0 11px',
+                  letterSpacing: '.10em',
+                  padding: '0 15px',
                   cursor: 'pointer',
                   transition: 'color .15s, border-color .15s',
                   marginBottom: active ? '-1px' : 0,
                   whiteSpace: 'nowrap',
                 }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-3)' }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-1)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
               >
                 {item.label}
               </button>
@@ -104,8 +104,8 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
 
       {isAnalyst && (
         <div style={{
-          fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)',
-          letterSpacing: '.18em', color: 'var(--txt-3)', textTransform: 'uppercase',
+          fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+          letterSpacing: '.14em', color: 'var(--txt-2)', textTransform: 'uppercase',
         }}>
           ANALYST VIEW
         </div>
@@ -135,17 +135,17 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
                   background: active ? 'rgba(79,156,249,0.15)' : 'transparent',
                   border: 'none',
                   borderRight: m.id === 'map' ? '1px solid var(--border-md)' : 'none',
-                  color: active ? 'var(--cyan)' : 'var(--txt-3)',
+                  color: active ? 'var(--cyan)' : 'var(--txt-2)',
                   fontFamily: 'var(--mono)',
-                  fontSize: 'var(--label-xs)',
+                  fontSize: 'var(--label-sm)',
                   fontWeight: '600',
-                  letterSpacing: '.12em',
-                  padding: '4px 10px',
+                  letterSpacing: '.10em',
+                  padding: '5px 13px',
                   cursor: 'pointer',
                   transition: 'color .15s, background .15s',
                 }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-3)' }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-1)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
               >
                 {m.label}
               </button>
@@ -156,7 +156,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
         {/* WS status */}
         <div style={{
           display:'flex', alignItems:'center', gap:'5px',
-          fontFamily:'var(--mono)', fontSize:'var(--label-xs)', color: wsColor,
+          fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color: wsColor,
         }}>
           <div style={{
             width:'5px', height:'5px', borderRadius:'50%',
@@ -172,7 +172,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
             background:'rgba(244,63,94,0.10)',
             border:'1px solid rgba(244,63,94,0.30)',
             borderRadius:'3px', padding:'3px 8px',
-            fontFamily:'var(--mono)', fontSize:'var(--label-xs)', fontWeight:'600',
+            fontFamily:'var(--mono)', fontSize:'var(--label-sm)', fontWeight:'600',
             color:'var(--red)',
           }}>
             <div style={{
@@ -186,10 +186,10 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
         {/* Clock */}
         <div style={{
           fontFamily:'var(--mono)', fontSize:'var(--label-md)',
-          color:'var(--txt-3)', letterSpacing:'.06em',
+          color:'var(--txt-2)', letterSpacing:'.06em',
         }}>
-          <span style={{ color:'var(--txt-3)', fontSize:'var(--label-xs)' }}>UTC </span>
-          <span style={{ color:'var(--txt-2)' }}>{time}</span>
+          <span style={{ color:'var(--txt-3)', fontSize:'var(--label-sm)' }}>UTC </span>
+          <span style={{ color:'var(--txt-1)' }}>{time}</span>
         </div>
       </div>
     </header>

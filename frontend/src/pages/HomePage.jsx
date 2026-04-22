@@ -23,7 +23,7 @@ function ModuleCard({ title, icon, subtitle, status, statusColor, children, onCl
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
       <div style={{
-        padding: '12px 14px 10px',
+        padding: '18px 18px 14px',
         borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexShrink: 0,
@@ -31,10 +31,10 @@ function ModuleCard({ title, icon, subtitle, status, statusColor, children, onCl
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <span style={{ fontSize:'18px', lineHeight:1 }}>{icon}</span>
           <div>
-            <div style={{ fontSize:'11px', fontWeight:'700', letterSpacing:'.18em', color:'var(--accent)', textTransform:'uppercase' }}>
+            <div style={{ fontSize:'var(--title-sm)', fontWeight:'700', letterSpacing:'.12em', color:'var(--accent)', textTransform:'uppercase' }}>
               {title}
             </div>
-            <div style={{ fontSize:'9px', color:'var(--txt-3)', letterSpacing:'.1em', marginTop:'1px' }}>
+            <div style={{ fontSize:'var(--label-sm)', color:'var(--txt-2)', letterSpacing:'.08em', marginTop:'3px' }}>
               {subtitle}
             </div>
           </div>
@@ -45,7 +45,7 @@ function ModuleCard({ title, icon, subtitle, status, statusColor, children, onCl
             background: statusColor,
             animation: 'blink 2.4s ease-in-out infinite',
           }} />
-          <span style={{ fontFamily:'var(--mono)', fontSize:'9px', color: statusColor, letterSpacing:'.1em' }}>
+          <span style={{ fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color: statusColor, letterSpacing:'.08em' }}>
             {status}
           </span>
         </div>
@@ -55,7 +55,7 @@ function ModuleCard({ title, icon, subtitle, status, statusColor, children, onCl
       </div>
       <div style={{
         position:'absolute', bottom:10, right:12,
-        fontFamily:'var(--mono)', fontSize:'9px', color:'rgba(79,156,249,0.25)',
+        fontFamily:'var(--mono)', fontSize:'11px', color:'rgba(74,158,255,0.30)',
         letterSpacing:'.1em', pointerEvents:'none',
       }}>
         ABRIR →
@@ -74,10 +74,10 @@ function TacticalPreview({ aircraft, alerts }) {
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1px', background:'var(--border)', margin:'0 0 8px' }}>
       {rows.map(r => (
-        <div key={r.label} style={{ background:'var(--bg-2)', padding:'10px 14px' }}>
-          <div style={{ fontFamily:'var(--mono)', fontSize:'24px', fontWeight:'500', color:r.color, lineHeight:1 }}>{r.value}</div>
-          <div style={{ fontSize:'8px', letterSpacing:'.14em', color:'var(--txt-3)', textTransform:'uppercase', marginTop:'2px' }}>{r.label}</div>
-          <div style={{ fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)', marginTop:'1px' }}>{r.sub}</div>
+        <div key={r.label} style={{ background:'var(--bg-2)', padding:'14px 18px' }}>
+          <div style={{ fontFamily:'var(--mono)', fontSize:'28px', fontWeight:'500', color:r.color, lineHeight:1 }}>{r.value}</div>
+          <div style={{ fontSize:'var(--label-sm)', letterSpacing:'.12em', color:'var(--txt-2)', textTransform:'uppercase', marginTop:'4px' }}>{r.label}</div>
+          <div style={{ fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)', marginTop:'2px' }}>{r.sub}</div>
         </div>
       ))}
     </div>
@@ -86,18 +86,18 @@ function TacticalPreview({ aircraft, alerts }) {
 
 function NewsPreview({ articles, loading }) {
   if (loading) return (
-    <div style={{ padding:'14px', fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>CARGANDO…</div>
+    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>CARGANDO…</div>
   )
   const items = articles.slice(0, 4)
   if (!items.length) return (
-    <div style={{ padding:'14px', fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>SIN ARTÍCULOS</div>
+    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>SIN ARTÍCULOS</div>
   )
   return (
     <div>
       {items.map(n => (
         <div key={n.id || n.url} style={{
-          padding:'7px 14px', borderBottom:'1px solid var(--border)',
-          display:'flex', alignItems:'flex-start', gap:'8px',
+          padding:'10px 18px', borderBottom:'1px solid var(--border)',
+          display:'flex', alignItems:'flex-start', gap:'10px',
         }}>
           <div style={{
             flexShrink:0, marginTop:'3px',
@@ -121,11 +121,11 @@ function NewsPreview({ articles, loading }) {
 
 function DocsPreview({ docs, loading }) {
   if (loading) return (
-    <div style={{ padding:'14px', fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>CARGANDO…</div>
+    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>CARGANDO…</div>
   )
   const items = docs.slice(0, 4)
   if (!items.length) return (
-    <div style={{ padding:'14px', fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>SIN DOCUMENTOS</div>
+    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>SINDOCUMENTOS</div>
   )
   return (
     <div>
@@ -154,11 +154,11 @@ function DocsPreview({ docs, loading }) {
 
 function SocialPreview({ posts, loading }) {
   if (loading) return (
-    <div style={{ padding:'14px', fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>CARGANDO…</div>
+    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>CARGANDO…</div>
   )
   const items = posts.slice(0, 4)
   if (!items.length) return (
-    <div style={{ padding:'14px', fontFamily:'var(--mono)', fontSize:'9px', color:'var(--txt-3)' }}>SIN TWEETS</div>
+    <div style={{ padding:'16px', fontFamily:'var(--mono)', fontSize:'var(--label-sm)', color:'var(--txt-3)' }}>SINTWEETS</div>
   )
   return (
     <div>
@@ -287,20 +287,20 @@ export default function HomePage({ aircraft, alerts, onNavigate }) {
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
       overflow: 'hidden', background: 'var(--bg-0)',
-      padding: '16px 20px', gap: '12px',
+      padding: '20px 24px', gap: '16px',
     }}>
 
       {/* System status strip */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '20px',
-        padding: '9px 16px',
+        padding: '12px 20px',
         background: 'var(--bg-1)',
         border: '1px solid var(--border)',
         borderRadius: '3px',
         flexShrink: 0,
         flexWrap: 'wrap',
       }}>
-        <div style={{ fontSize:'var(--label-xs)', fontWeight:'700', letterSpacing:'.2em', color:'var(--txt-3)', textTransform:'uppercase', marginRight:'4px', flexShrink:0 }}>
+        <div style={{ fontSize:'var(--label-sm)', fontWeight:'700', letterSpacing:'.16em', color:'var(--txt-2)', textTransform:'uppercase', marginRight:'4px', flexShrink:0 }}>
           ESTADO DEL SISTEMA
         </div>
         {[

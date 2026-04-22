@@ -83,7 +83,7 @@ export default function App() {
     return (
       <div style={{
         display: 'grid',
-        gridTemplateRows: '44px 1fr 36px',
+        gridTemplateRows: '52px 1fr 44px',
         gridTemplateColumns: '1fr 340px',
         height: '100vh', width: '100vw', overflow: 'hidden',
       }}>

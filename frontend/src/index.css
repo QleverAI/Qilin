@@ -1,23 +1,23 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Backgrounds */
-  --bg-0:       #0c0c0e;
-  --bg-1:       #131316;
-  --bg-2:       #1a1a1f;
-  --bg-3:       #222228;
+  /* Backgrounds — azul marino oscuro, no negro puro */
+  --bg-0:       #080e1a;
+  --bg-1:       #0d1525;
+  --bg-2:       #111e30;
+  --bg-3:       #172038;
 
-  /* Borders */
-  --border:     rgba(255,255,255,0.06);
-  --border-sm:  rgba(255,255,255,0.06);
-  --border-md:  rgba(255,255,255,0.11);
-  --border-hi:  rgba(255,255,255,0.20);
+  /* Borders — tinte azulado */
+  --border:     rgba(80,130,200,0.12);
+  --border-sm:  rgba(80,130,200,0.12);
+  --border-md:  rgba(80,130,200,0.22);
+  --border-hi:  rgba(100,160,255,0.36);
 
   /* Accent / brand */
-  --accent:     #4f9cf9;
-  --accent-dim: rgba(79,156,249,0.12);
-  --cyan:       #4f9cf9;
-  --cyan-dim:   rgba(79,156,249,0.15);
+  --accent:     #4a9eff;
+  --accent-dim: rgba(74,158,255,0.15);
+  --cyan:       #4a9eff;
+  --cyan-dim:   rgba(74,158,255,0.18);
 
   /* Semantic */
   --green:      #34d399;
@@ -35,23 +35,23 @@
   --sev-low-bg:      rgba(52,211,153,0.08);
   --sev-low-border:  rgba(52,211,153,0.20);
 
-  /* Text — increased contrast on txt-2 */
-  --txt-1:      #e8eaf0;
-  --txt-2:      #94a3b8;
-  --txt-3:      #4a5568;
+  /* Text — más contraste, más legibles */
+  --txt-1:      #f0f4f8;
+  --txt-2:      #8baac8;
+  --txt-3:      #4e6a8a;
 
   /* Typography */
   --mono:       'IBM Plex Mono', monospace;
   --ui:         'Inter', sans-serif;
 
-  /* Type scale — section label / meta / body */
-  --label-xs:   8px;
-  --label-sm:   9px;
-  --label-md:   10px;
-  --body-sm:    11px;
-  --body-md:    12px;
-  --title-sm:   13px;
-  --title-md:   15px;
+  /* Type scale — aumentada +3-4px en toda la escala */
+  --label-xs:   11px;
+  --label-sm:   12px;
+  --label-md:   13px;
+  --body-sm:    14px;
+  --body-md:    15px;
+  --title-sm:   17px;
+  --title-md:   20px;
 }
 
 html, body, #root {

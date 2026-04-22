@@ -16,8 +16,8 @@ export default function BottomBar({ stats }) {
       padding:'0 16px',
       background:'var(--bg-1)',
       borderTop:'1px solid var(--border-md)',
-      height:'36px', flexShrink:0,
-      fontSize:'11px', fontWeight:'500', letterSpacing:'.1em',
+      height:'44px', flexShrink:0,
+      fontSize:'var(--body-sm)', fontWeight:'500', letterSpacing:'.08em',
     }}>
       {items.map((it,i) => (
         <div key={i} style={{
@@ -27,19 +27,19 @@ export default function BottomBar({ stats }) {
           borderRight:'1px solid var(--border)',
           paddingLeft: i===0 ? 0 : undefined,
         }}>
-          <span style={{ fontSize:'9px', color: it.color }}>{it.icon}</span>
+          <span style={{ fontSize:'11px', color: it.color }}>{it.icon}</span>
           <span style={{ color:'var(--txt-1)', fontWeight:'500' }}>{it.value}</span>
           <span>{it.label}</span>
         </div>
       ))}
       <div style={{
-        fontFamily:'var(--mono)', color:'var(--txt-3)', fontSize:'9px',
+        fontFamily:'var(--mono)', color:'var(--txt-3)', fontSize:'var(--label-sm)',
         padding:'0 14px', borderRight:'1px solid var(--border)',
       }}>
         LAST UPDATE <span style={{ color:'var(--txt-2)' }}>{ts} UTC</span>
       </div>
       <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'7px',
-        fontFamily:'var(--mono)', fontSize:'10px', fontWeight:'600',
+        fontFamily:'var(--mono)', fontSize:'var(--label-md)', fontWeight:'600',
         letterSpacing:'.15em', textTransform:'uppercase', color:'var(--green)',
       }}>
         <div style={{
