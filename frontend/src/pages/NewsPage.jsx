@@ -325,6 +325,8 @@ function NewsCard({ article, onClick, isFav, onToggleFav }) {
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 
+const SEV_ORDER = { high: 3, medium: 2, low: 1 }
+
 export default function NewsPage() {
   const { articles, countries, sourceTypes, zones, sectors, loading, lastUpdate } = useNewsFeed()
 
@@ -337,18 +339,25 @@ export default function NewsPage() {
   const [typeFilter,   setTypeFilter]   = useState('TODOS')
   const [modalArticle, setModalArticle] = useState(null)
   const [search,       setSearch]       = useState('')
+  const [sortBy,       setSortBy]       = useState('newest')
 
-  const filtered = useMemo(() => articles.filter(a => {
-    const articleSectors = Array.isArray(a.sectors) ? a.sectors : (a.keywords || [])
-    const articleZones   = Array.isArray(a.zones) ? a.zones : []
-    if (sevFilter    !== 'TODOS' && a.severity       !== sevFilter)           return false
-    if (sectorFilter !== 'TODOS' && !articleSectors.includes(sectorFilter))   return false
-    if (zoneFilter   !== 'TODOS' && !articleZones.includes(zoneFilter))       return false
-    if (countryFilter!== 'TODOS' && a.source_country !== countryFilter)       return false
-    if (typeFilter   !== 'TODOS' && a.source_type    !== typeFilter)          return false
-    if (search && !a.title?.toLowerCase().includes(search.toLowerCase()))     return false
-    return true
-  }), [articles, sevFilter, sectorFilter, zoneFilter, countryFilter, typeFilter, search])
+  const filtered = useMemo(() => {
+    const list = articles.filter(a => {
+      const articleSectors = Array.isArray(a.sectors) ? a.sectors : (a.keywords || [])
+      const articleZones   = Array.isArray(a.zones) ? a.zones : []
+      if (sevFilter    !== 'TODOS' && a.severity       !== sevFilter)           return false
+      if (sectorFilter !== 'TODOS' && !articleSectors.includes(sectorFilter))   return false
+      if (zoneFilter   !== 'TODOS' && !articleZones.includes(zoneFilter))       return false
+      if (countryFilter!== 'TODOS' && a.source_country !== countryFilter)       return false
+      if (typeFilter   !== 'TODOS' && a.source_type    !== typeFilter)          return false
+      if (search && !a.title?.toLowerCase().includes(search.toLowerCase()))     return false
+      return true
+    })
+    if (sortBy === 'oldest')   return [...list].sort((a, b) => new Date(a.time) - new Date(b.time))
+    if (sortBy === 'sev_high') return [...list].sort((a, b) => (SEV_ORDER[b.severity] || 0) - (SEV_ORDER[a.severity] || 0))
+    if (sortBy === 'sev_low')  return [...list].sort((a, b) => (SEV_ORDER[a.severity] || 0) - (SEV_ORDER[b.severity] || 0))
+    return [...list].sort((a, b) => new Date(b.time) - new Date(a.time))
+  }, [articles, sevFilter, sectorFilter, zoneFilter, countryFilter, typeFilter, search, sortBy])
 
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: 'var(--bg-0)' }}>
@@ -406,6 +415,27 @@ export default function NewsPage() {
           <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-3)', marginLeft: 'auto' }}>
             {loading ? 'Cargando…' : `${filtered.length} artículos · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`}
           </span>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={{
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border)',
+              borderRadius: '2px',
+              color: 'var(--txt-2)',
+              fontFamily: 'var(--mono)',
+              fontSize: 'var(--label-sm)',
+              padding: '4px 8px',
+              outline: 'none',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <option value="newest">Más reciente primero</option>
+            <option value="oldest">Más antiguo primero</option>
+            <option value="sev_high">Severidad: Alta → Baja</option>
+            <option value="sev_low">Severidad: Baja → Alta</option>
+          </select>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
