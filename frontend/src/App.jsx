@@ -25,15 +25,8 @@ import { useAircraftTrail } from './hooks/useAircraftTrail'
 
 const MapView = lazy(() => import('./components/MapView'))
 
-function initUser() {
-  const token    = sessionStorage.getItem('qilin_token')
-  const username = sessionStorage.getItem('qilin_user')
-  return token ? { username, token } : null
-}
-
 // ── Dashboard shell — all /app/* views ───────────────────────────────────────
 function AppShell() {
-  const [user,       setUser]       = useState(initUser)
   const [activeView, setActiveView] = useState('map')
   const [view,       setView]       = useState('home')
   const [flyTarget,        setFlyTarget]        = useState(null)
