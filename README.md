@@ -35,12 +35,16 @@ docker compose up --build
 
 | Servicio | Descripción |
 |---|---|
-| `ingestor-adsb` | Polling Airplanes.live — /mil global + /point por zona, sin auth requerida |
+| `ingestor-adsb` | Polling Airplanes.live `/mil` — todos los militares globales, sin filtro de zona |
 | `ingestor-ais` | WebSocket aisstream.io; filtra tankers/military/unknown; detecta AIS dark |
+| `ingestor-news` | RSS de 104 medios geopolíticos; clasifica por sector/severidad; extrae og:image |
+| `ingestor-social` | RSS vía RSSHub de ~40 cuentas X/Twitter geopolíticas |
+| `ingestor-bases` | Detecta aterrizajes y aprende bases/rutas habituales de cada aeronave |
 | `ingestor-sentinel` | Copernicus CDSE OAuth2; monitoriza NO₂/SO₂ por zona; detecta anomalías ≥1.5x baseline |
 | `alert-engine` | Motor de reglas + enriquecimiento LLM (claude-haiku-4-5); triage automático; notifica Telegram |
 | `api` | FastAPI REST + WebSocket para el dashboard |
-| `timescaledb` | Almacenamiento de alertas e historial |
+| `rsshub` | RSSHub self-hosted para fuentes sin RSS directo |
+| `timescaledb` | Almacenamiento de alertas, posiciones e historial |
 | `redis` | Cache de posiciones actuales + message bus |
 
 ## Configuración de zonas

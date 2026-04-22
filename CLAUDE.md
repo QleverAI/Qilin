@@ -66,12 +66,20 @@ npm run build
 | Servicio | Puerto | Descripción |
 |---------|--------|-------------|
 | `api` | 8000 | FastAPI REST + WebSocket en tiempo real |
+| Frontend (prod) | 80 | Build estático servido por nginx en el VPS |
 | Frontend (dev) | 3000 | React + Vite (proxy `/api` y `/ws` → 8000) |
 | `redis` | 6379 | Cache de posiciones actuales + message bus |
 | `timescaledb` | 5432 | Almacenamiento histórico con compresión automática 7d |
-| `ingestor-adsb` | — | Polling Airplanes.live (/mil global + /point por zona), filtra por zonas |
+| `ingestor-adsb` | — | Polling Airplanes.live `/mil` — publica **todos** los militares globales sin filtrar por zona |
 | `ingestor-ais` | — | WebSocket aisstream.io; filtra tankers/military/unknown; detecta AIS dark |
+| `ingestor-news` | — | RSS de 104 medios geopolíticos; clasifica por sector/severidad; extrae og:image |
+| `ingestor-social` | — | RSS vía RSSHub de ~40 cuentas X/Twitter geopolíticas |
+| `ingestor-bases` | — | Detecta aterrizajes en `aircraft_positions`; aprende bases y rutas por aeronave |
+| `ingestor-docs` | — | Documentos de defensa/geopolítica |
+| `ingestor-sec` | — | Filings SEC relevantes |
+| `ingestor-polymarket` | — | Mercados de predicción Polymarket |
 | `ingestor-sentinel` | — | Copernicus CDSE OAuth2; monitoriza NO₂/SO₂ por zona; detecta anomalías ≥1.5x baseline |
+| `rsshub` | 1200 | RSSHub self-hosted para fuentes sin RSS directo (Reuters, AP, X/Twitter) |
 | `alert-engine` | — | Motor de reglas + enriquecimiento LLM (claude-haiku-4-5); triage automático; notifica Telegram |
 
 ## Variables de entorno clave (ver .env.example)
@@ -91,7 +99,10 @@ npm run build
 - `aircraft_positions` — hypertable con posiciones ADS-B (compresión 7d)
 - `vessel_positions` — hypertable con posiciones AIS (compresión 7d)
 - `alerts` — alertas generadas con JSONB `entities`
-- `news_events` — noticias (fase 2, tabla preparada)
+- `news_events` — noticias con clasificación por sector/severidad e `image_url` (og:image)
+- `aircraft_bases` — bases/aeródromos conocidos por aeronave (icao24 + airfield_icao)
+- `aircraft_routes` — rutas origen→destino detectadas por aeronave
+- `airfields` — catálogo OurAirports (~70k aeródromos con lat/lon e indicador militar)
 
 Redis keys:
 - `stream:adsb` — stream de posiciones de aeronaves
@@ -146,13 +157,12 @@ Anti-spam: cooldown de 1h por regla+zona. Ventana de correlación: 6h.
 - **Redis Streams** usan `$` como `last_id` inicial para solo leer mensajes nuevos
 - El frontend tiene datos mock en `src/data/` para desarrollo sin backend
 
-## Roadmap de despliegue
+## Despliegue en producción
 
-### Hetzner VPS (planificado)
-- VPS CX21 o CX31 (2-4 vCPU, 4-8GB RAM)
-- Docker Compose con Traefik como reverse proxy
-- TimescaleDB con backups automáticos a Hetzner Object Storage
-- Dominio propio con SSL automático (Let's Encrypt vía Traefik)
+### Hetzner VPS — activo en `178.104.238.122`
+- Docker Compose con nginx como reverse proxy (puerto 80)
+- Frontend: `npm run build` → `frontend/dist/` servido por nginx
+- Git push desde local (el servidor no tiene credenciales GitHub)
 
 ### Mejoras planificadas
 - **ENTSO-E**: ingestor de datos de generación eléctrica europea (cortes de luz como indicador geopolítico)
