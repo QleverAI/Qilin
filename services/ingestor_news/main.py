@@ -8,14 +8,16 @@ Estrategia:
   3. Parsea con feedparser (síncrono, ejecutado en executor).
   4. Clasifica cada artículo: sectors[], severity, relevance via classifier.py.
   5. Deduplica por URL en Redis (TTL 24h).
-  6. Publica en stream:news + persiste en news_events (TimescaleDB).
-  7. Fuentes con priority=high se procesan primero cada ciclo.
+  6. Extrae og:image de la página del artículo si el feed no incluye imagen.
+  7. Publica en stream:news + persiste en news_events (TimescaleDB).
+  8. Fuentes con priority=high se procesan primero cada ciclo.
 """
 
 import asyncio
 import json
 import logging
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
@@ -36,6 +38,13 @@ POLL_INTERVAL = int(os.getenv("NEWS_POLL_INTERVAL", "900"))  # 15 min
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
+# Regex para og:image — cubre las dos variantes de orden de atributos
+_OG_IMAGE_RE = re.compile(
+    r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']'
+    r'|<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+    re.I,
+)
+
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +52,35 @@ def load_sources() -> list[dict]:
     with open("/app/config/news_sources.yaml") as f:
         cfg = yaml.safe_load(f)
     return cfg["sources"]
+
+
+# ── og:image extractor ────────────────────────────────────────────────────────
+
+async def fetch_og_image(client: httpx.AsyncClient, url: str) -> str | None:
+    """
+    Hace GET al artículo y extrae og:image.
+    Timeout corto — si falla, devuelve None sin interrumpir el flujo.
+    Solo lee los primeros 32 KB para no descargar artículos completos.
+    """
+    try:
+        async with client.stream("GET", url, timeout=6, follow_redirects=True) as r:
+            if r.status_code != 200:
+                return None
+            ct = r.headers.get("content-type", "")
+            if "html" not in ct:
+                return None
+            chunk = b""
+            async for data in r.aiter_bytes(chunk_size=4096):
+                chunk += data
+                if len(chunk) >= 32768:
+                    break
+        text = chunk.decode("utf-8", errors="ignore")
+        m = _OG_IMAGE_RE.search(text)
+        if m:
+            return (m.group(1) or m.group(2) or "").strip() or None
+    except Exception:
+        pass
+    return None
 
 
 # ── RSS fetch (síncrono en executor para no bloquear el loop) ─────────────────
@@ -197,8 +235,8 @@ async def main():
             log.warning(f"No se pudo conectar a DB: {e}. Artículos no se persistirán.")
 
     headers = {
-        "User-Agent": "Qilin/1.0 geopolitical-intelligence-platform (RSS reader)",
-        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        "User-Agent": "Mozilla/5.0 (compatible; Qilin/1.0 geopolitical-intelligence)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
 
     # Fuentes high priority primero
@@ -211,13 +249,21 @@ async def main():
         while True:
             new_count  = 0
             fail_count = 0
+            img_count  = 0
 
             for source in ordered:
                 try:
                     entries = await fetch_feed(client, source)
                     for entry in entries:
                         article = parse_entry(entry, source)
-                        if article and await publish(redis, db, article):
+                        if not article:
+                            continue
+                        # Extraer og:image si el feed no lo incluye
+                        if not article["image_url"]:
+                            article["image_url"] = await fetch_og_image(client, article["url"])
+                            if article["image_url"]:
+                                img_count += 1
+                        if await publish(redis, db, article):
                             new_count += 1
                 except Exception as e:
                     log.error(f"Error procesando {source['slug']}: {e}")
@@ -226,7 +272,8 @@ async def main():
                 await asyncio.sleep(0.5)  # cortesía entre fuentes
 
             log.info(
-                f"Ciclo completo — {new_count} artículos nuevos, "
+                f"Ciclo completo — {new_count} artículos nuevos "
+                f"({img_count} con og:image), "
                 f"{fail_count} fuentes fallidas de {len(ordered)}"
             )
             await asyncio.sleep(POLL_INTERVAL)
