@@ -17,6 +17,7 @@ import httpx
 import bcrypt
 import jwt
 import yaml
+import yfinance as yf
 import redis.asyncio as aioredis
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status, BackgroundTasks, Request
 from fastapi.responses import FileResponse
@@ -51,6 +52,48 @@ def _load_users() -> dict[str, str]:
     return users
 
 USERS = _load_users()
+
+# ── Market assets ─────────────────────────────────────────────────────────────
+MARKET_ASSETS = [
+    {"symbol": "CL=F",  "name": "WTI Crude Oil",         "group": "Materias primas"},
+    {"symbol": "BZ=F",  "name": "Brent Crude",            "group": "Materias primas"},
+    {"symbol": "CC=F",  "name": "Cacao",                  "group": "Materias primas"},
+    {"symbol": "GC=F",  "name": "Oro",                    "group": "Materias primas"},
+    {"symbol": "NG=F",  "name": "Gas natural",            "group": "Materias primas"},
+    {"symbol": "ZW=F",  "name": "Trigo",                  "group": "Materias primas"},
+    {"symbol": "HG=F",  "name": "Cobre",                  "group": "Materias primas"},
+    {"symbol": "ALI=F", "name": "Aluminio",               "group": "Materias primas"},
+    {"symbol": "LMT",   "name": "Lockheed Martin",        "group": "Defensa EEUU"},
+    {"symbol": "RTX",   "name": "Raytheon",               "group": "Defensa EEUU"},
+    {"symbol": "BA",    "name": "Boeing",                 "group": "Defensa EEUU"},
+    {"symbol": "NOC",   "name": "Northrop Grumman",       "group": "Defensa EEUU"},
+    {"symbol": "GD",    "name": "General Dynamics",       "group": "Defensa EEUU"},
+    {"symbol": "LHX",   "name": "L3Harris",               "group": "Defensa EEUU"},
+    {"symbol": "RHM.DE","name": "Rheinmetall",            "group": "Defensa Europa"},
+    {"symbol": "BA.L",  "name": "BAE Systems",            "group": "Defensa Europa"},
+    {"symbol": "AIR.PA","name": "Airbus",                 "group": "Defensa Europa"},
+    {"symbol": "HO.PA", "name": "Thales",                 "group": "Defensa Europa"},
+    {"symbol": "LDO.MI","name": "Leonardo",               "group": "Defensa Europa"},
+    {"symbol": "XOM",   "name": "ExxonMobil",             "group": "Energía"},
+    {"symbol": "CVX",   "name": "Chevron",                "group": "Energía"},
+    {"symbol": "SHEL",  "name": "Shell",                  "group": "Energía"},
+    {"symbol": "BP",    "name": "BP",                     "group": "Energía"},
+    {"symbol": "TTE",   "name": "TotalEnergies",          "group": "Energía"},
+    {"symbol": "EQNR",  "name": "Equinor",               "group": "Energía"},
+    {"symbol": "NVDA",  "name": "NVIDIA",                 "group": "Semiconductores"},
+    {"symbol": "TSM",   "name": "TSMC",                   "group": "Semiconductores"},
+    {"symbol": "ASML",  "name": "ASML",                   "group": "Semiconductores"},
+    {"symbol": "INTC",  "name": "Intel",                  "group": "Semiconductores"},
+    {"symbol": "FCX",   "name": "Freeport-McMoRan",       "group": "Minería crítica"},
+    {"symbol": "VALE",  "name": "Vale",                   "group": "Minería crítica"},
+    {"symbol": "RIO",   "name": "Rio Tinto",              "group": "Minería crítica"},
+    {"symbol": "USO",   "name": "Oil ETF",                "group": "ETFs"},
+    {"symbol": "GLD",   "name": "Gold ETF",               "group": "ETFs"},
+    {"symbol": "XLE",   "name": "Energy Select ETF",      "group": "ETFs"},
+    {"symbol": "ITA",   "name": "Aerospace & Defense ETF","group": "ETFs"},
+]
+
+_PERIOD_INTERVAL = {"1d": "5m", "5d": "1h", "1mo": "1d", "3mo": "1d", "1y": "1wk"}
 
 # ── Helpers JWT ───────────────────────────────────────────────────────────────
 
@@ -1812,6 +1855,96 @@ async def chat(req: ChatRequest, _user: str = Depends(get_current_user)):
     except Exception as e:
         log.warning(f"chat error: {e}")
         raise HTTPException(status_code=500, detail="Error del chatbot")
+
+
+# ── Markets ────────────────────────────────────────────────────────────────────
+
+@app.get("/markets/quotes")
+async def get_market_quotes(_user: str = Depends(get_current_user)):
+    redis = app.state.redis
+    cached = await redis.get("cache:markets:quotes")
+    if cached:
+        return json.loads(cached)
+
+    symbols = [a["symbol"] for a in MARKET_ASSETS]
+
+    def _fetch():
+        tickers_obj = yf.Tickers(" ".join(symbols))
+        results = []
+        for asset in MARKET_ASSETS:
+            sym = asset["symbol"]
+            try:
+                fi = tickers_obj.tickers[sym].fast_info
+                price = fi.last_price
+                prev  = fi.previous_close
+                pct   = round((price - prev) / prev * 100, 2) if prev else None
+                results.append({
+                    "symbol":     sym,
+                    "name":       asset["name"],
+                    "group":      asset["group"],
+                    "price":      round(price, 4) if price else None,
+                    "change_pct": pct,
+                    "currency":   getattr(fi, "currency", None),
+                })
+            except Exception:
+                results.append({
+                    "symbol": sym, "name": asset["name"], "group": asset["group"],
+                    "price": None, "change_pct": None, "currency": None,
+                })
+        return results
+
+    loop = asyncio.get_event_loop()
+    try:
+        quotes = await loop.run_in_executor(None, _fetch)
+    except Exception as e:
+        log.error(f"Error fetching market quotes: {e}")
+        raise HTTPException(status_code=503, detail="Error fetching market data")
+
+    await redis.setex("cache:markets:quotes", 300, json.dumps(quotes))
+    return quotes
+
+
+@app.get("/markets/history")
+async def get_market_history(
+    symbol: str,
+    period: str = "1mo",
+    _user: str = Depends(get_current_user),
+):
+    if period not in _PERIOD_INTERVAL:
+        raise HTTPException(status_code=400, detail=f"period must be one of {list(_PERIOD_INTERVAL)}")
+
+    cache_key = f"cache:markets:history:{symbol}:{period}"
+    redis = app.state.redis
+    cached = await redis.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
+    interval = _PERIOD_INTERVAL[period]
+
+    def _fetch():
+        ticker = yf.Ticker(symbol)
+        hist   = ticker.history(period=period, interval=interval)
+        rows   = []
+        for ts, row in hist.iterrows():
+            rows.append({
+                "time":   int(ts.timestamp()),
+                "open":   round(float(row["Open"]),   4),
+                "high":   round(float(row["High"]),   4),
+                "low":    round(float(row["Low"]),    4),
+                "close":  round(float(row["Close"]),  4),
+                "volume": int(row["Volume"]),
+            })
+        return rows
+
+    loop = asyncio.get_event_loop()
+    try:
+        data = await loop.run_in_executor(None, _fetch)
+    except Exception as e:
+        log.error(f"Error fetching history for {symbol}: {e}")
+        raise HTTPException(status_code=503, detail="Error fetching market history")
+
+    await redis.setex(cache_key, 3600, json.dumps(data))
+    return data
 
 
 @app.websocket("/ws")
