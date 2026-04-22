@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLang } from '../hooks/useLanguage'
 
 const NAV_ITEMS = [
-  { id: 'home',       label: 'INICIO'     },
-  { id: 'tactical',   label: 'TÁCTICO'    },
-  { id: 'news',       label: 'NOTICIAS'   },
-  { id: 'documents',  label: 'DOCUMENTOS' },
-  { id: 'social',     label: 'SOCIAL'     },
-  { id: 'sentinel',   label: 'SENTINEL'   },
-  { id: 'markets',    label: 'MERCADOS'   },
-  { id: 'polymarket', label: 'PREDICCIÓN' },
+  { id: 'home',       key: 'nav.home'      },
+  { id: 'tactical',   key: 'nav.tactical'  },
+  { id: 'news',       key: 'nav.news'      },
+  { id: 'documents',  key: 'nav.documents' },
+  { id: 'social',     key: 'nav.social'    },
+  { id: 'sentinel',   key: 'nav.sentinel'  },
+  { id: 'markets',    key: 'nav.markets'   },
+  { id: 'polymarket', key: 'nav.polymarket'},
 ]
 
 function LogoIcon() {
@@ -25,11 +26,12 @@ function LogoIcon() {
   )
 }
 
-export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, activeMode, onModeChange, onLogout }) {
+export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, onLogout }) {
   const [time, setTime] = useState('')
   const [username] = useState(() => sessionStorage.getItem('qilin_user') || '')
   const [ddOpen, setDdOpen] = useState(false)
   const ddRef = useRef(null)
+  const { lang, switchLang, t } = useLang()
 
   useEffect(() => {
     if (!ddOpen) return
@@ -56,8 +58,6 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
   const wsColor = wsStatus === 'connected' ? 'var(--green)' : wsStatus === 'error' ? 'var(--red)' : 'var(--amber)'
   const wsLabel = wsStatus === 'connected' ? 'LIVE'  : wsStatus === 'error'     ? 'ERROR' : 'MOCK'
 
-  const isAnalyst = activeMode === 'analyst'
-
   return (
     <header style={{
       gridColumn: '1 / -1',
@@ -82,52 +82,41 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
       {/* Separator */}
       <div style={{ width:'1px', height:'18px', background:'var(--border-md)', marginRight:'14px', flexShrink:0 }} />
 
-      {/* Navigation tabs — hidden in analyst mode */}
-      {!isAnalyst && (
-        <nav style={{ display:'flex', alignItems:'stretch', height:'100%', gap:'1px' }}>
-          {NAV_ITEMS.map(item => {
-            const active = currentView === item.id
-            return (
-              <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                style={{
-                  background: 'none', border: 'none',
-                  borderBottom: active ? '2px solid var(--cyan)' : '2px solid transparent',
-                  color: active ? 'var(--cyan)' : 'var(--txt-2)',
-                  fontFamily: 'var(--mono)',
-                  fontSize: 'var(--label-sm)',
-                  fontWeight: '600',
-                  letterSpacing: '.10em',
-                  padding: '0 15px',
-                  cursor: 'pointer',
-                  transition: 'color .15s, border-color .15s',
-                  marginBottom: active ? '-1px' : 0,
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-1)' }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
-              >
-                {item.label}
-              </button>
-            )
-          })}
-        </nav>
-      )}
-
-      {isAnalyst && (
-        <div style={{
-          fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
-          letterSpacing: '.14em', color: 'var(--txt-2)', textTransform: 'uppercase',
-        }}>
-          ANALYST VIEW
-        </div>
-      )}
+      {/* Navigation tabs */}
+      <nav style={{ display:'flex', alignItems:'stretch', height:'100%', gap:'1px' }}>
+        {NAV_ITEMS.map(item => {
+          const active = currentView === item.id
+          return (
+            <button
+              key={item.id}
+              onClick={() => onNavigate(item.id)}
+              style={{
+                background: 'none', border: 'none',
+                borderBottom: active ? '2px solid var(--cyan)' : '2px solid transparent',
+                color: active ? 'var(--cyan)' : 'var(--txt-2)',
+                fontFamily: 'var(--mono)',
+                fontSize: 'var(--label-sm)',
+                fontWeight: '600',
+                letterSpacing: '.10em',
+                padding: '0 15px',
+                cursor: 'pointer',
+                transition: 'color .15s, border-color .15s',
+                marginBottom: active ? '-1px' : 0,
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-1)' }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
+            >
+              {t(item.key)}
+            </button>
+          )
+        })}
+      </nav>
 
       {/* Right side */}
       <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px' }}>
 
-        {/* MAP / ANALYST toggle */}
+        {/* ES | EN language toggle */}
         <div style={{
           display: 'flex', alignItems: 'center',
           background: 'var(--bg-2)',
@@ -135,32 +124,29 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
           borderRadius: '3px',
           overflow: 'hidden',
         }}>
-          {[
-            { id: 'map',     label: 'MAP'     },
-            { id: 'analyst', label: 'ANALYST' },
-          ].map(m => {
-            const active = activeMode === m.id
+          {['es', 'en'].map((l, i) => {
+            const active = lang === l
             return (
               <button
-                key={m.id}
-                onClick={() => onModeChange(m.id)}
+                key={l}
+                onClick={() => switchLang(l)}
                 style={{
                   background: active ? 'rgba(79,156,249,0.15)' : 'transparent',
                   border: 'none',
-                  borderRight: m.id === 'map' ? '1px solid var(--border-md)' : 'none',
+                  borderRight: i === 0 ? '1px solid var(--border-md)' : 'none',
                   color: active ? 'var(--cyan)' : 'var(--txt-2)',
                   fontFamily: 'var(--mono)',
                   fontSize: 'var(--label-sm)',
                   fontWeight: '600',
                   letterSpacing: '.10em',
-                  padding: '5px 13px',
+                  padding: '5px 11px',
                   cursor: 'pointer',
                   transition: 'color .15s, background .15s',
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-1)' }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
               >
-                {m.label}
+                {l.toUpperCase()}
               </button>
             )
           })}
@@ -261,7 +247,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'var(--txt-1)' }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--txt-2)' }}
                 >
-                  ⚙ Mi perfil
+                  ⚙ {t('topbar.profile')}
                 </button>
                 <button
                   onClick={() => { setDdOpen(false); onLogout?.() }}
@@ -277,7 +263,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(244,63,94,0.06)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
-                  → Cerrar sesión
+                  {t('topbar.logout')}
                 </button>
               </div>
             </div>

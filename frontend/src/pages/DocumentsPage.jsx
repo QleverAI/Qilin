@@ -5,6 +5,7 @@ import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
 import FilterGroup from '../components/FilterGroup'
 import { LoadingRows } from '../components/LoadingSkeleton'
 import EmptyState from '../components/EmptyState'
+import { useLang } from '../hooks/useLanguage'
 
 const ORG_LABELS = {
   defense:       'Defensa',
@@ -47,6 +48,7 @@ const PAGE_SIZE = 50
 // ── Paginación ─────────────────────────────────────────────────────────────────
 
 function Pagination({ page, totalPages, onChange }) {
+  const { t } = useLang()
   if (totalPages <= 1) return null
   return (
     <div style={{
@@ -64,9 +66,9 @@ function Pagination({ page, totalPages, onChange }) {
           padding: '4px 10px', cursor: page === 1 ? 'default' : 'pointer',
           opacity: page === 1 ? 0.4 : 1,
         }}
-      >← Anterior</button>
+      >{t('pagination.prev')}</button>
       <span style={{ fontSize: '10px', color: 'var(--txt-2)', fontFamily: 'var(--mono)' }}>
-        Página {page} de {totalPages}
+        {t('pagination.page_of', { page, total: totalPages })}
       </span>
       <button
         onClick={() => onChange(page + 1)}
@@ -78,7 +80,7 @@ function Pagination({ page, totalPages, onChange }) {
           padding: '4px 10px', cursor: page === totalPages ? 'default' : 'pointer',
           opacity: page === totalPages ? 0.4 : 1,
         }}
-      >Siguiente →</button>
+      >{t('pagination.next')}</button>
     </div>
   )
 }
@@ -126,6 +128,7 @@ function SectorTag({ sector }) {
 }
 
 function DocRow({ doc, selected, onClick, isFav, onToggleFav }) {
+  const { t } = useLang()
   const severity = doc.severity || 'low'
   const sectors  = Array.isArray(doc.sectors) ? doc.sectors : []
   const pubDate  = doc.time
@@ -186,16 +189,17 @@ function DocRow({ doc, selected, onClick, isFav, onToggleFav }) {
           fontSize: 13, lineHeight: 1, padding: '2px 4px',
           flexShrink: 0, transition: 'color .15s',
         }}
-        title={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+        title={isFav ? t('news.fav_remove') : t('news.fav_add')}
       >★</button>
     </div>
   )
 }
 
 function DocDetail({ doc }) {
+  const { t } = useLang()
   if (!doc) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <EmptyState title="SELECCIONA UN DOCUMENTO" subtitle="PARA VER EL ANÁLISIS" icon="◧" />
+      <EmptyState title={t('docs.select_doc')} subtitle={t('docs.see_analysis')} icon="◧" />
     </div>
   )
 
@@ -233,12 +237,12 @@ function DocDetail({ doc }) {
       {/* Meta */}
       <div style={{ marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--border)' }}>
         {[
-          ['Fuente',     doc.source],
-          ['Publicado',  pubDate],
-          ['Detectado',  discDate],
-          ['Tamaño',     doc.file_size_kb ? `${doc.file_size_kb} KB` : '—'],
-          ['Páginas',    doc.page_count || '—'],
-          ['Estado',     doc.status],
+          [t('docs.meta.source'),    doc.source],
+          [t('docs.meta.published'), pubDate],
+          [t('docs.meta.detected'),  discDate],
+          [t('docs.meta.size'),      doc.file_size_kb ? `${doc.file_size_kb} KB` : '—'],
+          [t('docs.meta.pages'),     doc.page_count || '—'],
+          [t('docs.meta.status'),    doc.status],
         ].map(([k, v]) => (
           <div key={k} style={{ display: 'flex', gap: '10px', marginBottom: '5px' }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '.1em', flexShrink: 0, width: '70px' }}>{k}</span>
@@ -251,7 +255,7 @@ function DocDetail({ doc }) {
       {sectors.length > 0 && (
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '8px' }}>
-            SECTORES
+            {t('docs.sectors')}
           </div>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {sectors.map(s => <SectorTag key={s} sector={s} />)}
@@ -262,7 +266,7 @@ function DocDetail({ doc }) {
       {/* Relevancia */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '8px' }}>
-          RELEVANCIA GEOPOLÍTICA
+          {t('docs.relevance')}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ flex: 1, height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -282,7 +286,7 @@ function DocDetail({ doc }) {
       {doc.summary && (
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '8px' }}>
-            EXTRACTO DEL DOCUMENTO
+            {t('docs.extract')}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--txt-2)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
             {doc.summary}
@@ -313,7 +317,7 @@ function DocDetail({ doc }) {
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,156,249,0.2)'}
           onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-dim)'}
         >
-          ABRIR PDF ↗
+          {t('docs.open_pdf')}
         </a>
       )}
     </div>
@@ -321,13 +325,14 @@ function DocDetail({ doc }) {
 }
 
 export default function DocumentsPage() {
+  const { t } = useLang()
   const { docs, orgTypes, countries, sectors, failingSources, loading, lastUpdate } = useDocsFeed()
   const { isFavorite, toggleFavorite, canAddMore } = useSourceFavorites()
 
-  const [sevFilter,  setSevFilter]  = useState('TODOS')
-  const [orgFilter,  setOrgFilter]  = useState('TODOS')
-  const [secFilter,  setSecFilter]  = useState('TODOS')
-  const [cntFilter,  setCntFilter]  = useState('TODOS')
+  const [sevFilter,  setSevFilter]  = useState('')
+  const [orgFilter,  setOrgFilter]  = useState('')
+  const [secFilter,  setSecFilter]  = useState('')
+  const [cntFilter,  setCntFilter]  = useState('')
   const [selected,   setSelected]   = useState(null)
   const [search,     setSearch]     = useState('')
   const [page,       setPage]       = useState(1)
@@ -339,10 +344,10 @@ export default function DocumentsPage() {
 
   const filtered = useMemo(() => docs.filter(d => {
     const docSectors = Array.isArray(d.sectors) ? d.sectors : []
-    if (sevFilter !== 'TODOS' && d.severity       !== sevFilter)       return false
-    if (orgFilter !== 'TODOS' && d.org_type        !== orgFilter)      return false
-    if (secFilter !== 'TODOS' && !docSectors.includes(secFilter))      return false
-    if (cntFilter !== 'TODOS' && d.source_country  !== cntFilter)      return false
+    if (sevFilter && d.severity                      !== sevFilter)    return false
+    if (orgFilter && d.org_type                      !== orgFilter)    return false
+    if (secFilter && !docSectors.includes(secFilter))                  return false
+    if (cntFilter && d.source_country                !== cntFilter)    return false
     if (search && !d.title?.toLowerCase().includes(search.toLowerCase())) return false
     return true
   }), [docs, sevFilter, orgFilter, secFilter, cntFilter, search])
@@ -367,7 +372,7 @@ export default function DocumentsPage() {
           display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0,
         }}>
           <span style={{ color: 'var(--red)', fontFamily: 'var(--mono)', fontSize: '9px', fontWeight: '700', letterSpacing: '.15em' }}>
-            ⚠ SCRAPING FALLIDO:
+            {t('docs.scraping_failed')}
           </span>
           <span style={{ color: 'var(--red)', fontFamily: 'var(--mono)', fontSize: '9px' }}>
             {failingSources.map(s => s.name).join(' · ')}
@@ -387,12 +392,12 @@ export default function DocumentsPage() {
         }}>
           <div>
             <div style={{ fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px' }}>
-              BUSCAR
+              {t('filter.search')}
             </div>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="título…"
+              placeholder={t('docs.search_placeholder')}
               style={{
                 width: '100%', boxSizing: 'border-box',
                 background: 'var(--bg-2)', border: '1px solid var(--border)',
@@ -403,17 +408,17 @@ export default function DocumentsPage() {
             />
           </div>
 
-          <CollapsibleFilter label="SEVERIDAD" defaultOpen={true}>
-            <FilterGroup label="SEVERIDAD" options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} hideLabel />
+          <CollapsibleFilter label={t('filter.severity')} defaultOpen={true}>
+            <FilterGroup label={t('filter.severity')} options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} allLabel={t('filter.all_m')} hideLabel />
           </CollapsibleFilter>
-          <CollapsibleFilter label="ORGANISMO">
-            <FilterGroup label="ORGANISMO" options={orgTypes} value={orgFilter} onChange={setOrgFilter} labelFn={t => ORG_LABELS[t] || t} hideLabel />
+          <CollapsibleFilter label={t('filter.org')}>
+            <FilterGroup label={t('filter.org')} options={orgTypes} value={orgFilter} onChange={setOrgFilter} labelFn={o => ORG_LABELS[o] || o} allLabel={t('filter.all_m')} hideLabel />
           </CollapsibleFilter>
-          <CollapsibleFilter label="SECTOR">
-            <FilterGroup label="SECTOR" options={sectors} value={secFilter} onChange={setSecFilter} labelFn={s => SECTOR_LABELS[s] || s} hideLabel />
+          <CollapsibleFilter label={t('filter.sector')}>
+            <FilterGroup label={t('filter.sector')} options={sectors} value={secFilter} onChange={setSecFilter} labelFn={s => SECTOR_LABELS[s] || s} allLabel={t('filter.all_m')} hideLabel />
           </CollapsibleFilter>
-          <CollapsibleFilter label="PAÍS">
-            <FilterGroup label="PAÍS" options={countries} value={cntFilter} onChange={setCntFilter} hideLabel />
+          <CollapsibleFilter label={t('filter.country')}>
+            <FilterGroup label={t('filter.country')} options={countries} value={cntFilter} onChange={setCntFilter} allLabel={t('filter.all_m')} hideLabel />
           </CollapsibleFilter>
         </aside>
 
@@ -421,13 +426,13 @@ export default function DocumentsPage() {
         <div style={{ width: '420px', flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-md)', overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-3)', textTransform: 'uppercase' }}>
-              DOCUMENTOS OFICIALES
+              {t('docs.header')}
             </span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', marginLeft: 'auto' }}>
               {loading
-                ? 'Cargando…'
+                ? t('common.loading')
                 : filtered.length > 0
-                  ? `${rangeStart}–${rangeEnd} de ${filtered.length} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+                  ? `${rangeStart}–${rangeEnd} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
                   : `0 · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
               }
             </span>
@@ -437,8 +442,8 @@ export default function DocumentsPage() {
             {loading && <LoadingRows count={8} />}
             {!loading && filtered.length === 0 && (
               <EmptyState
-                title={docs.length === 0 ? 'SIN DOCUMENTOS' : 'SIN RESULTADOS'}
-                subtitle={docs.length === 0 ? 'INGESTOR INACTIVO O SIN DATOS' : 'AJUSTA LOS FILTROS ACTIVOS'}
+                title={docs.length === 0 ? t('docs.no_docs') : t('common.no_results')}
+                subtitle={docs.length === 0 ? t('docs.inactive') : t('common.adjust_filters')}
                 icon="◧"
               />
             )}

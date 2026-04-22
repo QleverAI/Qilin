@@ -4,6 +4,7 @@ import { useSourceFavorites } from '../hooks/useSourceFavorites'
 import FilterGroup from '../components/FilterGroup'
 import { LoadingCards } from '../components/LoadingSkeleton'
 import EmptyState from '../components/EmptyState'
+import { useLang } from '../hooks/useLanguage'
 
 const CAT_LABELS = {
   us_gov:         'US Gov',
@@ -52,6 +53,7 @@ function timeAgo(isoString) {
 // ── Paginación ─────────────────────────────────────────────────────────────────
 
 function Pagination({ page, totalPages, onChange }) {
+  const { t } = useLang()
   if (totalPages <= 1) return null
   return (
     <div style={{
@@ -69,9 +71,9 @@ function Pagination({ page, totalPages, onChange }) {
           padding: '5px 14px', cursor: page === 1 ? 'default' : 'pointer',
           opacity: page === 1 ? 0.4 : 1,
         }}
-      >← Anterior</button>
+      >{t('pagination.prev')}</button>
       <span style={{ fontSize: '11px', color: 'var(--txt-2)', fontFamily: 'var(--mono)' }}>
-        Página {page} de {totalPages}
+        {t('pagination.page_of', { page, total: totalPages })}
       </span>
       <button
         onClick={() => onChange(page + 1)}
@@ -83,7 +85,7 @@ function Pagination({ page, totalPages, onChange }) {
           padding: '5px 14px', cursor: page === totalPages ? 'default' : 'pointer',
           opacity: page === totalPages ? 0.4 : 1,
         }}
-      >Siguiente →</button>
+      >{t('pagination.next')}</button>
     </div>
   )
 }
@@ -120,6 +122,7 @@ function CollapsibleFilter({ label, defaultOpen, children }) {
 // ── Modal ──────────────────────────────────────────────────────────────────────
 
 function TweetModal({ post, onClose }) {
+  const { t } = useLang()
   const color   = CAT_COLOR[post.category] || '#888'
   const initial = (post.handle || '?')[0].toUpperCase()
   const pubDate = post.time
@@ -265,7 +268,7 @@ function TweetModal({ post, onClose }) {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,200,255,0.2)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,200,255,0.1)'}
             >
-              VER EN X ↗
+              {t('social.view_on_x')}
             </a>
           )}
         </div>
@@ -277,6 +280,7 @@ function TweetModal({ post, onClose }) {
 // ── Grid Card ──────────────────────────────────────────────────────────────────
 
 function SocialCard({ post, onClick, isFav, onToggleFav }) {
+  const { t } = useLang()
   const color = CAT_COLOR[post.category] || '#888'
 
   return (
@@ -339,7 +343,7 @@ function SocialCard({ post, onClick, isFav, onToggleFav }) {
               fontSize: 13, lineHeight: 1, padding: '2px 4px',
               flexShrink: 0, transition: 'color .15s',
             }}
-            title={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+            title={isFav ? t('social.fav_remove') : t('social.fav_add')}
           >★</button>
         </div>
 
@@ -382,11 +386,12 @@ function SocialCard({ post, onClick, isFav, onToggleFav }) {
 // ── Página ─────────────────────────────────────────────────────────────────────
 
 export default function SocialPage() {
+  const { t } = useLang()
   const { posts, categories, zones, loading, lastUpdate } = useSocialFeed()
   const { isFavorite, toggleFavorite, canAddMore } = useSourceFavorites()
 
-  const [catFilter,  setCatFilter]  = useState('TODAS')
-  const [zoneFilter, setZoneFilter] = useState('TODAS')
+  const [catFilter,  setCatFilter]  = useState('')
+  const [zoneFilter, setZoneFilter] = useState('')
   const [query,      setQuery]      = useState('')
   const [modalPost,  setModalPost]  = useState(null)
   const [page,       setPage]       = useState(1)
@@ -397,8 +402,8 @@ export default function SocialPage() {
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0 }, [page])
 
   const filtered = useMemo(() => posts.filter(p => {
-    if (catFilter  !== 'TODAS' && p.category !== catFilter)               return false
-    if (zoneFilter !== 'TODAS' && p.zone     !== zoneFilter)              return false
+    if (catFilter  && p.category !== catFilter)                           return false
+    if (zoneFilter && p.zone     !== zoneFilter)                          return false
     if (query && !p.content?.toLowerCase().includes(query.toLowerCase())) return false
     return true
   }), [posts, catFilter, zoneFilter, query])
@@ -422,12 +427,12 @@ export default function SocialPage() {
       }}>
         <div>
           <div style={{ fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-2)', textTransform: 'uppercase', marginBottom: '6px' }}>
-            BUSCAR
+            {t('filter.search')}
           </div>
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="palabra clave…"
+            placeholder={t('social.search_placeholder')}
             style={{
               width: '100%', boxSizing: 'border-box',
               background: 'var(--bg-2)', border: '1px solid var(--border)',
@@ -438,24 +443,24 @@ export default function SocialPage() {
           />
         </div>
 
-        <CollapsibleFilter label="CATEGORÍA" defaultOpen={true}>
+        <CollapsibleFilter label={t('filter.category')} defaultOpen={true}>
           <FilterGroup
-            label="CATEGORÍA"
+            label={t('filter.category')}
             options={categories}
             value={catFilter}
             onChange={setCatFilter}
             labelFn={c => CAT_LABELS[c] || c}
-            allLabel="TODAS"
+            allLabel={t('filter.all_f')}
             hideLabel
           />
         </CollapsibleFilter>
-        <CollapsibleFilter label="ZONA">
+        <CollapsibleFilter label={t('filter.zone')}>
           <FilterGroup
-            label="ZONA"
+            label={t('filter.zone')}
             options={zones}
             value={zoneFilter}
             onChange={setZoneFilter}
-            allLabel="TODAS"
+            allLabel={t('filter.all_f')}
             hideLabel
           />
         </CollapsibleFilter>
@@ -471,10 +476,10 @@ export default function SocialPage() {
           </span>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-3)', marginLeft: 'auto' }}>
             {loading
-              ? 'Cargando…'
+              ? t('common.loading')
               : filtered.length > 0
-                ? `${rangeStart}–${rangeEnd} de ${filtered.length} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
-                : `0 tweets · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+                ? `${rangeStart}–${rangeEnd} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+                : `0 · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
             }
           </span>
         </div>
@@ -483,8 +488,8 @@ export default function SocialPage() {
           {loading && <LoadingCards count={12} />}
           {!loading && filtered.length === 0 && (
             <EmptyState
-              title={posts.length === 0 ? 'SIN TWEETS' : 'SIN RESULTADOS'}
-              subtitle={posts.length === 0 ? 'INGESTOR SOCIAL INACTIVO' : 'AJUSTA LOS FILTROS ACTIVOS'}
+              title={posts.length === 0 ? t('social.no_tweets') : t('common.no_results')}
+              subtitle={posts.length === 0 ? t('social.inactive') : t('common.adjust_filters')}
               icon="◈"
             />
           )}

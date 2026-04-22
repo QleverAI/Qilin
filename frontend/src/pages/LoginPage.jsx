@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useLang } from '../hooks/useLanguage'
 
 function BackgroundCanvas() {
   const ref = useRef(null)
@@ -46,6 +47,7 @@ function BackgroundCanvas() {
 }
 
 export default function LoginPage() {
+  const { t } = useLang()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
@@ -60,13 +62,13 @@ export default function LoginPage() {
     try {
       const body = new URLSearchParams({ username, password })
       const res  = await fetch('/auth/login', { method:'POST', body })
-      if (!res.ok) { setError('Usuario o contraseña incorrectos'); return }
+      if (!res.ok) { setError(t('login.error_credentials')); return }
       const { access_token } = await res.json()
       sessionStorage.setItem('qilin_token', access_token)
       sessionStorage.setItem('qilin_user', username)
       navigate(next, { replace: true })
     } catch (_) {
-      setError('Error de conexión')
+      setError(t('login.error_connection'))
     } finally {
       setLoading(false)
     }
@@ -82,16 +84,16 @@ export default function LoginPage() {
           <div style={{ fontSize:'22px', fontWeight:'700', letterSpacing:'.3em',
             color:'#4f9cf9', textTransform:'uppercase', marginBottom:'8px' }}>◈ QILIN</div>
           <div style={{ fontSize:'10px', letterSpacing:'.2em', color:'rgba(200,216,232,0.4)',
-            textTransform:'uppercase' }}>Acceso al sistema</div>
+            textTransform:'uppercase' }}>{t('login.subtitle')}</div>
         </div>
         <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
           <input value={username} onChange={e => setUsername(e.target.value)}
-            placeholder="Usuario" autoFocus required
+            placeholder={t('login.username')} autoFocus required
             style={{ background:'rgba(79,156,249,0.06)', border:'1px solid rgba(79,156,249,0.2)',
               borderRadius:'4px', padding:'12px 14px', color:'#c8d8e8',
               fontSize:'13px', fontFamily:'inherit', outline:'none' }} />
           <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="Contraseña" required
+            placeholder={t('login.password')} required
             style={{ background:'rgba(79,156,249,0.06)', border:'1px solid rgba(79,156,249,0.2)',
               borderRadius:'4px', padding:'12px 14px', color:'#c8d8e8',
               fontSize:'13px', fontFamily:'inherit', outline:'none' }} />
@@ -102,17 +104,17 @@ export default function LoginPage() {
               fontSize:'12px', letterSpacing:'.1em', textTransform:'uppercase',
               cursor: loading ? 'default' : 'pointer', fontFamily:'inherit',
               opacity: loading ? .6 : 1 }}>
-            {loading ? 'Verificando...' : 'Acceder →'}
+            {loading ? t('login.loading') : t('login.submit')}
           </button>
         </form>
         <div style={{ textAlign:'center', marginTop:'20px', fontSize:'11px', color:'rgba(200,216,232,0.35)' }}>
-          ¿No tienes cuenta?{' '}
+          {t('login.no_account')}{' '}
           <Link to="/register" style={{ color:'rgba(79,156,249,0.7)', textDecoration:'none' }}>
-            Crear cuenta
+            {t('login.create_account')}
           </Link>
           {' '}·{' '}
           <Link to="/" style={{ color:'rgba(200,216,232,0.3)', textDecoration:'none' }}>
-            Inicio
+            {t('login.home')}
           </Link>
         </div>
       </div>

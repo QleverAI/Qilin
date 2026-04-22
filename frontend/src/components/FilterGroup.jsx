@@ -1,4 +1,5 @@
 // Shared sidebar filter group — used by NewsPage, DocumentsPage, SocialPage, MarketsPage
+// Uses '' (empty string) as the internal sentinel for "show all" — allLabel is display-only.
 
 export default function FilterGroup({ label, options, value, onChange, labelFn, accentColor, allLabel = 'TODOS', hideLabel = false }) {
   const accent = accentColor || 'var(--accent)'
@@ -17,11 +18,11 @@ export default function FilterGroup({ label, options, value, onChange, labelFn, 
           {label}
         </div>
       )}
-      {[allLabel, ...options].map(opt => {
+      {['', ...options].map(opt => {
         const active = value === opt
         return (
           <button
-            key={opt}
+            key={opt || '__all__'}
             onClick={() => onChange(opt)}
             style={{
               display: 'block', width: '100%', textAlign: 'left',
@@ -41,7 +42,7 @@ export default function FilterGroup({ label, options, value, onChange, labelFn, 
             onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--txt-2)' }}
             onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--txt-3)' }}
           >
-            {opt === allLabel ? allLabel : (labelFn ? labelFn(opt) : opt.replace(/_/g, ' '))}
+            {opt === '' ? allLabel : (labelFn ? labelFn(opt) : opt.replace(/_/g, ' '))}
           </button>
         )
       })}

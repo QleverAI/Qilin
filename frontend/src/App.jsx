@@ -2,7 +2,6 @@ import { useState, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import ProtectedRoute    from './components/ProtectedRoute'
 import TopBar            from './components/TopBar'
-import AnalystView       from './components/AnalystView'
 import TacticalPanel     from './components/TacticalPanel'
 import BottomBar         from './components/BottomBar'
 import ChatBot           from './components/ChatBot'
@@ -28,8 +27,7 @@ const MapView = lazy(() => import('./components/MapView'))
 
 // ── Dashboard shell — all /app/* views ───────────────────────────────────────
 function AppShell() {
-  const [activeView, setActiveView] = useState('map')
-  const [view,       setView]       = useState('home')
+  const [view, setView] = useState('home')
   const [flyTarget,        setFlyTarget]        = useState(null)
   const [selectedAircraft, setSelectedAircraft] = useState(null)
   const [selectedVessel,   setSelectedVessel]   = useState(null)
@@ -53,28 +51,13 @@ function AppShell() {
   const { trails, addTrail, removeTrail, clearAll } = useAircraftTrail()
   const { vesselTrails, addVesselTrail, removeVesselTrail, clearAllVesselTrails } = useVesselTrail()
 
-  // Analyst view
-  if (activeView === 'analyst') {
-    return (
-      <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
-        <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
-          onNavigate={v => { setView(v); setActiveView('map') }}
-          activeMode={activeView} onModeChange={setActiveView} onLogout={handleLogout} />
-        <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-          <AnalystView />
-        </div>
-        <ChatBot />
-      </div>
-    )
-  }
-
   // Tactical grid
   if (view === 'tactical') {
     return (
       <div style={{ display:'grid', gridTemplateRows:'52px 1fr 44px',
         gridTemplateColumns:'1fr 340px', height:'100vh', width:'100vw', overflow:'hidden' }}>
         <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
-          onNavigate={setView} activeMode={activeView} onModeChange={setActiveView} onLogout={handleLogout} />
+          onNavigate={setView} onLogout={handleLogout} />
         <Suspense fallback={
           <div style={{ gridColumn:1, gridRow:2, display:'flex', alignItems:'center',
             justifyContent:'center', background:'var(--bg-0)' }}>
@@ -119,7 +102,7 @@ function AppShell() {
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
       <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
-        onNavigate={setView} activeMode={activeView} onModeChange={setActiveView} onLogout={handleLogout} />
+        onNavigate={setView} onLogout={handleLogout} />
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
         {view === 'home'       && <HomePage aircraft={aircraft} alerts={alerts} onNavigate={setView} />}
         {view === 'news'       && <NewsPage />}

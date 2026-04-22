@@ -5,6 +5,7 @@ import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
 import FilterGroup from '../components/FilterGroup'
 import { LoadingCards } from '../components/LoadingSkeleton'
 import EmptyState from '../components/EmptyState'
+import { useLang } from '../hooks/useLanguage'
 
 const TYPE_LABELS = {
   agency:       'Agencia',
@@ -79,6 +80,7 @@ function RelevanceBar({ value }) {
 // ── Paginación ─────────────────────────────────────────────────────────────────
 
 function Pagination({ page, totalPages, onChange }) {
+  const { t } = useLang()
   if (totalPages <= 1) return null
   return (
     <div style={{
@@ -96,9 +98,9 @@ function Pagination({ page, totalPages, onChange }) {
           padding: '5px 14px', cursor: page === 1 ? 'default' : 'pointer',
           opacity: page === 1 ? 0.4 : 1,
         }}
-      >← Anterior</button>
+      >{t('pagination.prev')}</button>
       <span style={{ fontSize: '11px', color: 'var(--txt-2)', fontFamily: 'var(--mono)' }}>
-        Página {page} de {totalPages}
+        {t('pagination.page_of', { page, total: totalPages })}
       </span>
       <button
         onClick={() => onChange(page + 1)}
@@ -110,7 +112,7 @@ function Pagination({ page, totalPages, onChange }) {
           padding: '5px 14px', cursor: page === totalPages ? 'default' : 'pointer',
           opacity: page === totalPages ? 0.4 : 1,
         }}
-      >Siguiente →</button>
+      >{t('pagination.next')}</button>
     </div>
   )
 }
@@ -147,6 +149,7 @@ function CollapsibleFilter({ label, defaultOpen, children }) {
 // ── Modal ──────────────────────────────────────────────────────────────────────
 
 function NewsModal({ article, onClose }) {
+  const { t } = useLang()
   const severity = article.severity || 'low'
   const sectors  = Array.isArray(article.sectors) ? article.sectors : (article.keywords || [])
   const favicon  = article.url ? faviconUrl(article.url) : null
@@ -259,7 +262,7 @@ function NewsModal({ article, onClose }) {
 
           <div style={{ marginBottom: '20px' }}>
             <div style={{ fontSize: '8px', fontFamily: 'var(--mono)', color: 'var(--txt-3)', letterSpacing: '.15em', marginBottom: '6px' }}>
-              RELEVANCIA GEOPOLÍTICA
+              {t('news.relevance')}
             </div>
             <RelevanceBar value={article.relevance || 50} />
           </div>
@@ -286,7 +289,7 @@ function NewsModal({ article, onClose }) {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,156,249,0.2)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-dim)'}
             >
-              LEER ARTÍCULO COMPLETO ↗
+              {t('news.read_full')}
             </a>
           )}
         </div>
@@ -298,6 +301,7 @@ function NewsModal({ article, onClose }) {
 // ── Tarjeta ────────────────────────────────────────────────────────────────────
 
 function NewsCard({ article, onClick, isFav, onToggleFav }) {
+  const { t } = useLang()
   const severity = article.severity || 'low'
   const sectors  = Array.isArray(article.sectors) ? article.sectors : (article.keywords || [])
   const favicon  = article.url ? faviconUrl(article.url) : null
@@ -352,7 +356,7 @@ function NewsCard({ article, onClick, isFav, onToggleFav }) {
               fontSize: 13, lineHeight: 1, padding: '2px 4px',
               flexShrink: 0, transition: 'color .15s',
             }}
-            title={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+            title={isFav ? t('news.fav_remove') : t('news.fav_add')}
           >★</button>
         </div>
 
@@ -383,14 +387,15 @@ function NewsCard({ article, onClick, isFav, onToggleFav }) {
 // ── Página ─────────────────────────────────────────────────────────────────────
 
 export default function NewsPage() {
+  const { t } = useLang()
   const { articles, countries, sourceTypes, zones, sectors, loading, lastUpdate } = useNewsFeed()
   const { isFavorite, toggleFavorite, canAddMore } = useSourceFavorites()
 
-  const [sevFilter,    setSevFilter]    = useState('TODOS')
-  const [sectorFilter, setSectorFilter] = useState('TODOS')
-  const [zoneFilter,   setZoneFilter]   = useState('TODOS')
-  const [countryFilter,setCountryFilter]= useState('TODOS')
-  const [typeFilter,   setTypeFilter]   = useState('TODOS')
+  const [sevFilter,    setSevFilter]    = useState('')
+  const [sectorFilter, setSectorFilter] = useState('')
+  const [zoneFilter,   setZoneFilter]   = useState('')
+  const [countryFilter,setCountryFilter]= useState('')
+  const [typeFilter,   setTypeFilter]   = useState('')
   const [modalArticle, setModalArticle] = useState(null)
   const [search,       setSearch]       = useState('')
   const [sortBy,       setSortBy]       = useState('newest')
@@ -410,12 +415,12 @@ export default function NewsPage() {
     const list = articles.filter(a => {
       const articleSectors = Array.isArray(a.sectors) ? a.sectors : (a.keywords || [])
       const articleZones   = Array.isArray(a.zones) ? a.zones : []
-      if (sevFilter    !== 'TODOS' && a.severity       !== sevFilter)           return false
-      if (sectorFilter !== 'TODOS' && !articleSectors.includes(sectorFilter))   return false
-      if (zoneFilter   !== 'TODOS' && !articleZones.includes(zoneFilter))       return false
-      if (countryFilter!== 'TODOS' && a.source_country !== countryFilter)       return false
-      if (typeFilter   !== 'TODOS' && a.source_type    !== typeFilter)          return false
-      if (search && !a.title?.toLowerCase().includes(search.toLowerCase()))     return false
+      if (sevFilter     && a.severity                    !== sevFilter)        return false
+      if (sectorFilter  && !articleSectors.includes(sectorFilter))             return false
+      if (zoneFilter    && !articleZones.includes(zoneFilter))                 return false
+      if (countryFilter && a.source_country              !== countryFilter)    return false
+      if (typeFilter    && a.source_type                 !== typeFilter)       return false
+      if (search && !a.title?.toLowerCase().includes(search.toLowerCase()))    return false
       return true
     })
     if (sortBy === 'oldest')   return [...list].sort((a, b) => new Date(a.time) - new Date(b.time))
@@ -448,12 +453,12 @@ export default function NewsPage() {
       }}>
         <div>
           <div style={{ fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.2em', color: 'var(--txt-2)', textTransform: 'uppercase', marginBottom: '6px' }}>
-            BUSCAR
+            {t('filter.search')}
           </div>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="titular…"
+            placeholder={t('news.search_placeholder')}
             style={{
               width: '100%', boxSizing: 'border-box',
               background: 'var(--bg-2)', border: '1px solid var(--border)',
@@ -464,20 +469,20 @@ export default function NewsPage() {
           />
         </div>
 
-        <CollapsibleFilter label="SEVERIDAD" defaultOpen={true}>
-          <FilterGroup label="SEVERIDAD" options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} hideLabel />
+        <CollapsibleFilter label={t('filter.severity')} defaultOpen={true}>
+          <FilterGroup label={t('filter.severity')} options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} allLabel={t('filter.all_m')} hideLabel />
         </CollapsibleFilter>
-        <CollapsibleFilter label="SECTOR">
-          <FilterGroup label="SECTOR" options={sectors} value={sectorFilter} onChange={setSectorFilter} labelFn={s => SECTOR_LABELS[s] || s} hideLabel />
+        <CollapsibleFilter label={t('filter.sector')}>
+          <FilterGroup label={t('filter.sector')} options={sectors} value={sectorFilter} onChange={setSectorFilter} labelFn={s => SECTOR_LABELS[s] || s} allLabel={t('filter.all_m')} hideLabel />
         </CollapsibleFilter>
-        <CollapsibleFilter label="ZONA">
-          <FilterGroup label="ZONA" options={zones} value={zoneFilter} onChange={setZoneFilter} hideLabel />
+        <CollapsibleFilter label={t('filter.zone')}>
+          <FilterGroup label={t('filter.zone')} options={zones} value={zoneFilter} onChange={setZoneFilter} allLabel={t('filter.all_m')} hideLabel />
         </CollapsibleFilter>
-        <CollapsibleFilter label="PAÍS">
-          <FilterGroup label="PAÍS" options={countries} value={countryFilter} onChange={setCountryFilter} hideLabel />
+        <CollapsibleFilter label={t('filter.country')}>
+          <FilterGroup label={t('filter.country')} options={countries} value={countryFilter} onChange={setCountryFilter} allLabel={t('filter.all_m')} hideLabel />
         </CollapsibleFilter>
-        <CollapsibleFilter label="TIPO">
-          <FilterGroup label="TIPO" options={sourceTypes} value={typeFilter} onChange={setTypeFilter} labelFn={t => TYPE_LABELS[t] || t} hideLabel />
+        <CollapsibleFilter label={t('filter.type')}>
+          <FilterGroup label={t('filter.type')} options={sourceTypes} value={typeFilter} onChange={setTypeFilter} labelFn={tp => TYPE_LABELS[tp] || tp} allLabel={t('filter.all_m')} hideLabel />
         </CollapsibleFilter>
       </aside>
 
@@ -494,10 +499,10 @@ export default function NewsPage() {
           </span>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-3)', marginLeft: 'auto' }}>
             {loading
-              ? 'Cargando…'
+              ? t('common.loading')
               : filtered.length > 0
-                ? `${rangeStart}–${rangeEnd} de ${filtered.length} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
-                : `0 artículos · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+                ? `${rangeStart}–${rangeEnd} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+                : `0 · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
             }
           </span>
           <select
@@ -516,10 +521,10 @@ export default function NewsPage() {
               flexShrink: 0,
             }}
           >
-            <option value="newest">Más reciente primero</option>
-            <option value="oldest">Más antiguo primero</option>
-            <option value="sev_high">Severidad: Alta → Baja</option>
-            <option value="sev_low">Severidad: Baja → Alta</option>
+            <option value="newest">{t('news.sort_newest')}</option>
+            <option value="oldest">{t('news.sort_oldest')}</option>
+            <option value="sev_high">{t('news.sort_sev_high')}</option>
+            <option value="sev_low">{t('news.sort_sev_low')}</option>
           </select>
         </div>
 
@@ -527,8 +532,8 @@ export default function NewsPage() {
           {loading && <LoadingCards count={12} />}
           {!loading && filtered.length === 0 && (
             <EmptyState
-              title={articles.length === 0 ? 'SIN NOTICIAS' : 'SIN RESULTADOS'}
-              subtitle={articles.length === 0 ? 'INGESTOR INACTIVO O SIN DATOS' : 'AJUSTA LOS FILTROS ACTIVOS'}
+              title={articles.length === 0 ? t('news.no_news') : t('common.no_results')}
+              subtitle={articles.length === 0 ? t('news.inactive') : t('common.adjust_filters')}
               icon="◈"
             />
           )}
