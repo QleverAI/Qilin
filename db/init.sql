@@ -359,7 +359,7 @@ CREATE TABLE IF NOT EXISTS vessel_ports (
     country       TEXT,
     lat           DOUBLE PRECISION,
     lon           DOUBLE PRECISION,
-    is_military   BOOLEAN          DEFAULT FALSE,
+    is_military   BOOLEAN          NOT NULL DEFAULT FALSE,
     first_seen    TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
     last_seen     TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
     visit_count   INT              NOT NULL DEFAULT 1,
