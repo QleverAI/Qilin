@@ -23,7 +23,7 @@ export function useVesselFavorites() {
   }, [])
 
   const isFavorite = useCallback(
-    (mmsi) => favorites.some(f => f.mmsi === mmsi),
+    (mmsi) => !!mmsi && favorites.some(f => f.mmsi === mmsi),
     [favorites]
   )
 
