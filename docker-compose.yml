@@ -37,6 +37,20 @@ services:
       - redis
       - timescaledb
 
+  ingestor-vip:
+    build: ./services/ingestor_vip
+    container_name: qilin_ingestor_vip
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
+      VIP_POLL_INTERVAL: ${VIP_POLL_INTERVAL:-60}
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - timescaledb
+
   rsshub:
     image: diygod/rsshub:latest
     container_name: qilin_rsshub

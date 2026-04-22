@@ -1,0 +1,490 @@
+# VIP Aircraft Watchlist — Qilin
+# Fuentes: FAA Registry, Wikipedia, OSINT periodístico (Reuters, FT, NYT, ADS-B Exchange)
+# Formato: registration es la clave primaria. icao24 se rellena al vuelo si no se conoce.
+# El ingestor usa /v2/reg/{reg} de Airplanes.live para lookup por matrícula.
+
+aircraft:
+
+  # ──────────────────────────────────────────────────────
+  # JEFES DE ESTADO — AERONAVES GUBERNAMENTALES
+  # ──────────────────────────────────────────────────────
+
+  # ESTADOS UNIDOS
+  - registration: "82-8000"
+    owner: "POTUS — Air Force One (SAM 28000)"
+    country: "USA"
+    category: "head_of_state"
+    aircraft_type: "Boeing VC-25A"
+    notes: "Primario Air Force One"
+
+  - registration: "92-9000"
+    owner: "POTUS — Air Force One (SAM 29000)"
+    country: "USA"
+    category: "head_of_state"
+    aircraft_type: "Boeing VC-25A"
+    notes: "Secundario Air Force One"
+
+  - registration: "99-0003"
+    owner: "VPOTUS — Air Force Two"
+    country: "USA"
+    category: "head_of_state"
+    aircraft_type: "Boeing C-32A"
+
+  - registration: "00-9001"
+    owner: "VPOTUS — Air Force Two (backup)"
+    country: "USA"
+    category: "head_of_state"
+    aircraft_type: "Boeing C-32A"
+
+  # REINO UNIDO
+  - registration: "ZZ336"
+    owner: "RAF — PM / Familia Real UK"
+    country: "GBR"
+    category: "head_of_state"
+    aircraft_type: "Airbus A330 Voyager"
+
+  - registration: "ZZ335"
+    owner: "RAF — VIP backup UK"
+    country: "GBR"
+    category: "head_of_state"
+    aircraft_type: "Airbus A330 Voyager"
+
+  # FRANCIA
+  - registration: "F-RARF"
+    owner: "Armée de l'Air — Presidente Francia"
+    country: "FRA"
+    category: "head_of_state"
+    aircraft_type: "Airbus A330 MRTT"
+    notes: "Cotam 0001"
+
+  - registration: "F-RAFR"
+    owner: "Armée de l'Air — VIP Francia"
+    country: "FRA"
+    category: "head_of_state"
+    aircraft_type: "Airbus A330 MRTT"
+
+  # ALEMANIA
+  - registration: "10+01"
+    owner: "Luftwaffe — Canciller / Presidente Alemania"
+    country: "DEU"
+    category: "head_of_state"
+    aircraft_type: "Airbus A350-900"
+    notes: "Konrad Adenauer"
+
+  - registration: "10+02"
+    owner: "Luftwaffe — VIP Alemania"
+    country: "DEU"
+    category: "head_of_state"
+    aircraft_type: "Airbus A350-900"
+    notes: "Kurt Schumacher"
+
+  # RUSIA
+  - registration: "RA-96019"
+    owner: "Putin — Rusia Uno (primario)"
+    country: "RUS"
+    category: "head_of_state"
+    aircraft_type: "Ilyushin Il-96-300PU"
+    notes: "Avión presidencial principal"
+
+  - registration: "RA-96020"
+    owner: "Putin — Rusia Uno (secundario)"
+    country: "RUS"
+    category: "head_of_state"
+    aircraft_type: "Ilyushin Il-96-300PU"
+
+  - registration: "RA-96021"
+    owner: "Rusia — VIP Il-96"
+    country: "RUS"
+    category: "head_of_state"
+    aircraft_type: "Ilyushin Il-96-300"
+
+  - registration: "RA-64524"
+    owner: "Rusia — Gobierno VIP Tu-214"
+    country: "RUS"
+    category: "head_of_state"
+    aircraft_type: "Tupolev Tu-214VIP"
+
+  - registration: "RA-64011"
+    owner: "Rusia — Comunicaciones especiales"
+    country: "RUS"
+    category: "head_of_state"
+    aircraft_type: "Tupolev Tu-214SR"
+
+  # CHINA
+  - registration: "B-2447"
+    owner: "Air China — Xi Jinping VIP"
+    country: "CHN"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-89L"
+    notes: "Usado en visitas de estado"
+
+  - registration: "B-2448"
+    owner: "Air China — China Uno (backup)"
+    country: "CHN"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-89L"
+
+  # TURQUÍA
+  - registration: "TC-ANK"
+    owner: "Erdogan — Presidencia Turquía"
+    country: "TUR"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-8i"
+    notes: "Anadolu — avión presidencial principal"
+
+  - registration: "TC-CAN"
+    owner: "Presidencia Turquía — VIP"
+    country: "TUR"
+    category: "head_of_state"
+    aircraft_type: "Boeing 737 BBJ"
+
+  # ISRAEL
+  - registration: "4X-ICB"
+    owner: "IAF — Primer Ministro Israel"
+    country: "ISR"
+    category: "head_of_state"
+    aircraft_type: "Boeing 767-200"
+    notes: "Fuerza Aérea israelí, vuelos VIP gobierno"
+
+  # INDIA
+  - registration: "VT-ALW"
+    owner: "Modi — Air India One"
+    country: "IND"
+    category: "head_of_state"
+    aircraft_type: "Boeing 777-337ER"
+
+  - registration: "VT-ALX"
+    owner: "Air India One (backup)"
+    country: "IND"
+    category: "head_of_state"
+    aircraft_type: "Boeing 777-337ER"
+
+  # JAPÓN
+  - registration: "20-1101"
+    owner: "JASDF — Japan Air Force One"
+    country: "JPN"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-400"
+
+  - registration: "20-1102"
+    owner: "JASDF — Japan Air Force One (backup)"
+    country: "JPN"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-400"
+
+  # AUSTRALIA
+  - registration: "A36-001"
+    owner: "RAAF — PM Australia"
+    country: "AUS"
+    category: "head_of_state"
+    aircraft_type: "Boeing 737-700 BBJ"
+
+  - registration: "A36-002"
+    owner: "RAAF — PM Australia (backup)"
+    country: "AUS"
+    category: "head_of_state"
+    aircraft_type: "Boeing 737-700 BBJ"
+
+  # CANADÁ
+  - registration: "15001"
+    owner: "RCAF — PM Canadá"
+    country: "CAN"
+    category: "head_of_state"
+    aircraft_type: "Airbus CC-150 Polaris"
+
+  # BRASIL
+  - registration: "FAB 2101"
+    owner: "FAB — Presidente Brasil"
+    country: "BRA"
+    category: "head_of_state"
+    aircraft_type: "Airbus VC-99C (A319CJ)"
+
+  # ──────────────────────────────────────────────────────
+  # ARABIA SAUDÍ / GOLFO
+  # ──────────────────────────────────────────────────────
+
+  - registration: "HZ-HM1"
+    owner: "Rey Salman — Arabia Saudí"
+    country: "SAU"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-8i"
+
+  - registration: "HZ-HM1B"
+    owner: "Casa Real Saudí — VIP"
+    country: "SAU"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-400"
+
+  - registration: "HZ-MF1"
+    owner: "MBS — Mohammed bin Salman"
+    country: "SAU"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-8i"
+    notes: "Príncipe Heredero, hombre fuerte de Arabia Saudí"
+
+  - registration: "HZ-SK1"
+    owner: "Casa Real Saudí — Airbus A380 VIP"
+    country: "SAU"
+    category: "head_of_state"
+    aircraft_type: "Airbus A380"
+    notes: "Uno de los jets privados más grandes del mundo"
+
+  - registration: "A6-HHH"
+    owner: "Sheikh Mohammed bin Rashid — Gobernador Dubai"
+    country: "UAE"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-400"
+    notes: "Gobernante de Dubai, PM de UAE"
+
+  - registration: "A7-HHK"
+    owner: "Emir Qatar — Tamim bin Hamad Al Thani"
+    country: "QAT"
+    category: "head_of_state"
+    aircraft_type: "Boeing 747-8i"
+
+  - registration: "A7-AAG"
+    owner: "Gobierno Qatar — VIP"
+    country: "QAT"
+    category: "head_of_state"
+    aircraft_type: "Airbus A340"
+
+  # ──────────────────────────────────────────────────────
+  # BILLONARIOS TECH
+  # ──────────────────────────────────────────────────────
+
+  - registration: "N628TS"
+    icao24: "a4b7dd"
+    owner: "Elon Musk"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Gulfstream G650ER"
+    notes: "El famoso avión rastreado por @ElonJet antes de ser baneado. Puede haber sido vendido."
+
+  - registration: "N272BG"
+    owner: "Elon Musk (secundario)"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Gulfstream G650ER"
+
+  - registration: "N292JB"
+    owner: "Jeff Bezos"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Gulfstream G650ER"
+
+  - registration: "N271JS"
+    owner: "Jeff Bezos (secundario)"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Gulfstream G650ER"
+
+  - registration: "N887WM"
+    owner: "Bill Gates"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Bombardier Challenger 350"
+
+  - registration: "N72MZ"
+    owner: "Mark Zuckerberg"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Gulfstream G650ER"
+
+  - registration: "N158FB"
+    owner: "Mark Zuckerberg (Dassault)"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Dassault Falcon 900EX"
+
+  - registration: "N808LE"
+    owner: "Larry Ellison (Oracle)"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Gulfstream G650"
+
+  - registration: "N840PG"
+    owner: "Larry Page (Google)"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Boeing 767"
+
+  - registration: "N317SB"
+    owner: "Sergey Brin (Google)"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Gulfstream G550"
+
+  - registration: "N365ES"
+    owner: "Eric Schmidt (Google chairman)"
+    country: "USA"
+    category: "billionaire_tech"
+    aircraft_type: "Gulfstream G650"
+
+  # ──────────────────────────────────────────────────────
+  # BILLONARIOS FINANZAS
+  # ──────────────────────────────────────────────────────
+
+  - registration: "N501WB"
+    owner: "Warren Buffett (Berkshire Hathaway)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G650"
+    notes: "El llamó a su jet 'The Indefensible'"
+
+  - registration: "N119K"
+    owner: "Michael Bloomberg"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G550"
+
+  - registration: "N68EF"
+    owner: "George Soros (Open Society)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream"
+
+  - registration: "N64AG"
+    owner: "Ken Griffin (Citadel)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G650ER"
+
+  - registration: "N360RD"
+    owner: "Ray Dalio (Bridgewater)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G650"
+
+  - registration: "N522BS"
+    owner: "Stephen Schwarzman (Blackstone)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G650ER"
+
+  - registration: "N700JD"
+    owner: "Jamie Dimon (JPMorgan Chase)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G650"
+
+  - registration: "N178LF"
+    owner: "Larry Fink (BlackRock)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G650"
+
+  - registration: "N143PT"
+    owner: "Peter Thiel (Palantir / Founders Fund)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G550"
+
+  - registration: "N396DT"
+    owner: "David Tepper (Appaloosa)"
+    country: "USA"
+    category: "billionaire_finance"
+    aircraft_type: "Gulfstream G650ER"
+
+  # ──────────────────────────────────────────────────────
+  # MAGNATES MEDIA / INDUSTRIA
+  # ──────────────────────────────────────────────────────
+
+  - registration: "N536LF"
+    owner: "Rupert Murdoch (News Corp / Fox)"
+    country: "USA"
+    category: "billionaire_media"
+    aircraft_type: "Gulfstream G550"
+
+  - registration: "N1LN"
+    owner: "David Geffen"
+    country: "USA"
+    category: "billionaire_media"
+    aircraft_type: "Gulfstream G650ER"
+
+  # ──────────────────────────────────────────────────────
+  # MAGNATES INDUSTRIALES / ENERGÍA
+  # ──────────────────────────────────────────────────────
+
+  - registration: "VT-MUA"
+    owner: "Mukesh Ambani (Reliance Industries)"
+    country: "IND"
+    category: "billionaire_energy"
+    aircraft_type: "Boeing 747-400B"
+    notes: "El hombre más rico de Asia"
+
+  - registration: "VT-ANX"
+    owner: "Mukesh Ambani — Airbus"
+    country: "IND"
+    category: "billionaire_energy"
+    aircraft_type: "Airbus A319CJ"
+
+  - registration: "XA-ESM"
+    owner: "Carlos Slim (América Móvil)"
+    country: "MEX"
+    category: "billionaire_energy"
+    aircraft_type: "Boeing 737-700 BBJ"
+
+  - registration: "F-GVVB"
+    owner: "Bernard Arnault (LVMH)"
+    country: "FRA"
+    category: "billionaire_industry"
+    aircraft_type: "Gulfstream G650ER"
+    notes: "Hombre más rico de Europa"
+
+  # ──────────────────────────────────────────────────────
+  # OLIGARCAS RUSOS (sancionados / geopolíticamente relevantes)
+  # ──────────────────────────────────────────────────────
+
+  - registration: "LX-RAY"
+    owner: "Roman Abramovich (oligarca ruso)"
+    country: "RUS"
+    category: "oligarch_russian"
+    aircraft_type: "Airbus A319CJ"
+    notes: "Sancionado UE/UK desde 2022. Matrícula luxemburguesa."
+
+  - registration: "P4-MES"
+    owner: "Roman Abramovich — Boeing 787"
+    country: "RUS"
+    category: "oligarch_russian"
+    aircraft_type: "Boeing 787-8 Dreamliner"
+    notes: "Matrícula Aruba, sancionado"
+
+  - registration: "M-KATE"
+    owner: "Roman Abramovich — A319 Isla de Man"
+    country: "RUS"
+    category: "oligarch_russian"
+    aircraft_type: "Airbus A319CJ"
+
+  - registration: "VP-BGG"
+    owner: "Alisher Usmanov (oligarca ruso)"
+    country: "RUS"
+    category: "oligarch_russian"
+    aircraft_type: "Airbus A340-600"
+    notes: "Sancionado UE. Jet confiscado en Hamburgo 2022."
+
+  - registration: "VP-BHL"
+    owner: "Alisher Usmanov (secundario)"
+    country: "RUS"
+    category: "oligarch_russian"
+    aircraft_type: "Airbus A340"
+
+  - registration: "VP-BIO"
+    owner: "Mikhail Prokhorov (oligarca ruso)"
+    country: "RUS"
+    category: "oligarch_russian"
+    aircraft_type: "Gulfstream G650"
+    notes: "Exdueño de Brooklyn Nets"
+
+  - registration: "VP-BGW"
+    owner: "Viktor Vekselberg (oligarca ruso)"
+    country: "RUS"
+    category: "oligarch_russian"
+    aircraft_type: "Bombardier Global 7500"
+    notes: "Sancionado. Jet retenido en EEUU."
+
+  - registration: "VP-BKS"
+    owner: "Arkady Rotenberg (oligarca ruso, círculo Putin)"
+    country: "RUS"
+    category: "oligarch_russian"
+    aircraft_type: "Gulfstream G650ER"
+    notes: "Amigo íntimo de Putin desde infancia"
