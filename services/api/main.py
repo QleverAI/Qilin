@@ -1352,7 +1352,7 @@ async def get_analytics_timeline(
 
 # ── SENTINEL ──────────────────────────────────────────────────────────────────
 
-@app.get("/api/sentinel/zones")
+@app.get("/sentinel/zones")
 async def get_sentinel_zones(_user: str = Depends(get_current_user)):
     if not app.state.db:
         return {"zones": []}
