@@ -96,7 +96,12 @@ export default function ProfilePage({ onNavigate }) {
           <Section label="Datos de cuenta">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <Row label="Usuario"       value={profile.username} />
-              <Row label="Plan"          value={profile.plan?.toUpperCase()} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', letterSpacing: '.12em', color: 'var(--txt-3)', textTransform: 'uppercase' }}>Plan</span>
+                <span style={{ display: 'inline-flex', alignSelf: 'flex-start', fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', fontWeight: '700', letterSpacing: '.1em', color: 'var(--accent)', background: 'rgba(0,200,255,0.10)', border: '1px solid rgba(0,200,255,0.30)', borderRadius: '3px', padding: '2px 8px' }}>
+                  {profile.plan?.toUpperCase()}
+                </span>
+              </div>
               <Row label="Email"         value={profile.email} />
               <Row label="Miembro desde" value={createdAt} />
             </div>

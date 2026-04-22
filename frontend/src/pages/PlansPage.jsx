@@ -147,7 +147,7 @@ export default function PlansPage({ onNavigate }) {
                 >
                   CONTACTAR
                 </a>
-              ) : (
+              ) : isCurrent ? (
                 <div style={{
                   textAlign: 'center',
                   fontFamily: 'var(--mono)',
@@ -159,7 +159,7 @@ export default function PlansPage({ onNavigate }) {
                 }}>
                   PLAN ACTUAL
                 </div>
-              )}
+              ) : null}
             </div>
           )
         })}
