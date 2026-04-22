@@ -14,6 +14,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
+import asyncpg
 import httpx
 import redis.asyncio as aioredis
 import yaml
@@ -23,10 +24,10 @@ log = logging.getLogger(__name__)
 
 BASE_URL      = "https://api.airplanes.live/v2"
 REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379")
-POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "5"))   # segundos de espera tras completar el ciclo
+DB_URL        = os.getenv("DB_URL", "")
+POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "5"))
 
 # ── País por prefijo de matrícula (ICAO Doc 9303) ────────────────────────────
-# Ordenados de más largo a más corto para que el match sea correcto
 _REG_PREFIX: list[tuple[str, str]] = sorted([
     ("N",   "United States"),    ("G",   "United Kingdom"),
     ("D",   "Germany"),          ("F",   "France"),
@@ -78,8 +79,6 @@ def infer_country(registration: str | None) -> str | None:
     return None
 
 
-# ── Carga de zonas ────────────────────────────────────────────────────────────
-
 def load_zones() -> list[tuple[str, dict]]:
     with open("/app/config/zones.yaml") as f:
         cfg = yaml.safe_load(f)
@@ -93,8 +92,6 @@ def in_zone(lat, lon, zone: dict) -> bool:
             zone["lon"][0] <= lon <= zone["lon"][1])
 
 
-# ── Parsing ───────────────────────────────────────────────────────────────────
-
 def parse_aircraft(ac: dict, zone: str, category: str) -> dict:
     """
     Convierte un avión de Airplanes.live al formato interno de Qilin.
@@ -105,29 +102,27 @@ def parse_aircraft(ac: dict, zone: str, category: str) -> dict:
     alt_baro   = ac.get("alt_baro")
     altitude_m = round(alt_baro * 0.3048, 1) if isinstance(alt_baro, (int, float)) else None
 
-    gs         = ac.get("gs")
-    velocity   = round(gs * 0.514444, 1) if isinstance(gs, (int, float)) else None
+    gs       = ac.get("gs")
+    velocity = round(gs * 0.514444, 1) if isinstance(gs, (int, float)) else None
 
     return {
-        "icao24":       (ac.get("hex") or "").lower(),
-        "callsign":     (ac.get("flight") or "").strip() or None,
-        "registration":   ac.get("r"),        # matrícula directa
-        "type_code":      ac.get("t"),        # tipo ICAO (B738, F16, C130…)
+        "icao24":         (ac.get("hex") or "").lower(),
+        "callsign":       (ac.get("flight") or "").strip() or None,
+        "registration":   ac.get("r"),
+        "type_code":      ac.get("t"),
         "origin_country": infer_country(ac.get("r")),
-        "lat":          ac.get("lat"),
-        "lon":          ac.get("lon"),
-        "altitude":     altitude_m,
-        "on_ground":    ac.get("alt_baro") == "ground",
-        "velocity":     velocity,
-        "heading":      ac.get("track"),
-        "squawk":       ac.get("squawk"),
-        "category":     category,
-        "zone":         zone,
-        "time":         datetime.now(timezone.utc).isoformat(),
+        "lat":            ac.get("lat"),
+        "lon":            ac.get("lon"),
+        "altitude":       altitude_m,
+        "on_ground":      ac.get("alt_baro") == "ground",
+        "velocity":       velocity,
+        "heading":        ac.get("track"),
+        "squawk":         ac.get("squawk"),
+        "category":       category,
+        "zone":           zone,
+        "time":           datetime.now(timezone.utc).isoformat(),
     }
 
-
-# ── HTTP ──────────────────────────────────────────────────────────────────────
 
 async def fetch_aircraft(client: httpx.AsyncClient, url: str, _retry: bool = True) -> list[dict]:
     """
@@ -140,7 +135,7 @@ async def fetch_aircraft(client: httpx.AsyncClient, url: str, _retry: bool = Tru
         r = await client.get(url, timeout=15)
         if r.status_code == 429 and _retry:
             wait = int(r.headers.get("Retry-After", 12))
-            log.info(f"429 en {url.split('/')[-3:]} — reintentando en {wait}s")
+            log.info(f"429 — reintentando en {wait}s")
             await asyncio.sleep(wait)
             return await fetch_aircraft(client, url, _retry=False)
         r.raise_for_status()
@@ -150,9 +145,7 @@ async def fetch_aircraft(client: httpx.AsyncClient, url: str, _retry: bool = Tru
         return []
 
 
-# ── Publicación en Redis ──────────────────────────────────────────────────────
-
-async def publish(redis, aircraft: dict):
+async def publish_redis(redis, aircraft: dict):
     icao24 = aircraft["icao24"]
     if not icao24:
         return
@@ -161,32 +154,91 @@ async def publish(redis, aircraft: dict):
     await redis.setex(f"current:aircraft:{icao24}", 120, payload)
 
 
-# ── Loop principal ────────────────────────────────────────────────────────────
+_INSERT_SQL = (
+    "INSERT INTO aircraft_positions"
+    " (time, icao24, callsign, lat, lon, altitude, velocity, heading,"
+    "  on_ground, category, origin_country, zone)"
+    " VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)"
+)
+
+
+async def persist_batch(db, positions: list[dict]) -> None:
+    rows = [
+        (
+            datetime.fromisoformat(p["time"]),
+            p["icao24"],
+            p.get("callsign"),
+            p.get("lat"),
+            p.get("lon"),
+            p.get("altitude"),
+            p.get("velocity"),
+            p.get("heading"),
+            p.get("on_ground"),
+            p.get("category"),
+            p.get("origin_country"),
+            p.get("zone"),
+        )
+        for p in positions
+        if p.get("icao24")
+    ]
+    if rows:
+        await db.executemany(_INSERT_SQL, rows)
+
+
+async def connect_db() -> "asyncpg.Connection | None":
+    if not DB_URL:
+        return None
+    try:
+        conn = await asyncpg.connect(DB_URL)
+        log.info("Conectado a TimescaleDB.")
+        return conn
+    except Exception as e:
+        log.warning(f"No se pudo conectar a DB: {e}. Posiciones no se persistirán.")
+        return None
+
 
 async def main():
     log.info("Qilin ADS-B ingestor (Airplanes.live) arrancando...")
     zones = load_zones()
     redis = aioredis.from_url(REDIS_URL, decode_responses=True)
+    db    = await connect_db()
 
     headers = {"User-Agent": "Qilin/1.0 geopolitical-intelligence-platform"}
+    cycle   = 0
 
-    async with httpx.AsyncClient(headers=headers) as client:
+    async with httpx.AsyncClient(headers=headers) as http:
         while True:
             mil_count = 0
+            cycle_positions: list[dict] = []
 
-            # Militares globales — /mil devuelve todo el mundo, filtramos por zona
-            mil_aircraft = await fetch_aircraft(client, f"{BASE_URL}/mil")
+            mil_aircraft = await fetch_aircraft(http, f"{BASE_URL}/mil")
             log.info(f"Militares globales recibidos: {len(mil_aircraft)}")
 
             for ac in mil_aircraft:
                 lat, lon = ac.get("lat"), ac.get("lon")
-                for zone_name, zone_cfg in zones:
-                    if in_zone(lat, lon, zone_cfg):
-                        await publish(redis, parse_aircraft(ac, zone_name, "military"))
-                        mil_count += 1
-                        break  # una zona por avión
+                # Asignar zona si cae dentro de alguna, "global" si no
+                zone_name = "global"
+                for zn, zc in zones:
+                    if in_zone(lat, lon, zc):
+                        zone_name = zn
+                        break
+                parsed = parse_aircraft(ac, zone_name, "military")
+                await publish_redis(redis, parsed)
+                cycle_positions.append(parsed)
+                mil_count += 1
 
-            log.info(f"Ciclo completo — militares en zonas: {mil_count}")
+            log.info(f"Ciclo completo — militares publicados: {mil_count}")
+
+            if db and cycle_positions:
+                try:
+                    await persist_batch(db, cycle_positions)
+                    cycle += 1
+                    if cycle % 10 == 1:
+                        log.info(f"DB: {len(cycle_positions)} posiciones persistidas (ciclo {cycle})")
+                except Exception as e:
+                    log.error(f"Error guardando posiciones en DB: {e}")
+                    db = await connect_db()
+
             await asyncio.sleep(POLL_INTERVAL)
 
 
