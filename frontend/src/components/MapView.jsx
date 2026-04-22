@@ -51,6 +51,23 @@ function makePlaneIcon(color, size = 24) {
   return ctx.getImageData(0, 0, size, size)
 }
 
+function makeShipIcon(color, size = 20) {
+  const c = document.createElement('canvas')
+  c.width = size; c.height = size
+  const ctx = c.getContext('2d')
+  const cx = size / 2
+  ctx.fillStyle = color; ctx.globalAlpha = 0.92
+  ctx.beginPath()
+  ctx.moveTo(cx, 1)              // bow
+  ctx.lineTo(cx + 5, size * 0.3) // starboard bow shoulder
+  ctx.lineTo(cx + 5, size - 3)   // starboard stern
+  ctx.lineTo(cx - 5, size - 3)   // port stern
+  ctx.lineTo(cx - 5, size * 0.3) // port bow shoulder
+  ctx.closePath()
+  ctx.fill()
+  return ctx.getImageData(0, 0, size, size)
+}
+
 // ── GeoJSON helpers ────────────────────────────────────────────
 function zonesToGeoJSON() {
   return {
@@ -106,6 +123,33 @@ function toGeoJSON(entities, iconFn) {
   }
 }
 
+function vesselsToGeoJSON(vessels) {
+  return {
+    type: 'FeatureCollection',
+    features: vessels.map(v => ({
+      type: 'Feature',
+      properties: {
+        id:          v.id,
+        mmsi:        v.mmsi,
+        label:       v.name || v.mmsi,
+        type:        v.type,
+        heading:     v.heading || 0,
+        speed:       v.speed,
+        flag:        v.flag,
+        company:     v.company,
+        destination: v.destination,
+        ais_active:  v.ais_active,
+        zone:        v.zone,
+        icon: v.type === 'military' ? 'ship-military'
+             : v.type === 'tanker'  ? 'ship-tanker'
+             : v.type === 'cargo'   ? 'ship-cargo'
+             : 'ship-unknown',
+      },
+      geometry: { type: 'Point', coordinates: [v.lon, v.lat] },
+    })),
+  }
+}
+
 function alertsGeoJSON(alerts) {
   return {
     type: 'FeatureCollection',
@@ -118,7 +162,7 @@ function alertsGeoJSON(alerts) {
 }
 
 // ── Component ──────────────────────────────────────────────────
-export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAddTrail, onRemoveTrail, onClearTrails, onSelectAircraft }) {
+export default function MapView({ aircraft, vessels = [], alerts, flyTarget, trails = {}, onAddTrail, onRemoveTrail, onClearTrails, onSelectAircraft, onSelectVessel }) {
   const containerRef = useRef(null)
   const mapRef       = useRef(null)
   const [ready, setReady]               = useState(false)
@@ -144,6 +188,10 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
       map.addImage('plane-civil',    makePlaneIcon('#00c8ff'))
       map.addImage('plane-military', makePlaneIcon('#ff3b4a', 26))
       map.addImage('plane-vip',      makePlaneIcon('#ffd60a', 26))
+      map.addImage('ship-military', makeShipIcon('#f43f5e', 20))
+      map.addImage('ship-tanker',   makeShipIcon('#f59e0b', 18))
+      map.addImage('ship-cargo',    makeShipIcon('#60a5fa', 18))
+      map.addImage('ship-unknown',  makeShipIcon('#64748b', 16))
 
       // ── Zones (label only) ──
       map.addSource('zones', { type: 'geojson', data: zonesToGeoJSON() })
@@ -175,6 +223,42 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
           'text-size':9, 'text-offset':[0,1.2], 'text-anchor':'top', 'text-allow-overlap':false },
         paint:{ 'text-color':'rgba(200,216,232,0.7)', 'text-halo-color':'rgba(0,0,0,0.8)', 'text-halo-width':1 } })
 
+      // ── Vessels ──
+      map.addSource('vessels-src', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addLayer({ id: 'vessels-layer', type: 'symbol', source: 'vessels-src',
+        layout: {
+          'icon-image': ['get', 'icon'],
+          'icon-rotate': ['get', 'heading'],
+          'icon-rotation-alignment': 'map',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-size': 1,
+        },
+        paint: { 'icon-opacity': 0.9 },
+      })
+
+      map.addLayer({ id: 'vessels-labels', type: 'symbol', source: 'vessels-src',
+        minzoom: 6,
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-font': ['Noto Sans Regular'],
+          'text-size': 9,
+          'text-offset': [0, 1.2],
+          'text-anchor': 'top',
+          'text-allow-overlap': false,
+        },
+        paint: { 'text-color': 'rgba(200,216,232,0.65)', 'text-halo-color': 'rgba(0,0,0,0.8)', 'text-halo-width': 1 },
+      })
+
+      map.on('click', 'vessels-layer', e => {
+        const props = e.features[0]?.properties
+        if (props && onSelectVessel) {
+          onSelectVessel({ ...props, lon: e.lngLat.lng, lat: e.lngLat.lat })
+        }
+      })
+      map.on('mouseenter', 'vessels-layer', () => { map.getCanvas().style.cursor = 'pointer' })
+      map.on('mouseleave', 'vessels-layer', () => { map.getCanvas().style.cursor = '' })
+
       // ── Click handlers ──
       map.on('click', 'aircraft-layer', e => {
         const props = e.features[0]?.properties
@@ -186,10 +270,10 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
       map.on('mouseleave', 'aircraft-layer', () => { map.getCanvas().style.cursor = '' })
 
       map.on('click', e => {
-        const hits = map.queryRenderedFeatures(e.point, { layers: ['aircraft-layer'] })
-        if (!hits.length && onSelectAircraft) {
-          onSelectAircraft(null)
-        }
+        const acHits     = map.queryRenderedFeatures(e.point, { layers: ['aircraft-layer'] })
+        const vesselHits = map.queryRenderedFeatures(e.point, { layers: ['vessels-layer'] })
+        if (!acHits.length && onSelectAircraft)   onSelectAircraft(null)
+        if (!vesselHits.length && onSelectVessel) onSelectVessel(null)
       })
 
       setReady(true)
@@ -208,6 +292,14 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
       )
     } catch (_) {}
   }, [aircraft, ready])
+
+  // Update vessels source
+  useEffect(() => {
+    if (!ready || !mapRef.current) return
+    try {
+      mapRef.current.getSource('vessels-src')?.setData(vesselsToGeoJSON(vessels))
+    } catch (_) {}
+  }, [vessels, ready])
 
   // Manage trail polyline layers per tracked aircraft
   useEffect(() => {
