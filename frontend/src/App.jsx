@@ -1,10 +1,9 @@
-import { useState, useMemo, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import ProtectedRoute    from './components/ProtectedRoute'
 import TopBar            from './components/TopBar'
 import AnalystView       from './components/AnalystView'
-import AlertPanel        from './components/AlertPanel'
-import FilterPanel       from './components/FilterPanel'
+import TacticalPanel     from './components/TacticalPanel'
 import BottomBar         from './components/BottomBar'
 import ChatBot           from './components/ChatBot'
 import LandingPage       from './pages/LandingPage'
@@ -23,13 +22,6 @@ import { useAircraftTrail } from './hooks/useAircraftTrail'
 
 const MapView = lazy(() => import('./components/MapView'))
 
-const DEFAULT_FILTERS = {
-  civil:             true,
-  military_aircraft: true,
-  vip:               true,
-  alerts:            true,
-}
-
 function initUser() {
   const token    = sessionStorage.getItem('qilin_token')
   const username = sessionStorage.getItem('qilin_user')
@@ -41,33 +33,12 @@ function AppShell() {
   const [user,       setUser]       = useState(initUser)
   const [activeView, setActiveView] = useState('map')
   const [view,       setView]       = useState('home')
-  const [filters,    setFilters]    = useState(DEFAULT_FILTERS)
-  const [flyTarget,  setFlyTarget]  = useState(null)
+  const [flyTarget,        setFlyTarget]        = useState(null)
+  const [selectedAircraft, setSelectedAircraft] = useState(null)
   const navigate = useNavigate()
 
   const { aircraft, alerts, stats, wsStatus } = useQilinData()
   const { trails, addTrail, removeTrail, clearAll } = useAircraftTrail()
-
-  function toggleFilter(key) {
-    setFilters(prev => ({ ...prev, [key]: !prev[key] }))
-  }
-
-  const visibleAircraft = useMemo(() => aircraft.filter(a => {
-    if (a.type === 'military') return filters.military_aircraft
-    if (a.type === 'vip')      return filters.vip
-    return filters.civil
-  }), [aircraft, filters])
-
-  const visibleAlerts = useMemo(() =>
-    filters.alerts ? alerts : []
-  , [alerts, filters])
-
-  const counts = useMemo(() => ({
-    civil:             aircraft.filter(a => a.type === 'civil').length,
-    military_aircraft: aircraft.filter(a => a.type === 'military').length,
-    vip:               aircraft.filter(a => a.type === 'vip').length,
-    alerts:            alerts.length,
-  }), [aircraft, alerts])
 
   // Analyst view
   if (activeView === 'analyst') {
@@ -97,14 +68,23 @@ function AppShell() {
             <LoadingState message="CARGANDO MAPA..." variant="map" />
           </div>
         }>
-          <MapView aircraft={visibleAircraft} alerts={visibleAlerts} flyTarget={flyTarget}
-            trails={trails} onAddTrail={addTrail} onRemoveTrail={removeTrail} onClearTrails={clearAll} />
+          <MapView aircraft={aircraft} alerts={[]} flyTarget={flyTarget}
+            trails={trails} onAddTrail={addTrail} onRemoveTrail={removeTrail} onClearTrails={clearAll}
+            onSelectAircraft={setSelectedAircraft} />
         </Suspense>
         <aside style={{ gridColumn:2, gridRow:2, display:'flex', flexDirection:'column',
           background:'var(--bg-1)', borderLeft:'1px solid var(--border-md)', overflow:'hidden' }}>
-          <FilterPanel filters={filters} onToggle={toggleFilter} counts={counts} />
-          <AlertPanel alerts={visibleAlerts} stats={stats}
-            onAlertClick={a => setFlyTarget({ lon: a.lon, lat: a.lat })} />
+          <TacticalPanel
+            selectedAircraft={selectedAircraft}
+            onClose={() => setSelectedAircraft(null)}
+            trails={trails}
+            onAddTrail={addTrail}
+            onRemoveTrail={removeTrail}
+            onFlyTo={(icao24) => {
+              const a = aircraft.find(x => x.id === icao24)
+              if (a) setFlyTarget({ lon: a.lon, lat: a.lat })
+            }}
+          />
         </aside>
         <BottomBar stats={stats} />
         <ChatBot />
