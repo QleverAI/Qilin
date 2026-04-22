@@ -242,6 +242,11 @@ class SourceFavoriteRequest(BaseModel):
     source_name: str | None = None
 
 
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 _LANDING_CHAT_SYSTEM = """Eres Qilin, el asistente de la plataforma de inteligencia geopolítica Qilin.
 
 Tu función es ayudar a visitantes de la web a entender la plataforma y elegir el plan correcto.
@@ -1535,6 +1540,62 @@ async def remove_source_favorite(
     except Exception as e:
         log.error(f"remove_source_favorite error: {e}")
         return {"ok": False}
+    return {"ok": True}
+
+
+# ── PROFILE ───────────────────────────────────────────────────────────────────
+
+@app.get("/me")
+async def get_me(user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return {"username": user, "email": None, "plan": "scout", "created_at": None}
+    try:
+        row = await app.state.db.fetchrow(
+            "SELECT username, email, plan, created_at FROM users WHERE username=$1",
+            user,
+        )
+        if not row:
+            return {"username": user, "email": None, "plan": "scout", "created_at": None}
+        return {
+            "username": row["username"],
+            "email": row["email"],
+            "plan": row["plan"],
+            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+        }
+    except Exception as e:
+        log.error(f"get_me error: {e}")
+        return {"username": user, "email": None, "plan": "scout", "created_at": None}
+
+
+@app.post("/me/password")
+async def change_password(req: PasswordChangeRequest, user: str = Depends(get_current_user)):
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=422, detail="La contraseña debe tener al menos 8 caracteres")
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    try:
+        row = await app.state.db.fetchrow(
+            "SELECT password_hash FROM users WHERE username=$1", user
+        )
+    except Exception as e:
+        log.error(f"change_password fetch error: {e}")
+        raise HTTPException(status_code=500, detail="Error interno")
+    if not row:
+        raise HTTPException(status_code=403, detail="Contraseña gestionada por el administrador")
+    try:
+        match = bcrypt.checkpw(req.current_password.encode(), row["password_hash"].encode())
+    except Exception:
+        match = False
+    if not match:
+        raise HTTPException(status_code=401, detail="Contraseña actual incorrecta")
+    new_hash = bcrypt.hashpw(req.new_password.encode(), bcrypt.gensalt(12)).decode()
+    try:
+        await app.state.db.execute(
+            "UPDATE users SET password_hash=$1 WHERE username=$2", new_hash, user
+        )
+    except Exception as e:
+        log.error(f"change_password update error: {e}")
+        raise HTTPException(status_code=500, detail="Error al actualizar la contraseña")
     return {"ok": True}
 
 
