@@ -52,31 +52,23 @@ function makePlaneIcon(color, size = 24) {
 }
 
 // ── GeoJSON helpers ────────────────────────────────────────────
-function makeCirclePolygon(clon, clat, radiusDeg, n = 72) {
-  const cosLat = Math.cos(clat * Math.PI / 180)
-  const pts = []
-  for (let i = 0; i <= n; i++) {
-    const a = (i / n) * 2 * Math.PI
-    pts.push([clon + (radiusDeg / cosLat) * Math.cos(a), clat + radiusDeg * Math.sin(a)])
-  }
-  return pts
-}
-
 function zonesToGeoJSON() {
   return {
     type: 'FeatureCollection',
-    features: ZONES.map(z => {
-      const clat = (z.lat[0] + z.lat[1]) / 2
-      const clon = (z.lon[0] + z.lon[1]) / 2
-      const dlat = (z.lat[1] - z.lat[0]) / 2
-      const dlon = (z.lon[1] - z.lon[0]) / 2
-      const radiusDeg = Math.sqrt(dlat * dlat + dlon * dlon)
-      return {
-        type: 'Feature',
-        properties: { label: z.label, fill: z.color, stroke: z.border },
-        geometry: { type: 'Polygon', coordinates: [makeCirclePolygon(clon, clat, radiusDeg)] },
-      }
-    }),
+    features: ZONES.map(z => ({
+      type: 'Feature',
+      properties: { label: z.label, fill: z.color, stroke: z.border },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [z.lon[0], z.lat[0]],
+          [z.lon[1], z.lat[0]],
+          [z.lon[1], z.lat[1]],
+          [z.lon[0], z.lat[1]],
+          [z.lon[0], z.lat[0]],
+        ]],
+      },
+    })),
   }
 }
 
@@ -133,8 +125,6 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
   const [routeLoading, setRouteLoading] = useState(false)
   const [meta, setMeta]                 = useState(null)
   const [metaLoading, setMetaLoading]   = useState(false)
-  const animRef  = useRef(null)
-  const pulseRef = useRef(0)
 
   function authHdr() {
     const token = sessionStorage.getItem('qilin_token')
@@ -203,35 +193,12 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
         paint:{ 'text-color':['get','stroke'], 'text-halo-color':'rgba(0,0,0,0.7)', 'text-halo-width':1.5 },
       })
 
-      // ── Chokepoints ──
+      // ── Chokepoints (label only) ──
       map.addSource('chokes', { type: 'geojson', data: chokesToGeoJSON() })
-      map.addLayer({ id:'chokes-dot', type:'circle', source:'chokes',
-        paint:{ 'circle-radius':5, 'circle-color':'#ffb020', 'circle-opacity':.85,
-          'circle-stroke-width':1, 'circle-stroke-color':'rgba(255,176,32,0.4)' } })
       map.addLayer({ id:'chokes-label', type:'symbol', source:'chokes',
-        layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'], 'text-size':9, 'text-offset':[1,0], 'text-anchor':'left', 'text-allow-overlap':true },
-        paint:{ 'text-color':'rgba(255,176,32,0.75)', 'text-halo-color':'rgba(0,0,0,0.6)', 'text-halo-width':1 },
+        layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'], 'text-size':9, 'text-anchor':'center', 'text-allow-overlap':true },
+        paint:{ 'text-color':'rgba(255,176,32,0.65)', 'text-halo-color':'rgba(0,0,0,0.6)', 'text-halo-width':1 },
       })
-
-      // ── Alert rings (animated) ──
-      map.addSource('alerts-src', { type:'geojson', data:{ type:'FeatureCollection', features:[] } })
-      map.addLayer({ id:'alerts-outer', type:'circle', source:'alerts-src',
-        paint:{ 'circle-radius':20, 'circle-color':'transparent',
-          'circle-stroke-width':1.5, 'circle-stroke-color':['case',
-            ['==',['get','severity'],'high'],'#ff3b4a',
-            ['==',['get','severity'],'medium'],'#ffb020','#00e5a0'],
-          'circle-stroke-opacity':0.5 } })
-      map.addLayer({ id:'alerts-inner', type:'circle', source:'alerts-src',
-        paint:{ 'circle-radius':8, 'circle-color':'transparent',
-          'circle-stroke-width':2, 'circle-stroke-color':['case',
-            ['==',['get','severity'],'high'],'#ff3b4a',
-            ['==',['get','severity'],'medium'],'#ffb020','#00e5a0'],
-          'circle-stroke-opacity':0.8 } })
-      map.addLayer({ id:'alerts-dot', type:'circle', source:'alerts-src',
-        paint:{ 'circle-radius':3, 'circle-color':['case',
-            ['==',['get','severity'],'high'],'#ff3b4a',
-            ['==',['get','severity'],'medium'],'#ffb020','#00e5a0'],
-          'circle-opacity':0.95 } })
 
       // ── Aircraft ──
       map.addSource('aircraft-src', { type:'geojson', data:{ type:'FeatureCollection', features:[] } })
@@ -285,30 +252,6 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
       )
     } catch (_) {}
   }, [aircraft, ready])
-
-  // Update alert source
-  useEffect(() => {
-    if (!ready || !mapRef.current) return
-    try {
-      mapRef.current.getSource('alerts-src')?.setData(alertsGeoJSON(alerts))
-    } catch (_) {}
-  }, [alerts, ready])
-
-  // Animate alert rings pulse
-  useEffect(() => {
-    if (!ready || !mapRef.current) return
-    function pulse() {
-      pulseRef.current += 0.04
-      const t = (Math.sin(pulseRef.current) + 1) / 2
-      try {
-        mapRef.current.setPaintProperty('alerts-outer', 'circle-radius', 18 + t * 10)
-        mapRef.current.setPaintProperty('alerts-outer', 'circle-stroke-opacity', 0.15 + t * 0.35)
-      } catch (_) {}
-      animRef.current = requestAnimationFrame(pulse)
-    }
-    animRef.current = requestAnimationFrame(pulse)
-    return () => cancelAnimationFrame(animRef.current)
-  }, [ready])
 
   // Manage trail polyline layers per tracked aircraft
   useEffect(() => {
