@@ -32,6 +32,20 @@ globs: frontend/src/**/*.{js,jsx}
 - `documents` — DocumentsPage
 - `social` — SocialPage
 
+> `AnalystView` fue eliminada. `AnalystView.jsx` y `useAnalystData.js` han sido borrados. `App.jsx` ya no tiene estado `activeView` ni pasa `activeMode`/`onModeChange` a TopBar.
+
+## Sistema i18n (ES/EN)
+
+- Archivos de traducciones: `src/i18n/es.js` y `src/i18n/en.js` — diccionarios planos de clave → string
+- Hook: `src/hooks/useLanguage.jsx` — exporta `LanguageProvider` y `useLang()`
+- Provider montado en `src/main.jsx` envolviendo `<App />`
+- Uso: `const { t, lang, switchLang } = useLang()` dentro de cualquier componente
+- Sustitución de variables: `t('pagination.page_of', { page: 2, total: 10 })`
+- Idioma persistido en `localStorage` bajo clave `qilin_lang` (default `'es'`)
+- El toggle ES|EN vive en `TopBar.jsx` (mismo estilo widget que el antiguo MAP/ANALYST)
+- `FilterGroup` usa `''` (string vacío) como sentinel interno para "mostrar todos" — el prop `allLabel` es solo texto de display
+- Para añadir una traducción nueva: añadir la clave en ambos `es.js` y `en.js`, luego usar `t('la.clave')` en el componente
+
 ## Build
 - `npm run dev` — servidor de desarrollo en :3000 con HMR
 - `npm run build` — build de producción en `dist/`
