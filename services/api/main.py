@@ -1582,13 +1582,18 @@ async def change_password(req: PasswordChangeRequest, user: str = Depends(get_cu
         raise HTTPException(status_code=500, detail="Error interno")
     if not row:
         raise HTTPException(status_code=403, detail="Contraseña gestionada por el administrador")
+    loop = asyncio.get_event_loop()
     try:
-        match = bcrypt.checkpw(req.current_password.encode(), row["password_hash"].encode())
+        match = await loop.run_in_executor(
+            None, lambda: bcrypt.checkpw(req.current_password.encode(), row["password_hash"].encode())
+        )
     except Exception:
         match = False
     if not match:
         raise HTTPException(status_code=401, detail="Contraseña actual incorrecta")
-    new_hash = bcrypt.hashpw(req.new_password.encode(), bcrypt.gensalt(12)).decode()
+    new_hash = await loop.run_in_executor(
+        None, lambda: bcrypt.hashpw(req.new_password.encode(), bcrypt.gensalt(12)).decode()
+    )
     try:
         await app.state.db.execute(
             "UPDATE users SET password_hash=$1 WHERE username=$2", new_hash, user
