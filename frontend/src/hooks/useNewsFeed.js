@@ -13,7 +13,7 @@ export function useNewsFeed() {
     async function fetchAll() {
       try {
         const [rawArticles, rawSources] = await Promise.all([
-          apiFetch('/api/news/feed?limit=100'),
+          apiFetch('/api/news/feed?limit=1000'),
           apiFetch('/api/news/sources'),
         ])
         if (cancelled) return

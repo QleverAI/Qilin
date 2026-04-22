@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNewsFeed } from '../hooks/useNewsFeed'
 import { useSourceFavorites } from '../hooks/useSourceFavorites'
 import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
@@ -34,6 +34,9 @@ const SECTOR_COLOR = {
   crisis_humanitaria:'rgba(0,229,160,0.8)',
   nuclear:           'rgba(255,59,74,1)',
 }
+
+const SEV_ORDER  = { high: 3, medium: 2, low: 1 }
+const PAGE_SIZE  = 100
 
 function domainOf(url) {
   try { return new URL(url).hostname.replace('www.', '') } catch { return '' }
@@ -73,6 +76,75 @@ function RelevanceBar({ value }) {
   )
 }
 
+// ── Paginación ─────────────────────────────────────────────────────────────────
+
+function getPageNums(current, total) {
+  if (total <= 9) return Array.from({ length: total }, (_, i) => i + 1)
+  const set = new Set([1, 2, current - 2, current - 1, current, current + 1, current + 2, total - 1, total])
+  const nums = [...set].filter(n => n >= 1 && n <= total).sort((a, b) => a - b)
+  const result = []
+  for (let i = 0; i < nums.length; i++) {
+    if (i > 0 && nums[i] - nums[i - 1] > 1) result.push('…')
+    result.push(nums[i])
+  }
+  return result
+}
+
+function Pagination({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null
+  const nums = getPageNums(page, totalPages)
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      gap: '4px', padding: '16px 0 8px',
+      fontFamily: 'var(--mono)',
+    }}>
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        style={{
+          background: 'var(--bg-2)', border: '1px solid var(--border)',
+          borderRadius: '2px', color: page === 1 ? 'var(--txt-3)' : 'var(--txt-2)',
+          fontFamily: 'var(--mono)', fontSize: '11px',
+          padding: '4px 9px', cursor: page === 1 ? 'default' : 'pointer',
+          opacity: page === 1 ? 0.4 : 1,
+        }}
+      >‹</button>
+
+      {nums.map((n, i) =>
+        n === '…'
+          ? <span key={`e${i}`} style={{ fontSize: '11px', color: 'var(--txt-3)', padding: '0 2px' }}>…</span>
+          : <button
+              key={n}
+              onClick={() => onChange(n)}
+              style={{
+                background: n === page ? 'rgba(0,200,255,0.12)' : 'var(--bg-2)',
+                border: n === page ? '1px solid rgba(0,200,255,0.5)' : '1px solid var(--border)',
+                borderRadius: '2px',
+                color: n === page ? 'var(--cyan)' : 'var(--txt-2)',
+                fontFamily: 'var(--mono)', fontSize: '11px', fontWeight: n === page ? '700' : '400',
+                padding: '4px 8px', minWidth: '28px',
+                cursor: n === page ? 'default' : 'pointer',
+              }}
+            >{n}</button>
+      )}
+
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page === totalPages}
+        style={{
+          background: 'var(--bg-2)', border: '1px solid var(--border)',
+          borderRadius: '2px', color: page === totalPages ? 'var(--txt-3)' : 'var(--txt-2)',
+          fontFamily: 'var(--mono)', fontSize: '11px',
+          padding: '4px 9px', cursor: page === totalPages ? 'default' : 'pointer',
+          opacity: page === totalPages ? 0.4 : 1,
+        }}
+      >›</button>
+    </div>
+  )
+}
+
 // ── Modal ──────────────────────────────────────────────────────────────────────
 
 function NewsModal({ article, onClose }) {
@@ -82,7 +154,6 @@ function NewsModal({ article, onClose }) {
   const domain   = article.url ? domainOf(article.url) : ''
   const pubDate  = article.time ? new Date(article.time).toLocaleString('es-ES', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : ''
 
-  // Cerrar con Escape
   useEffect(() => {
     const handler = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -113,7 +184,6 @@ function NewsModal({ article, onClose }) {
           maxHeight: '85vh',
         }}
       >
-        {/* Imagen */}
         {article.image_url && (
           <div style={{ width: '100%', height: '200px', overflow: 'hidden', flexShrink: 0 }}>
             <img
@@ -125,10 +195,8 @@ function NewsModal({ article, onClose }) {
           </div>
         )}
 
-        {/* Contenido */}
         <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
 
-          {/* Cabecera: fuente + fecha + cerrar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
             {favicon && (
               <img src={favicon} alt="" width={20} height={20} style={{ borderRadius: '3px', flexShrink: 0 }}
@@ -152,7 +220,6 @@ function NewsModal({ article, onClose }) {
             >×</button>
           </div>
 
-          {/* Badges: severidad + país + tipo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
             <span style={{
               fontSize: '9px', fontWeight: '700', letterSpacing: '.12em',
@@ -175,26 +242,22 @@ function NewsModal({ article, onClose }) {
             )}
           </div>
 
-          {/* Titular */}
           <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--txt-1)', lineHeight: 1.4, marginBottom: '14px' }}>
             {article.title}
           </div>
 
-          {/* Resumen */}
           {article.summary && (
             <div style={{ fontSize: '12px', color: 'var(--txt-2)', lineHeight: 1.7, marginBottom: '16px' }}>
               {article.summary}
             </div>
           )}
 
-          {/* Sectores */}
           {sectors.length > 0 && (
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {sectors.map(s => <SectorTag key={s} sector={s} large />)}
             </div>
           )}
 
-          {/* Relevancia */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ fontSize: '8px', fontFamily: 'var(--mono)', color: 'var(--txt-3)', letterSpacing: '.15em', marginBottom: '6px' }}>
               RELEVANCIA GEOPOLÍTICA
@@ -202,7 +265,6 @@ function NewsModal({ article, onClose }) {
             <RelevanceBar value={article.relevance || 50} />
           </div>
 
-          {/* Botón leer */}
           {article.url && (
             <a
               href={article.url}
@@ -258,7 +320,6 @@ function NewsCard({ article, onClick, isFav, onToggleFav }) {
       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-md)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
-      {/* Imagen del artículo */}
       {article.image_url && (
         <div style={{ width: '100%', height: '160px', overflow: 'hidden', flexShrink: 0 }}>
           <img
@@ -271,7 +332,6 @@ function NewsCard({ article, onClick, isFav, onToggleFav }) {
       )}
 
       <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* Meta: favicon + fuente + país */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '7px' }}>
           {favicon && (
             <img src={favicon} alt="" width={14} height={14} style={{ borderRadius: '2px', flexShrink: 0 }}
@@ -297,7 +357,6 @@ function NewsCard({ article, onClick, isFav, onToggleFav }) {
           >★</button>
         </div>
 
-        {/* Titular */}
         <div style={{
           fontSize: 'var(--body-sm)', fontWeight: '600', color: 'var(--txt-1)', lineHeight: 1.4,
           flex: 1, marginBottom: '8px',
@@ -307,7 +366,6 @@ function NewsCard({ article, onClick, isFav, onToggleFav }) {
           {article.title}
         </div>
 
-        {/* Footer: sectores + severidad */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
           {sectors.slice(0, 2).map(s => <SectorTag key={s} sector={s} />)}
           <span style={{
@@ -325,11 +383,8 @@ function NewsCard({ article, onClick, isFav, onToggleFav }) {
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 
-const SEV_ORDER = { high: 3, medium: 2, low: 1 }
-
 export default function NewsPage() {
   const { articles, countries, sourceTypes, zones, sectors, loading, lastUpdate } = useNewsFeed()
-
   const { isFavorite, toggleFavorite, canAddMore } = useSourceFavorites()
 
   const [sevFilter,    setSevFilter]    = useState('TODOS')
@@ -340,6 +395,17 @@ export default function NewsPage() {
   const [modalArticle, setModalArticle] = useState(null)
   const [search,       setSearch]       = useState('')
   const [sortBy,       setSortBy]       = useState('newest')
+  const [page,         setPage]         = useState(1)
+
+  const scrollRef = useRef(null)
+
+  // Reset to page 1 whenever filters or sort change
+  useEffect(() => { setPage(1) }, [sevFilter, sectorFilter, zoneFilter, countryFilter, typeFilter, search, sortBy])
+
+  // Scroll to top on page change
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
+  }, [page])
 
   const filtered = useMemo(() => {
     const list = articles.filter(a => {
@@ -359,10 +425,15 @@ export default function NewsPage() {
     return [...list].sort((a, b) => new Date(b.time) - new Date(a.time))
   }, [articles, sevFilter, sectorFilter, zoneFilter, countryFilter, typeFilter, search, sortBy])
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const rangeEnd   = Math.min(page * PAGE_SIZE, filtered.length)
+
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: 'var(--bg-0)' }}>
 
-      {/* Modal */}
       {modalArticle && (
         <NewsModal article={modalArticle} onClose={() => setModalArticle(null)} />
       )}
@@ -413,7 +484,12 @@ export default function NewsPage() {
             NEWS INTELLIGENCE · RSS
           </span>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-md)', color: 'var(--txt-3)', marginLeft: 'auto' }}>
-            {loading ? 'Cargando…' : `${filtered.length} artículos · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`}
+            {loading
+              ? 'Cargando…'
+              : filtered.length > 0
+                ? `${rangeStart}–${rangeEnd} de ${filtered.length} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+                : `0 artículos · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+            }
           </span>
           <select
             value={sortBy}
@@ -438,7 +514,7 @@ export default function NewsPage() {
           </select>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
           {loading && <LoadingCards count={12} />}
           {!loading && filtered.length === 0 && (
             <EmptyState
@@ -448,24 +524,27 @@ export default function NewsPage() {
             />
           )}
           {!loading && filtered.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '10px',
-            }}>
-              {filtered.map(article => (
-                <NewsCard
-                  key={article.id || article.url}
-                  article={article}
-                  onClick={() => setModalArticle(article)}
-                  isFav={isFavorite('news', article.source)}
-                  onToggleFav={() => {
-                    if (!isFavorite('news', article.source) && !canAddMore('news')) return
-                    toggleFavorite('news', article.source, article.source)
-                  }}
-                />
-              ))}
-            </div>
+            <>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '10px',
+              }}>
+                {paginated.map(article => (
+                  <NewsCard
+                    key={article.id || article.url}
+                    article={article}
+                    onClick={() => setModalArticle(article)}
+                    isFav={isFavorite('news', article.source)}
+                    onToggleFav={() => {
+                      if (!isFavorite('news', article.source) && !canAddMore('news')) return
+                      toggleFavorite('news', article.source, article.source)
+                    }}
+                  />
+                ))}
+              </div>
+              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+            </>
           )}
         </div>
       </main>
