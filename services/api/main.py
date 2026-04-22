@@ -10,6 +10,7 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 import asyncpg
 import httpx
@@ -518,16 +519,6 @@ async def search_airfields(
         return []
 
 
-@app.get("/vessels")
-async def get_vessels(_user: str = Depends(get_current_user)):
-    redis = app.state.redis
-    keys  = await redis.keys("current:vessel:*")
-    if not keys:
-        return []
-    values = await redis.mget(*keys)
-    return [json.loads(v) for v in values if v]
-
-
 # ── VESSEL ENDPOINTS ──────────────────────────────────────────────────────────
 
 @app.get("/api/vessels")
@@ -564,7 +555,7 @@ async def get_vessel_info(mmsi: str, _user: str = Depends(get_current_user)):
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
-                f"https://en.wikipedia.org/api/rest_v1/page/summary/{name.replace(' ', '_')}",
+                f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(name.replace(' ', '_'), safe='')}",
                 headers={"User-Agent": "QilinIntelligence/1.0 carlosqc.work@gmail.com"},
             )
             if resp.status_code == 200:
@@ -630,11 +621,15 @@ async def get_vessel_routes(mmsi: str, _user: str = Depends(get_current_user)):
 async def list_vessel_favorites(_user: str = Depends(get_current_user)):
     if not app.state.db:
         return []
-    rows = await app.state.db.fetch(
-        "SELECT mmsi, name, added_at FROM vessel_favorites WHERE username=$1 ORDER BY added_at DESC",
-        _user
-    )
-    return [{"mmsi": r["mmsi"], "name": r["name"], "added_at": r["added_at"].isoformat()} for r in rows]
+    try:
+        rows = await app.state.db.fetch(
+            "SELECT mmsi, name, added_at FROM vessel_favorites WHERE username=$1 ORDER BY added_at DESC",
+            _user
+        )
+        return [{"mmsi": r["mmsi"], "name": r["name"], "added_at": r["added_at"].isoformat()} for r in rows]
+    except Exception as e:
+        log.error(f"Error fetching vessel favorites: {e}")
+        return []
 
 
 @app.post("/api/vessel-favorites")
@@ -649,18 +644,22 @@ async def add_vessel_favorite(req: VesselFavoriteRequest, _user: str = Depends(g
     except Exception as e:
         log.error(f"Error adding vessel favorite: {e}")
         raise HTTPException(status_code=500, detail="Error guardando favorito")
-    return {"status": "ok"}
+    return {"ok": True}
 
 
 @app.delete("/api/vessel-favorites/{mmsi}")
 async def remove_vessel_favorite(mmsi: str, _user: str = Depends(get_current_user)):
     if not app.state.db:
         raise HTTPException(status_code=503, detail="DB no disponible")
-    await app.state.db.execute(
-        "DELETE FROM vessel_favorites WHERE username=$1 AND mmsi=$2",
-        _user, mmsi
-    )
-    return {"status": "ok"}
+    try:
+        await app.state.db.execute(
+            "DELETE FROM vessel_favorites WHERE username=$1 AND mmsi=$2",
+            _user, mmsi
+        )
+    except Exception as e:
+        log.error(f"Error removing vessel favorite: {e}")
+        raise HTTPException(status_code=500, detail="Error eliminando favorito")
+    return {"ok": True}
 
 
 # ── RUTAS DE VUELO ───────────────────────────────────────────────────────────
