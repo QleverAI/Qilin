@@ -521,7 +521,7 @@ async def search_airfields(
 
 # ── VESSEL ENDPOINTS ──────────────────────────────────────────────────────────
 
-@app.get("/api/vessels")
+@app.get("/vessels")
 async def get_vessels_api(_user: str = Depends(get_current_user)):
     redis = app.state.redis
     keys  = await redis.keys("current:vessel:*")
@@ -531,7 +531,7 @@ async def get_vessels_api(_user: str = Depends(get_current_user)):
     return [json.loads(v) for v in values if v]
 
 
-@app.get("/api/vessels/{mmsi}/info")
+@app.get("/vessels/{mmsi}/info")
 async def get_vessel_info(mmsi: str, _user: str = Depends(get_current_user)):
     """Fetch ship photo from Wikipedia. Result cached 24h in Redis."""
     redis = app.state.redis
@@ -572,7 +572,7 @@ async def get_vessel_info(mmsi: str, _user: str = Depends(get_current_user)):
     return result
 
 
-@app.get("/api/vessels/{mmsi}/ports")
+@app.get("/vessels/{mmsi}/ports")
 async def get_vessel_ports(mmsi: str, _user: str = Depends(get_current_user)):
     if not app.state.db:
         return []
@@ -595,7 +595,7 @@ async def get_vessel_ports(mmsi: str, _user: str = Depends(get_current_user)):
         return []
 
 
-@app.get("/api/vessels/{mmsi}/routes")
+@app.get("/vessels/{mmsi}/routes")
 async def get_vessel_routes(mmsi: str, _user: str = Depends(get_current_user)):
     if not app.state.db:
         return []
@@ -617,7 +617,7 @@ async def get_vessel_routes(mmsi: str, _user: str = Depends(get_current_user)):
         return []
 
 
-@app.get("/api/vessel-favorites")
+@app.get("/vessel-favorites")
 async def list_vessel_favorites(_user: str = Depends(get_current_user)):
     if not app.state.db:
         return []
@@ -632,7 +632,7 @@ async def list_vessel_favorites(_user: str = Depends(get_current_user)):
         return []
 
 
-@app.post("/api/vessel-favorites")
+@app.post("/vessel-favorites")
 async def add_vessel_favorite(req: VesselFavoriteRequest, _user: str = Depends(get_current_user)):
     if not app.state.db:
         raise HTTPException(status_code=503, detail="DB no disponible")
@@ -647,7 +647,7 @@ async def add_vessel_favorite(req: VesselFavoriteRequest, _user: str = Depends(g
     return {"ok": True}
 
 
-@app.delete("/api/vessel-favorites/{mmsi}")
+@app.delete("/vessel-favorites/{mmsi}")
 async def remove_vessel_favorite(mmsi: str, _user: str = Depends(get_current_user)):
     if not app.state.db:
         raise HTTPException(status_code=503, detail="DB no disponible")
