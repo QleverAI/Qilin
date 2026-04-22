@@ -206,6 +206,23 @@ async def register(req: RegisterRequest):
 
 # ── REST ENDPOINTS ────────────────────────────────────────────────────────────
 
+@app.get("/api/stats")
+async def public_stats():
+    """Estadísticas públicas para la landing page. Sin autenticación."""
+    redis = app.state.redis
+    try:
+        cached = await redis.get("cache:stats:aircraft")
+        if cached:
+            return {"aircraft_active": int(cached)}
+        # Count live aircraft keys
+        keys = await redis.keys("current:aircraft:*")
+        count = len(keys)
+        await redis.set("cache:stats:aircraft", count, ex=15)
+        return {"aircraft_active": count}
+    except Exception:
+        return {"aircraft_active": 0}
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "qilin-api"}
