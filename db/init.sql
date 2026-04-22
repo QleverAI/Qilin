@@ -315,3 +315,16 @@ SELECT add_compression_policy('analyzed_events', INTERVAL '7 days');
 CREATE INDEX IF NOT EXISTS analyzed_events_zone_time_idx     ON analyzed_events (zone, time DESC);
 CREATE INDEX IF NOT EXISTS analyzed_events_severity_time_idx ON analyzed_events (severity, time DESC);
 CREATE INDEX IF NOT EXISTS analyzed_events_tags_gin          ON analyzed_events USING GIN (tags);
+
+-- ─── USUARIOS ─────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS users (
+    id            SERIAL PRIMARY KEY,
+    username      TEXT UNIQUE NOT NULL,
+    email         TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    plan          TEXT NOT NULL DEFAULT 'scout',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS users_username_idx ON users (username);
+CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
