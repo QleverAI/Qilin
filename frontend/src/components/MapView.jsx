@@ -56,13 +56,14 @@ function makeShipIcon(color, size = 20) {
   c.width = size; c.height = size
   const ctx = c.getContext('2d')
   const cx = size / 2
+  const hw = Math.round(size * 0.25)
   ctx.fillStyle = color; ctx.globalAlpha = 0.92
   ctx.beginPath()
-  ctx.moveTo(cx, 1)              // bow
-  ctx.lineTo(cx + 5, size * 0.3) // starboard bow shoulder
-  ctx.lineTo(cx + 5, size - 3)   // starboard stern
-  ctx.lineTo(cx - 5, size - 3)   // port stern
-  ctx.lineTo(cx - 5, size * 0.3) // port bow shoulder
+  ctx.moveTo(cx, 1)               // bow
+  ctx.lineTo(cx + hw, size * 0.3) // starboard bow shoulder
+  ctx.lineTo(cx + hw, size - 3)   // starboard stern
+  ctx.lineTo(cx - hw, size - 3)   // port stern
+  ctx.lineTo(cx - hw, size * 0.3) // port bow shoulder
   ctx.closePath()
   ctx.fill()
   return ctx.getImageData(0, 0, size, size)
