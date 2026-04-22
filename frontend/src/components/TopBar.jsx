@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const NAV_ITEMS = [
   { id: 'home',       label: 'INICIO'     },
@@ -25,8 +25,20 @@ function LogoIcon() {
   )
 }
 
-export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, activeMode, onModeChange }) {
+export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, activeMode, onModeChange, onLogout }) {
   const [time, setTime] = useState('')
+  const username = sessionStorage.getItem('qilin_user') || ''
+  const [ddOpen, setDdOpen] = useState(false)
+  const ddRef = useRef(null)
+
+  useEffect(() => {
+    if (!ddOpen) return
+    function handleClick(e) {
+      if (ddRef.current && !ddRef.current.contains(e.target)) setDdOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [ddOpen])
 
   useEffect(() => {
     const tick = () => {
@@ -191,6 +203,85 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
         }}>
           <span style={{ color:'var(--txt-3)', fontSize:'var(--label-sm)' }}>UTC </span>
           <span style={{ color:'var(--txt-1)' }}>{time}</span>
+        </div>
+
+        {/* User dropdown */}
+        <div ref={ddRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => setDdOpen(o => !o)}
+            style={{
+              background: ddOpen ? 'rgba(0,200,255,0.12)' : 'rgba(0,200,255,0.06)',
+              border: '1px solid rgba(0,200,255,0.25)',
+              borderRadius: '3px',
+              color: 'var(--accent)',
+              fontFamily: 'var(--mono)',
+              fontSize: 'var(--label-sm)',
+              fontWeight: '600',
+              letterSpacing: '.08em',
+              padding: '4px 10px',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '5px',
+              transition: 'background .15s',
+            }}
+          >
+            {username}
+            <span style={{ fontSize: '9px', opacity: 0.7 }}>{ddOpen ? '▴' : '▾'}</span>
+          </button>
+
+          {ddOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+              background: 'var(--bg-1)',
+              border: '1px solid var(--border-md)',
+              borderRadius: '4px',
+              minWidth: '200px',
+              zIndex: 200,
+              overflow: 'hidden',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            }}>
+              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '12px', fontWeight: '700', color: 'var(--txt-1)' }}>
+                  {username}
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--accent)', letterSpacing: '.08em', marginTop: '3px' }}>
+                  PLAN SCOUT
+                </div>
+              </div>
+              <div style={{ padding: '4px 0' }}>
+                <button
+                  onClick={() => { setDdOpen(false); onNavigate('profile') }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    background: 'none', border: 'none',
+                    fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+                    color: 'var(--txt-2)', padding: '8px 14px',
+                    cursor: 'pointer', letterSpacing: '.06em',
+                    transition: 'color .1s, background .1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'var(--txt-1)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--txt-2)' }}
+                >
+                  ⚙ Mi perfil
+                </button>
+                <button
+                  onClick={() => { setDdOpen(false); onLogout?.() }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    background: 'none', border: 'none',
+                    borderTop: '1px solid var(--border)',
+                    fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+                    color: 'var(--red)', padding: '8px 14px',
+                    cursor: 'pointer', letterSpacing: '.06em',
+                    transition: 'background .1s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(244,63,94,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  → Cerrar sesión
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
