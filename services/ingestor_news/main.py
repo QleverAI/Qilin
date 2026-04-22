@@ -38,11 +38,19 @@ POLL_INTERVAL = int(os.getenv("NEWS_POLL_INTERVAL", "900"))  # 15 min
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
-# Regex para og:image — cubre las dos variantes de orden de atributos
+# Regex para og:image y twitter:image — cubre variantes de orden de atributos
 _OG_IMAGE_RE = re.compile(
     r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']'
-    r'|<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+    r'|<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']'
+    r'|<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']'
+    r'|<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
     re.I,
+)
+
+_IMG_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
 )
 
 
@@ -58,12 +66,14 @@ def load_sources() -> list[dict]:
 
 async def fetch_og_image(client: httpx.AsyncClient, url: str) -> str | None:
     """
-    Hace GET al artículo y extrae og:image.
-    Timeout corto — si falla, devuelve None sin interrumpir el flujo.
+    Hace GET al artículo y extrae og:image / twitter:image.
+    Usa UA de Chrome para evitar bloqueos por bot-detection.
     Solo lee los primeros 32 KB para no descargar artículos completos.
     """
     try:
-        async with client.stream("GET", url, timeout=6, follow_redirects=True) as r:
+        headers = {"User-Agent": _IMG_UA, "Accept": "text/html,*/*;q=0.8"}
+        async with client.stream("GET", url, timeout=8, follow_redirects=True,
+                                 headers=headers) as r:
             if r.status_code != 200:
                 return None
             ct = r.headers.get("content-type", "")
@@ -77,7 +87,7 @@ async def fetch_og_image(client: httpx.AsyncClient, url: str) -> str | None:
         text = chunk.decode("utf-8", errors="ignore")
         m = _OG_IMAGE_RE.search(text)
         if m:
-            return (m.group(1) or m.group(2) or "").strip() or None
+            return next((g for g in m.groups() if g), "").strip() or None
     except Exception:
         pass
     return None
