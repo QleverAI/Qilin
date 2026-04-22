@@ -42,6 +42,25 @@ function normalizeAlert(raw) {
   }
 }
 
+function normalizeVessel(raw) {
+  return {
+    id:          raw.mmsi,
+    mmsi:        raw.mmsi,
+    name:        raw.name || null,
+    type:        raw.category || 'unknown',
+    lat:         raw.lat,
+    lon:         raw.lon,
+    speed:       raw.speed,
+    heading:     raw.heading ?? raw.course ?? 0,
+    course:      raw.course,
+    flag:        raw.flag || null,
+    zone:        raw.zone || null,
+    destination: raw.destination || null,
+    company:     raw.company || null,
+    ais_active:  raw.ais_active !== false,
+  }
+}
+
 function getWsUrl() {
   const token = getToken()
   return token ? `${API_WS_BASE}/ws?token=${token}` : `${API_WS_BASE}/ws`
@@ -50,6 +69,7 @@ function getWsUrl() {
 export function useQilinData() {
   const [aircraft, setAircraft] = useState([])
   const [alerts,   setAlerts]   = useState([])
+  const [vessels,  setVessels]  = useState([])
   const [wsStatus, setWsStatus] = useState('disconnected')
 
   const wsRef = useRef(null)
@@ -60,13 +80,15 @@ export function useQilinData() {
 
     async function fetchSnapshot() {
       try {
-        const [rawAircraft, rawAlerts] = await Promise.all([
+        const [rawAircraft, rawAlerts, rawVessels] = await Promise.all([
           apiFetch('/api/aircraft'),
           apiFetch('/api/alerts?limit=50'),
+          apiFetch('/api/vessels'),
         ])
         if (cancelled) return
         setAircraft((rawAircraft || []).filter(a => a.lat && a.lon).map(normalizeAircraft))
         setAlerts((rawAlerts || []).map(normalizeAlert))
+        setVessels((rawVessels || []).filter(v => v.lat && v.lon).map(normalizeVessel))
       } catch (err) {
         console.warn('[useQilinData] fetch failed:', err.message)
       }
@@ -82,11 +104,23 @@ export function useQilinData() {
       }
     }
 
+    async function pollVessels() {
+      try {
+        const raw = await apiFetch('/api/vessels')
+        if (cancelled) return
+        setVessels((raw || []).filter(v => v.lat && v.lon).map(normalizeVessel))
+      } catch (err) {
+        console.warn('[useQilinData] vessel poll failed:', err.message)
+      }
+    }
+
     fetchSnapshot()
-    const interval = setInterval(pollAircraft, 15_000)
+    const aircraftInterval = setInterval(pollAircraft, 15_000)
+    const vesselInterval   = setInterval(pollVessels,  30_000)
     return () => {
       cancelled = true
-      clearInterval(interval)
+      clearInterval(aircraftInterval)
+      clearInterval(vesselInterval)
     }
   }, [])
 
@@ -122,12 +156,14 @@ export function useQilinData() {
   }, [])
 
   const stats = {
-    aircraftTotal: aircraft.length,
-    aircraftMil:   aircraft.filter(a => a.type === 'military').length,
-    alertsHigh:    alerts.filter(a => a.severity === 'high').length,
-    alertsMedium:  alerts.filter(a => a.severity === 'medium').length,
-    alertsTotal:   alerts.length,
+    aircraftTotal:  aircraft.length,
+    aircraftMil:    aircraft.filter(a => a.type === 'military').length,
+    vesselTotal:    vessels.length,
+    vesselMil:      vessels.filter(v => v.type === 'military').length,
+    alertsHigh:     alerts.filter(a => a.severity === 'high').length,
+    alertsMedium:   alerts.filter(a => a.severity === 'medium').length,
+    alertsTotal:    alerts.length,
   }
 
-  return { aircraft, alerts, stats, wsStatus }
+  return { aircraft, vessels, alerts, stats, wsStatus }
 }
