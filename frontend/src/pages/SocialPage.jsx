@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSocialFeed } from '../hooks/useSocialFeed'
+import { useSourceFavorites } from '../hooks/useSourceFavorites'
 import FilterGroup from '../components/FilterGroup'
 import { LoadingRows } from '../components/LoadingSkeleton'
 import EmptyState from '../components/EmptyState'
@@ -250,7 +251,7 @@ function TweetModal({ post, onClose }) {
   )
 }
 
-function TweetCard({ post, onClick }) {
+function TweetCard({ post, onClick, isFav, onToggleFav }) {
   const color = CAT_COLOR[post.category] || '#888'
   return (
     <div
@@ -283,8 +284,20 @@ function TweetCard({ post, onClick }) {
         </span>
       </div>
 
-      <div style={{ fontSize: 'var(--label-sm)', color: 'var(--txt-2)', fontFamily: 'var(--mono)', marginBottom: '6px' }}>
-        {post.display}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+        <div style={{ fontSize: 'var(--label-sm)', color: 'var(--txt-2)', fontFamily: 'var(--mono)' }}>
+          {post.display}
+        </div>
+        <button
+          onClick={e => { e.stopPropagation(); onToggleFav && onToggleFav() }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: isFav ? '#ffd60a' : 'var(--txt-3)',
+            fontSize: 13, lineHeight: 1, padding: '2px 4px',
+            flexShrink: 0, transition: 'color .15s',
+          }}
+          title={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+        >★</button>
       </div>
 
       <MediaBlock url={post.media_url} type={post.media_type} tweetUrl={post.url} />
@@ -317,6 +330,7 @@ function TweetCard({ post, onClick }) {
 
 export default function SocialPage() {
   const { posts, categories, zones, loading, lastUpdate } = useSocialFeed()
+  const { isFavorite, toggleFavorite, canAddMore } = useSourceFavorites()
 
   const [catFilter,  setCatFilter]  = useState('TODAS')
   const [zoneFilter, setZoneFilter] = useState('TODAS')
@@ -412,6 +426,11 @@ export default function SocialPage() {
                   key={post.tweet_id}
                   post={post}
                   onClick={() => setModalPost(post)}
+                  isFav={isFavorite('social', post.handle)}
+                  onToggleFav={() => {
+                    if (!isFavorite('social', post.handle) && !canAddMore('social')) return
+                    toggleFavorite('social', post.handle, post.display || post.handle)
+                  }}
                 />
               ))}
             </>

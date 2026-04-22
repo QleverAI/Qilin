@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useDocsFeed } from '../hooks/useDocsFeed'
+import { useSourceFavorites } from '../hooks/useSourceFavorites'
 import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
 import FilterGroup from '../components/FilterGroup'
 import { LoadingRows } from '../components/LoadingSkeleton'
@@ -54,7 +55,7 @@ function SectorTag({ sector }) {
   )
 }
 
-function DocRow({ doc, selected, onClick }) {
+function DocRow({ doc, selected, onClick, isFav, onToggleFav }) {
   const severity = doc.severity || 'low'
   const sectors  = Array.isArray(doc.sectors) ? doc.sectors : []
   const pubDate  = doc.time
@@ -107,6 +108,16 @@ function DocRow({ doc, selected, onClick }) {
           </div>
         )}
       </div>
+      <button
+        onClick={e => { e.stopPropagation(); onToggleFav && onToggleFav() }}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: isFav ? '#ffd60a' : 'var(--txt-3)',
+          fontSize: 13, lineHeight: 1, padding: '2px 4px',
+          flexShrink: 0, transition: 'color .15s',
+        }}
+        title={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+      >★</button>
     </div>
   )
 }
@@ -241,6 +252,7 @@ function DocDetail({ doc }) {
 
 export default function DocumentsPage() {
   const { docs, orgTypes, countries, sectors, failingSources, loading, lastUpdate } = useDocsFeed()
+  const { isFavorite, toggleFavorite, canAddMore } = useSourceFavorites()
 
   const [sevFilter,  setSevFilter]  = useState('TODOS')
   const [orgFilter,  setOrgFilter]  = useState('TODOS')
@@ -342,6 +354,11 @@ export default function DocumentsPage() {
                 doc={doc}
                 selected={selected === doc.id}
                 onClick={() => setSelected(selected === doc.id ? null : doc.id)}
+                isFav={isFavorite('docs', doc.source)}
+                onToggleFav={() => {
+                  if (!isFavorite('docs', doc.source) && !canAddMore('docs')) return
+                  toggleFavorite('docs', doc.source, doc.source)
+                }}
               />
             ))}
           </div>

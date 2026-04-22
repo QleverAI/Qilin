@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNewsFeed } from '../hooks/useNewsFeed'
+import { useSourceFavorites } from '../hooks/useSourceFavorites'
 import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
 import FilterGroup from '../components/FilterGroup'
 import { LoadingCards } from '../components/LoadingSkeleton'
@@ -235,7 +236,7 @@ function NewsModal({ article, onClose }) {
 
 // ── Tarjeta ────────────────────────────────────────────────────────────────────
 
-function NewsCard({ article, onClick }) {
+function NewsCard({ article, onClick, isFav, onToggleFav }) {
   const severity = article.severity || 'low'
   const sectors  = Array.isArray(article.sectors) ? article.sectors : (article.keywords || [])
   const favicon  = article.url ? faviconUrl(article.url) : null
@@ -284,6 +285,16 @@ function NewsCard({ article, onClick }) {
               {article.source_country}
             </span>
           )}
+          <button
+            onClick={e => { e.stopPropagation(); onToggleFav && onToggleFav() }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: isFav ? '#ffd60a' : 'var(--txt-3)',
+              fontSize: 13, lineHeight: 1, padding: '2px 4px',
+              flexShrink: 0, transition: 'color .15s',
+            }}
+            title={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+          >★</button>
         </div>
 
         {/* Titular */}
@@ -316,6 +327,8 @@ function NewsCard({ article, onClick }) {
 
 export default function NewsPage() {
   const { articles, countries, sourceTypes, zones, sectors, loading, lastUpdate } = useNewsFeed()
+
+  const { isFavorite, toggleFavorite, canAddMore } = useSourceFavorites()
 
   const [sevFilter,    setSevFilter]    = useState('TODOS')
   const [sectorFilter, setSectorFilter] = useState('TODOS')
@@ -415,6 +428,11 @@ export default function NewsPage() {
                   key={article.id || article.url}
                   article={article}
                   onClick={() => setModalArticle(article)}
+                  isFav={isFavorite('news', article.source)}
+                  onToggleFav={() => {
+                    if (!isFavorite('news', article.source) && !canAddMore('news')) return
+                    toggleFavorite('news', article.source, article.source)
+                  }}
                 />
               ))}
             </div>
