@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createChart, CandlestickSeries, HistogramSeries } from 'lightweight-charts'
 import { useMarkets } from '../hooks/useMarkets'
+import { useLang } from '../hooks/useLanguage'
 
 const PERIODS = [
   { label: '1D', value: '1d' },
@@ -80,6 +81,7 @@ function GroupSection({ group, assets, selected, onSelect }) {
 }
 
 function PriceChart({ symbol, fetchHistory }) {
+  const { t } = useLang()
   const containerRef = useRef(null)
   const chartRef     = useRef(null)
   const candleRef    = useRef(null)
@@ -202,7 +204,7 @@ function PriceChart({ symbol, fetchHistory }) {
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(0,0,0,0.3)', fontSize: '12px', color: 'var(--txt-2)',
           }}>
-            Cargando...
+            {t('markets.chart_load')}
           </div>
         )}
         {noData && !loading && (
@@ -210,7 +212,7 @@ function PriceChart({ symbol, fetchHistory }) {
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '12px', color: 'var(--txt-3)',
           }}>
-            Sin datos disponibles
+            {t('markets.no_data')}
           </div>
         )}
       </div>
@@ -219,6 +221,7 @@ function PriceChart({ symbol, fetchHistory }) {
 }
 
 export default function MarketsPage() {
+  const { t } = useLang()
   const { quotes, loading, fetchHistory } = useMarkets()
   const [selected, setSelected] = useState(null)
 
@@ -245,7 +248,7 @@ export default function MarketsPage() {
       }}>
         {loading ? (
           <div style={{ padding: '20px 12px', color: 'var(--txt-3)', fontSize: '12px' }}>
-            Cargando cotizaciones...
+            {t('markets.loading')}
           </div>
         ) : (
           GROUP_ORDER.map(g => groups[g] ? (
@@ -294,7 +297,7 @@ export default function MarketsPage() {
           />
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--txt-3)', fontSize: '13px' }}>
-            Selecciona un activo
+            {t('markets.select')}
           </div>
         )}
       </div>

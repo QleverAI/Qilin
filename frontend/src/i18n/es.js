@@ -90,6 +90,12 @@ export const es = {
   'profile.pw.submit':          'ACTUALIZAR CONTRASEÑA',
   'profile.plan.change':        'CAMBIAR PLAN →',
 
+  // Markets
+  'markets.loading':    'Cargando cotizaciones...',
+  'markets.select':     'Selecciona un activo',
+  'markets.chart_load': 'Cargando...',
+  'markets.no_data':    'Sin datos disponibles',
+
   // Documents
   'docs.header':           'DOCUMENTOS OFICIALES',
   'docs.no_docs':          'SIN DOCUMENTOS',

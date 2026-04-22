@@ -90,6 +90,12 @@ export const en = {
   'profile.pw.submit':          'UPDATE PASSWORD',
   'profile.plan.change':        'CHANGE PLAN →',
 
+  // Markets
+  'markets.loading':    'Loading quotes...',
+  'markets.select':     'Select an asset',
+  'markets.chart_load': 'Loading...',
+  'markets.no_data':    'No data available',
+
   // Documents
   'docs.header':           'OFFICIAL DOCUMENTS',
   'docs.no_docs':          'NO DOCUMENTS',
