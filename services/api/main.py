@@ -1350,6 +1350,60 @@ async def get_analytics_timeline(
     ]
 
 
+# ── SENTINEL ──────────────────────────────────────────────────────────────────
+
+@app.get("/api/sentinel/zones")
+async def get_sentinel_zones(_user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return {"zones": []}
+    try:
+        current_rows = await app.state.db.fetch("""
+            SELECT DISTINCT ON (zone_id, product)
+              zone_id, product, mean_value, baseline_mean, anomaly_ratio, time
+            FROM sentinel_observations
+            ORDER BY zone_id, product, time DESC
+        """)
+        history_rows = await app.state.db.fetch("""
+            SELECT zone_id, product,
+              DATE(time AT TIME ZONE 'UTC') AS date,
+              AVG(mean_value) AS value
+            FROM sentinel_observations
+            WHERE time >= NOW() - INTERVAL '7 days'
+            GROUP BY zone_id, product, DATE(time AT TIME ZONE 'UTC')
+            ORDER BY zone_id, product, date ASC
+        """)
+    except Exception as e:
+        log.error(f"sentinel/zones error: {e}")
+        return {"zones": []}
+
+    zones_map = {}
+    for row in current_rows:
+        zid = row["zone_id"]
+        if zid not in zones_map:
+            zones_map[zid] = {"zone_id": zid, "no2": None, "so2": None}
+        gas_key = "no2" if row["product"] == "NO2" else "so2"
+        zones_map[zid][gas_key] = {
+            "current": row["mean_value"],
+            "baseline": row["baseline_mean"],
+            "ratio": row["anomaly_ratio"],
+            "history": [],
+        }
+
+    for row in history_rows:
+        zid = row["zone_id"]
+        if zid not in zones_map:
+            continue
+        gas_key = "no2" if row["product"] == "NO2" else "so2"
+        if zones_map[zid][gas_key] is None:
+            continue
+        zones_map[zid][gas_key]["history"].append({
+            "date": str(row["date"]),
+            "value": float(row["value"]) if row["value"] is not None else None,
+        })
+
+    return {"zones": list(zones_map.values())}
+
+
 # ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 
 class ConnectionManager:
