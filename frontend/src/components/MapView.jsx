@@ -118,48 +118,10 @@ function alertsGeoJSON(alerts) {
 }
 
 // ── Component ──────────────────────────────────────────────────
-export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAddTrail, onRemoveTrail, onClearTrails }) {
+export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAddTrail, onRemoveTrail, onClearTrails, onSelectAircraft }) {
   const containerRef = useRef(null)
   const mapRef       = useRef(null)
   const [ready, setReady]               = useState(false)
-  const [detail, setDetail]             = useState(null)  // { ...props, px, py }
-  const [route, setRoute]               = useState(null)
-  const [routeLoading, setRouteLoading] = useState(false)
-  const [meta, setMeta]                 = useState(null)
-  const [metaLoading, setMetaLoading]   = useState(false)
-
-  function authHdr() {
-    const token = sessionStorage.getItem('qilin_token')
-    return token ? { Authorization: `Bearer ${token}` } : {}
-  }
-
-  async function fetchRoute(callsign) {
-    if (!callsign) { setRoute(null); return }
-    setRouteLoading(true)
-    setRoute(null)
-    try {
-      const res  = await fetch(`/api/routes/${encodeURIComponent(callsign)}`, { headers: authHdr() })
-      setRoute(res.ok ? await res.json() : {})
-    } catch (_) {
-      setRoute({})
-    } finally {
-      setRouteLoading(false)
-    }
-  }
-
-  async function fetchMeta(icao24) {
-    if (!icao24) { setMeta(null); return }
-    setMetaLoading(true)
-    setMeta(null)
-    try {
-      const res  = await fetch(`/api/meta/${encodeURIComponent(icao24)}`, { headers: authHdr() })
-      setMeta(res.ok ? await res.json() : {})
-    } catch (_) {
-      setMeta({})
-    } finally {
-      setMetaLoading(false)
-    }
-  }
 
   // Init map
   useEffect(() => {
@@ -216,10 +178,8 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
       // ── Click handlers ──
       map.on('click', 'aircraft-layer', e => {
         const props = e.features[0]?.properties
-        if (props) {
-          setDetail({ ...props, px: e.point.x, py: e.point.y })
-          fetchRoute(props.label)
-          fetchMeta(props.id)
+        if (props && onSelectAircraft) {
+          onSelectAircraft({ ...props, lon: e.lngLat.lng, lat: e.lngLat.lat })
         }
       })
       map.on('mouseenter', 'aircraft-layer', () => { map.getCanvas().style.cursor = 'pointer' })
@@ -227,10 +187,8 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
 
       map.on('click', e => {
         const hits = map.queryRenderedFeatures(e.point, { layers: ['aircraft-layer'] })
-        if (!hits.length) {
-          setDetail(null)
-          setRoute(null)
-          setMeta(null)
+        if (!hits.length && onSelectAircraft) {
+          onSelectAircraft(null)
         }
       })
 
@@ -387,145 +345,6 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
         />
       )}
 
-      {/* Entity detail card — anclado al avión */}
-      {detail && (() => {
-        // Posición del popup: desplazado arriba-derecha del icono
-        const W = 260
-        const containerW = containerRef.current?.offsetWidth  || 800
-        const containerH = containerRef.current?.offsetHeight || 600
-        const flipX = detail.px + W + 16 > containerW
-        const flipY = detail.py - 20 < 180
-        const left = flipX ? detail.px - W - 12 : detail.px + 16
-        const top  = flipY ? detail.py + 16      : detail.py - 20
-
-        return (
-          <div style={{
-            position:'absolute', left, top, zIndex:10, width:`${W}px`,
-            background:'rgba(7,14,28,0.97)', border:'1px solid rgba(0,200,255,0.35)',
-            borderRadius:'3px', boxShadow:'0 4px 24px rgba(0,0,0,0.7)',
-            fontFamily:"'IBM Plex Mono',monospace", overflow:'hidden',
-          }}>
-            {/* Foto del avión */}
-            {metaLoading && (
-              <div style={{ height:'80px', background:'rgba(0,200,255,0.04)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <span style={{ fontSize:'9px', color:'rgba(0,200,255,0.3)' }}>Cargando foto…</span>
-              </div>
-            )}
-            {!metaLoading && meta?.photo_url && (() => {
-              const flag = flagUrl(detail.origin_country)
-              return (
-                <div style={{ position:'relative' }}>
-                  <img
-                    src={meta.photo_url}
-                    alt={meta.model || detail.label}
-                    style={{ width:'100%', height:'100px', objectFit:'cover', display:'block', opacity:0.85 }}
-                    onError={e => { e.currentTarget.style.display = 'none' }}
-                  />
-                  {flag && (
-                    <img
-                      src={flag}
-                      alt={detail.origin_country}
-                      title={detail.origin_country}
-                      style={{
-                        position:'absolute', top:7, right:7,
-                        width:'20px', height:'15px',
-                        boxShadow:'0 1px 4px rgba(0,0,0,0.7)',
-                        border:'1px solid rgba(255,255,255,0.15)',
-                        borderRadius:'1px',
-                        imageRendering:'crisp-edges',
-                      }}
-                    />
-                  )}
-                  {meta.photographer && (
-                    <div style={{
-                      position:'absolute', bottom:3, right:5,
-                      fontSize:'8px', color:'rgba(255,255,255,0.4)',
-                      fontFamily:"'IBM Plex Mono',monospace",
-                    }}>© {meta.photographer}</div>
-                  )}
-                </div>
-              )
-            })()}
-
-            <div style={{ padding:'10px 12px' }}>
-              {/* Header */}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
-                <div>
-                  <div style={{ fontSize:'9px', color: detail.type === 'military' ? '#ff3b4a' : detail.type === 'vip' ? '#ffd60a' : 'rgba(0,200,255,0.45)', letterSpacing:'.15em', textTransform:'uppercase' }}>
-                    {detail.type === 'military' ? '⬛ MILITAR' : detail.type === 'vip' ? '◆ VIP' : '▲ CIVIL'}
-                  </div>
-                  {detail.vip_owner && (
-                    <div style={{ fontSize:'13px', fontWeight:'700', color:'#ffd60a', marginTop:'1px', letterSpacing:'.02em' }}>
-                      {detail.vip_owner}
-                    </div>
-                  )}
-                  <div style={{ fontSize:'15px', fontWeight:'600', color: detail.type === 'vip' ? 'rgba(255,214,10,0.7)' : '#00c8ff', marginTop:'1px', letterSpacing:'.05em' }}>
-                    {detail.vip_owner ? (detail.label !== detail.vip_owner ? detail.label : null) : (detail.label || '—')}
-                  </div>
-                  {(meta?.model || detail.type_code) && (
-                    <div style={{ fontSize:'10px', color:'rgba(200,216,232,0.6)', marginTop:'1px' }}>
-                      {meta?.model || detail.type_code}
-                    </div>
-                  )}
-                  {(meta?.registration || detail.registration) && (
-                    <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', marginTop:'1px' }}>
-                      {meta?.registration || detail.registration}
-                    </div>
-                  )}
-                  {detail.origin_country && (() => {
-                    const flag = flagUrl(detail.origin_country)
-                    return (
-                      <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'3px' }}>
-                        {flag && (
-                          <img src={flag} alt={detail.origin_country}
-                            style={{ width:'14px', height:'10px', borderRadius:'1px', border:'1px solid rgba(255,255,255,0.12)', flexShrink:0 }} />
-                        )}
-                        <span style={{ fontSize:'9px', color:'rgba(200,216,232,0.45)', letterSpacing:'.05em' }}>
-                          {detail.origin_country}
-                        </span>
-                      </div>
-                    )
-                  })()}
-                </div>
-                <button onClick={() => { setDetail(null); setRoute(null); setMeta(null) }} style={{
-                  background:'none', border:'none', color:'rgba(0,200,255,0.4)',
-                  cursor:'pointer', fontSize:'16px', lineHeight:1, padding:'0 0 0 8px', flexShrink:0,
-                }}>×</button>
-              </div>
-
-              {/* Datos de vuelo */}
-              {[
-                detail.squawk   ? ['Squawk',    detail.squawk] : null,
-                ['Velocidad', detail.speed ? `${Math.round(Number(detail.speed))} m/s` : '—'],
-                detail.altitude ? ['Altitud', `${Number(detail.altitude).toLocaleString()} m`] : null,
-                ['Rumbo',     detail.heading ? `${Math.round(Number(detail.heading))}°` : '—'],
-                ['Zona',      detail.zone?.replace(/_/g,' ').toUpperCase()],
-              ].filter(Boolean).map(([k, v]) => (
-                <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:'3px' }}>
-                  <span style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', textTransform:'uppercase', letterSpacing:'.1em' }}>{k}</span>
-                  <span style={{ fontSize:'10px', color:'#c8d8e8' }}>{v || '—'}</span>
-                </div>
-              ))}
-
-              {/* Ruta */}
-              <div style={{ borderTop:'1px solid rgba(0,200,255,0.12)', marginTop:'7px', paddingTop:'7px' }}>
-                <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:'4px' }}>Ruta</div>
-                {routeLoading && <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.4)' }}>Consultando…</div>}
-                {!routeLoading && route && (route.origin || route.destination) && (
-                  <div style={{ fontSize:'12px', letterSpacing:'.05em' }}>
-                    <span style={{ color:'#00c8ff' }}>{route.origin ?? '—'}</span>
-                    <span style={{ color:'rgba(0,200,255,0.3)', margin:'0 6px' }}>→</span>
-                    <span style={{ color:'#00c8ff' }}>{route.destination ?? '—'}</span>
-                  </div>
-                )}
-                {!routeLoading && route && !route.origin && !route.destination && (
-                  <div style={{ fontSize:'9px', color:'rgba(0,200,255,0.3)' }}>Sin datos de ruta</div>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-      })()}
 
       {/* Custom MapLibre style overrides */}
       <style>{`
