@@ -210,6 +210,8 @@ async def register(req: RegisterRequest):
 async def public_stats():
     """Estadísticas públicas para la landing page. Sin autenticación."""
     redis = app.state.redis
+    if not redis:
+        return {"aircraft_active": 0}
     try:
         cached = await redis.get("cache:stats:aircraft")
         if cached:
@@ -219,7 +221,8 @@ async def public_stats():
         count = len(keys)
         await redis.set("cache:stats:aircraft", count, ex=15)
         return {"aircraft_active": count}
-    except Exception:
+    except Exception as e:
+        log.warning(f"stats endpoint error: {e}")
         return {"aircraft_active": 0}
 
 
