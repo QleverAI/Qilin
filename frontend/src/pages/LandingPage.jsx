@@ -11,12 +11,238 @@ const C = {
   border:'rgba(200,160,60,0.12)',
 }
 
-const HERO_IMG   = 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1920&q=80'
+const HERO_IMG    = 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1920&q=80'
 const CALLOUT_IMG = 'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=1920&q=80'
+
+// ── Translations ──────────────────────────────────────────────────────────────
+const T = {
+  es: {
+    nav: {
+      platform: 'Plataforma', pricing: 'Precios', contact: 'Contacto',
+      login: 'Iniciar sesión', cta: 'Comenzar →',
+    },
+    hero: {
+      badge: (n) => n > 0 ? `${n}+ aeronaves activas ahora mismo` : 'Sistema activo',
+      h1a: 'Ve lo que', h1b: 'otros no ven.',
+      sub: 'Inteligencia geopolítica en tiempo real. Aeronaves militares y privadas, flotas navales, alertas con IA y señales satelitales — todo en un solo panel.',
+      cta1: 'Solicitar acceso →', cta2: 'Ver capacidades',
+    },
+    stats: [
+      { l:'Aeronaves activas',      s:'● En vivo ahora' },
+      { l:'Perfiles de alto perfil', s:'Presidentes · Billonarios' },
+      { l:'Fuentes de inteligencia', s:'Clasificadas con IA' },
+      { l:'Cuentas monitorizadas',   s:'Líderes · Analistas · OSINT' },
+      { l:'Cobertura global',        s:'Sin interrupciones' },
+    ],
+    features: {
+      eyebrow: 'Capacidades',
+      h2a: 'Cada capa cuenta.', h2b: 'Juntas, lo cambian todo.',
+      sub: 'Qilin agrega señales de múltiples fuentes y las convierte en inteligencia accionable. Sin ruido, sin demoras.',
+      cards: [
+        { icon:'✈', title:'Vigilancia Aérea Global',
+          desc:'Aeronaves militares de todo el mundo y aviones privados de presidentes, líderes empresariales y figuras de alto perfil — rastreados en tiempo real, con historial de rutas y detección automática de bases.' },
+        { icon:'⚓', title:'Tráfico Naval',
+          desc:'Buques militares, petroleros y embarcaciones de interés estratégico. Detectamos automáticamente cuando un barco desaparece del radar — uno de los indicadores más claros de actividad encubierta.' },
+        { icon:'◉', title:'Alertas con Inteligencia Artificial',
+          desc:'Nuestro motor correlaciona eventos de múltiples fuentes simultáneamente. La IA enriquece cada alerta con contexto antes de que llegue a ti. Notificaciones instantáneas en segundos.' },
+        { icon:'📡', title:'Señales Satelitales',
+          desc:'Datos de satélites de observación terrestre: anomalías atmosféricas por zona. Indicadores tempranos que anteceden a eventos militares o de infraestructura antes de cualquier comunicado oficial.' },
+        { icon:'📰', title:'Inteligencia de Medios',
+          desc:'Más de 500 fuentes geopolíticas globales, agregadas y clasificadas por severidad y sector en tiempo real. Nunca te pierdes la señal entre el ruido.' },
+        { icon:'◆', title:'Mercados de Predicción',
+          desc:'Integración con mercados de predicción para cruzar probabilidades con eventos geopolíticos. ¿El mercado ya lo sabe, o va por detrás? La diferencia puede valer mucho.' },
+      ],
+    },
+    callout: {
+      eyebrow: 'Observación terrestre',
+      h2a: 'La Tierra no', h2b: 'tiene secretos.',
+      p: 'Integramos datos de satélites de observación para detectar anomalías atmosféricas por zona. Cuando hay actividad inusual — industrial, militar o de infraestructura — las señales lo delatan antes que cualquier comunicado oficial.',
+      note: 'Disponible en el plan Command.',
+    },
+    plans: {
+      eyebrow: 'Precios',
+      h2a: 'Elige tu nivel', h2b: 'de inteligencia.',
+      sub: 'Sin contratos anuales obligatorios. Cancela cuando quieras. Empieza gratis.',
+      popular: 'Más popular',
+      period: '/ mes',
+      items: [
+        {
+          tier:'Tier 01', name:'Scout', price:'$0', featured:false,
+          tagline:'Para explorar la plataforma. Datos con retraso y acceso limitado.',
+          feats:[
+            {on:true,  t:'Mapa militar con retraso'},
+            {on:true,  t:'Feed de noticias — últimas 24h'},
+            {on:true,  t:'5 alertas geopolíticas al día'},
+            {on:false, t:'Aviones privados'},
+            {on:false, t:'Tráfico naval'},
+            {on:false, t:'Notificaciones instantáneas'},
+            {on:false, t:'Análisis con IA'},
+          ],
+          cta:'Crear cuenta gratis', plan:'scout',
+        },
+        {
+          tier:'Tier 02', name:'Analyst', price:'$49', featured:true, popular:true,
+          tagline:'Acceso completo en tiempo real. Para analistas, periodistas e investigadores.',
+          feats:[
+            {on:true, t:'Mapa en tiempo real — militares + privados'},
+            {on:true, t:'Tráfico naval completo'},
+            {on:true, t:'500+ fuentes + 300+ cuentas monitorizadas'},
+            {on:true, t:'Alertas ilimitadas + notificaciones'},
+            {on:true, t:'Historial de rutas y bases'},
+            {on:true, t:'Documentos y mercados de predicción'},
+            {on:true, t:'Informes diarios · historial 30 días'},
+          ],
+          cta:'Empezar prueba de 7 días →', plan:'analyst',
+        },
+        {
+          tier:'Tier 03', name:'Command', price:'$199', featured:false,
+          tagline:'Para equipos e instituciones con necesidades avanzadas de inteligencia.',
+          feats:[
+            {on:true, t:'Todo de Analyst incluido'},
+            {on:true, t:'Datos satelitales de observación'},
+            {on:true, t:'Informes semanales con análisis IA'},
+            {on:true, t:'Acceso API REST'},
+            {on:true, t:'Hasta 5 usuarios'},
+            {on:true, t:'Historial ilimitado'},
+            {on:true, t:'Soporte prioritario'},
+          ],
+          cta:'Contactar ventas', plan:'command',
+        },
+      ],
+    },
+    footer: {
+      links: ['Términos de uso','Privacidad','Contacto','Status'],
+      copy: '© 2026 Qilin Intelligence. Todos los derechos reservados.',
+    },
+  },
+
+  en: {
+    nav: {
+      platform: 'Platform', pricing: 'Pricing', contact: 'Contact',
+      login: 'Sign in', cta: 'Get started →',
+    },
+    hero: {
+      badge: (n) => n > 0 ? `${n}+ aircraft active right now` : 'System active',
+      h1a: 'See what', h1b: 'others can\'t.',
+      sub: 'Real-time geopolitical intelligence. Military and private aircraft, naval fleets, AI-powered alerts, and satellite signals — all in one dashboard.',
+      cta1: 'Request access →', cta2: 'See capabilities',
+    },
+    stats: [
+      { l:'Active aircraft',         s:'● Live right now' },
+      { l:'High-profile targets',    s:'Heads of state · Billionaires' },
+      { l:'Intelligence sources',    s:'AI-classified' },
+      { l:'Monitored accounts',      s:'Leaders · Analysts · OSINT' },
+      { l:'Global coverage',         s:'Around the clock' },
+    ],
+    features: {
+      eyebrow: 'Capabilities',
+      h2a: 'Every layer matters.', h2b: 'Together, they change everything.',
+      sub: 'Qilin aggregates signals from multiple sources and turns them into actionable intelligence. No noise, no delays.',
+      cards: [
+        { icon:'✈', title:'Global Aerial Surveillance',
+          desc:'Military aircraft worldwide and private jets of heads of state, business leaders, and high-profile figures — tracked in real time, with route history and automatic base detection.' },
+        { icon:'⚓', title:'Naval Traffic',
+          desc:'Military vessels, tankers, and strategically relevant ships. We automatically detect when a vessel goes dark — one of the clearest indicators of covert activity.' },
+        { icon:'◉', title:'AI-Powered Alerts',
+          desc:'Our engine correlates events from multiple sources simultaneously. AI enriches each alert with context before it reaches you. Instant notifications within seconds.' },
+        { icon:'📡', title:'Satellite Signals',
+          desc:'Data from earth observation satellites: atmospheric anomalies by zone. Early indicators that precede military or infrastructure events before any official statement.' },
+        { icon:'📰', title:'Media Intelligence',
+          desc:'Over 500 global geopolitical sources, aggregated and classified by severity and sector in real time. Never miss the signal in the noise.' },
+        { icon:'◆', title:'Prediction Markets',
+          desc:'Integration with prediction markets to cross-reference probabilities with geopolitical events. Does the market already know, or is it behind? The difference can be worth a lot.' },
+      ],
+    },
+    callout: {
+      eyebrow: 'Earth observation',
+      h2a: 'The Earth has', h2b: 'no secrets.',
+      p: 'We integrate data from observation satellites to detect atmospheric anomalies by zone. When unusual activity occurs — industrial, military, or infrastructure — the signals reveal it before any official statement.',
+      note: 'Available on the Command plan.',
+    },
+    plans: {
+      eyebrow: 'Pricing',
+      h2a: 'Choose your level', h2b: 'of intelligence.',
+      sub: 'No mandatory annual contracts. Cancel anytime. Start for free.',
+      popular: 'Most popular',
+      period: '/ mo',
+      items: [
+        {
+          tier:'Tier 01', name:'Scout', price:'$0', featured:false,
+          tagline:'Explore the platform. Delayed data and limited access.',
+          feats:[
+            {on:true,  t:'Military map with delay'},
+            {on:true,  t:'News feed — last 24h'},
+            {on:true,  t:'5 geopolitical alerts per day'},
+            {on:false, t:'Private aircraft'},
+            {on:false, t:'Naval traffic'},
+            {on:false, t:'Instant notifications'},
+            {on:false, t:'AI analysis'},
+          ],
+          cta:'Create free account', plan:'scout',
+        },
+        {
+          tier:'Tier 02', name:'Analyst', price:'$49', featured:true, popular:true,
+          tagline:'Full real-time access. For analysts, journalists, and researchers.',
+          feats:[
+            {on:true, t:'Real-time map — military + private'},
+            {on:true, t:'Full naval traffic'},
+            {on:true, t:'500+ sources + 300+ monitored accounts'},
+            {on:true, t:'Unlimited alerts + notifications'},
+            {on:true, t:'Route and base history'},
+            {on:true, t:'Documents and prediction markets'},
+            {on:true, t:'Daily reports · 30-day history'},
+          ],
+          cta:'Start 7-day trial →', plan:'analyst',
+        },
+        {
+          tier:'Tier 03', name:'Command', price:'$199', featured:false,
+          tagline:'For teams and institutions with advanced intelligence needs.',
+          feats:[
+            {on:true, t:'Everything in Analyst'},
+            {on:true, t:'Satellite observation data'},
+            {on:true, t:'Weekly AI analysis reports'},
+            {on:true, t:'REST API access'},
+            {on:true, t:'Up to 5 users'},
+            {on:true, t:'Unlimited history'},
+            {on:true, t:'Priority support'},
+          ],
+          cta:'Contact sales', plan:'command',
+        },
+      ],
+    },
+    footer: {
+      links: ['Terms of use','Privacy','Contact','Status'],
+      copy: '© 2026 Qilin Intelligence. All rights reserved.',
+    },
+  },
+}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function Nav({ onLogin, onRegister }) {
+function LangToggle({ lang, setLang }) {
+  return (
+    <div style={{
+      display:'flex', alignItems:'center',
+      background:'rgba(200,160,60,0.07)', border:`1px solid ${C.goldBorder}`,
+      borderRadius:20, padding:'3px 4px', gap:2,
+    }}>
+      {['es','en'].map(l => (
+        <button key={l} onClick={() => setLang(l)}
+          style={{
+            padding:'4px 11px', borderRadius:16, fontSize:11, fontWeight:700,
+            letterSpacing:'.08em', textTransform:'uppercase', cursor:'pointer', border:'none',
+            fontFamily:"'IBM Plex Mono',monospace", transition:'all .15s',
+            background: lang === l ? C.gold : 'transparent',
+            color: lang === l ? C.bg0 : C.goldDim,
+          }}>
+          {l}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Nav({ t, onLogin, onRegister, lang, setLang }) {
   return (
     <nav style={{
       position:'fixed', top:0, left:0, right:0, zIndex:100,
@@ -31,31 +257,32 @@ function Nav({ onLogin, onRegister }) {
         onClick={() => window.scrollTo({top:0,behavior:'smooth'})}>
         ◈ QILIN
       </div>
-      <div style={{ display:'flex', gap:32 }}>
-        {[['Plataforma','#features'],['Precios','#plans'],['Contacto','mailto:']].map(([l,h]) => (
+      <div style={{ display:'flex', gap:32, alignItems:'center' }}>
+        {[[t.nav.platform,'#features'],[t.nav.pricing,'#plans'],[t.nav.contact,'mailto:']].map(([l,h]) => (
           <a key={l} href={h}
             style={{ fontSize:13, color:C.txt2, textDecoration:'none', letterSpacing:'.03em' }}
             onMouseEnter={e=>e.target.style.color=C.goldLight}
             onMouseLeave={e=>e.target.style.color=C.txt2}>{l}</a>
         ))}
+        <LangToggle lang={lang} setLang={setLang} />
       </div>
       <div style={{ display:'flex', gap:10 }}>
         <button onClick={onLogin} style={{ padding:'8px 20px', border:`1px solid ${C.goldBorder}`,
           borderRadius:6, background:'transparent', color:C.goldDim,
           fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-          Iniciar sesión
+          {t.nav.login}
         </button>
         <button onClick={onRegister} style={{ padding:'8px 20px', border:`1px solid ${C.gold}`,
           borderRadius:6, background:C.goldFill, color:C.goldLight,
           fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
-          Comenzar →
+          {t.nav.cta}
         </button>
       </div>
     </nav>
   )
 }
 
-function Hero({ aircraftCount, onRegister }) {
+function Hero({ t, aircraftCount, onRegister }) {
   return (
     <section style={{ minHeight:'100vh', position:'relative', overflow:'hidden',
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
@@ -76,29 +303,28 @@ function Hero({ aircraftCount, onRegister }) {
           fontFamily:"'IBM Plex Mono',monospace" }}>
           <span style={{ width:7, height:7, borderRadius:'50%', background:C.gold,
             display:'inline-block', animation:'blink 2s infinite' }} />
-          {aircraftCount > 0 ? `${aircraftCount}+ aeronaves activas ahora mismo` : 'Sistema activo'}
+          {t.hero.badge(aircraftCount)}
         </div>
         <h1 style={{ fontSize:'clamp(38px,6vw,72px)', fontWeight:800, lineHeight:1.08,
           letterSpacing:'-.03em', color:'#fff', marginBottom:24 }}>
-          Ve lo que<br />
-          <em style={{ fontStyle:'normal', color:C.goldLight }}>otros no ven.</em>
+          {t.hero.h1a}<br />
+          <em style={{ fontStyle:'normal', color:C.goldLight }}>{t.hero.h1b}</em>
         </h1>
         <p style={{ fontSize:17, color:C.txt2, maxWidth:560, margin:'0 auto 44px', lineHeight:1.75 }}>
-          Inteligencia geopolítica en tiempo real. Aeronaves militares y privadas, flotas navales,
-          alertas con IA y señales satelitales — todo en un solo panel.
+          {t.hero.sub}
         </p>
         <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
           <button onClick={onRegister}
             style={{ padding:'15px 36px', borderRadius:8, fontSize:14, fontWeight:600,
               background:'rgba(200,160,60,0.15)', border:`1px solid ${C.gold}`, color:C.goldLight,
               cursor:'pointer', fontFamily:'inherit' }}>
-            Solicitar acceso →
+            {t.hero.cta1}
           </button>
           <button onClick={() => document.getElementById('features')?.scrollIntoView({behavior:'smooth'})}
             style={{ padding:'15px 36px', borderRadius:8, fontSize:14, fontWeight:600,
               background:'transparent', border:'1px solid rgba(255,255,255,0.15)',
               color:'rgba(255,255,255,0.6)', cursor:'pointer', fontFamily:'inherit' }}>
-            Ver capacidades
+            {t.hero.cta2}
           </button>
         </div>
       </div>
@@ -107,22 +333,16 @@ function Hero({ aircraftCount, onRegister }) {
   )
 }
 
-function StatsBar({ aircraftCount }) {
-  const stats = [
-    { n: aircraftCount > 0 ? `${aircraftCount}+` : '300+', l:'Aeronaves activas', s:'● En vivo ahora' },
-    { n:'70+',   l:'Perfiles de alto perfil', s:'Presidentes · Billonarios' },
-    { n:'500+',  l:'Fuentes de inteligencia', s:'Clasificadas con IA' },
-    { n:'300+',  l:'Cuentas monitorizadas',   s:'Líderes · Analistas · OSINT' },
-    { n:'24/7',  l:'Cobertura global',        s:'Sin interrupciones' },
-  ]
+function StatsBar({ t, aircraftCount }) {
+  const nums = [aircraftCount > 0 ? `${aircraftCount}+` : '300+', '70+', '500+', '300+', '24/7']
   return (
     <div style={{ background:C.bg1, borderTop:`1px solid ${C.border}`,
       borderBottom:`1px solid ${C.border}`, padding:'28px 56px',
       display:'flex', justifyContent:'center', flexWrap:'wrap' }}>
-      {stats.map((s, i) => (
+      {t.stats.map((s, i) => (
         <div key={i} style={{ textAlign:'center', padding:'0 40px',
-          borderRight: i < stats.length-1 ? `1px solid ${C.border}` : 'none' }}>
-          <div style={{ fontSize:34, fontWeight:800, color:C.goldLight, letterSpacing:'-.03em', lineHeight:1 }}>{s.n}</div>
+          borderRight: i < t.stats.length-1 ? `1px solid ${C.border}` : 'none' }}>
+          <div style={{ fontSize:34, fontWeight:800, color:C.goldLight, letterSpacing:'-.03em', lineHeight:1 }}>{nums[i]}</div>
           <div style={{ fontSize:11, letterSpacing:'.15em', textTransform:'uppercase',
             color:C.txt3, marginTop:5, fontFamily:"'IBM Plex Mono',monospace" }}>{s.l}</div>
           <div style={{ fontSize:10, color:C.goldDim, marginTop:3 }}>{s.s}</div>
@@ -132,37 +352,23 @@ function StatsBar({ aircraftCount }) {
   )
 }
 
-function Features() {
-  const feats = [
-    { icon:'✈', title:'Vigilancia Aérea Global',
-      desc:'Aeronaves militares de todo el mundo y aviones privados de presidentes, líderes empresariales y figuras de alto perfil — rastreados en tiempo real, con historial de rutas y detección automática de bases.' },
-    { icon:'⚓', title:'Tráfico Naval',
-      desc:'Buques militares, petroleros y embarcaciones de interés estratégico. Detectamos automáticamente cuando un barco desaparece del radar — uno de los indicadores más claros de actividad encubierta.' },
-    { icon:'◉', title:'Alertas con Inteligencia Artificial',
-      desc:'Nuestro motor correlaciona eventos de múltiples fuentes simultáneamente. La IA enriquece cada alerta con contexto antes de que llegue a ti. Notificaciones instantáneas en segundos.' },
-    { icon:'📡', title:'Señales Satelitales',
-      desc:'Datos de satélites de observación terrestre: anomalías atmosféricas por zona. Indicadores tempranos que anteceden a eventos militares o de infraestructura antes de cualquier comunicado oficial.' },
-    { icon:'📰', title:'Inteligencia de Medios',
-      desc:'Más de 500 fuentes geopolíticas globales, agregadas y clasificadas por severidad y sector en tiempo real. Nunca te pierdes la señal entre el ruido.' },
-    { icon:'◆', title:'Mercados de Predicción',
-      desc:'Integración con mercados de predicción para cruzar probabilidades con eventos geopolíticos. ¿El mercado ya lo sabe, o va por detrás? La diferencia puede valer mucho.' },
-  ]
+function Features({ t }) {
   return (
     <section id="features" style={{ padding:'96px 0' }}>
       <div style={{ maxWidth:1120, margin:'0 auto', padding:'0 56px' }}>
         <div style={{ fontSize:11, letterSpacing:'.22em', textTransform:'uppercase',
-          color:C.goldDim, marginBottom:14, fontFamily:"'IBM Plex Mono',monospace" }}>Capacidades</div>
+          color:C.goldDim, marginBottom:14, fontFamily:"'IBM Plex Mono',monospace" }}>{t.features.eyebrow}</div>
         <h2 style={{ fontSize:'clamp(28px,4vw,46px)', fontWeight:800, color:'#fff',
           lineHeight:1.15, marginBottom:18, letterSpacing:'-.02em' }}>
-          Cada capa cuenta.<br />
-          <em style={{ fontStyle:'normal', color:C.goldLight }}>Juntas, lo cambian todo.</em>
+          {t.features.h2a}<br />
+          <em style={{ fontStyle:'normal', color:C.goldLight }}>{t.features.h2b}</em>
         </h2>
         <p style={{ fontSize:16, color:C.txt2, maxWidth:520, lineHeight:1.75 }}>
-          Qilin agrega señales de múltiples fuentes y las convierte en inteligencia accionable. Sin ruido, sin demoras.
+          {t.features.sub}
         </p>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)',
           gap:1, marginTop:56, border:`1px solid ${C.border}`, background:C.border }}>
-          {feats.map((f, i) => (
+          {t.features.cards.map((f, i) => (
             <div key={i} style={{ background:C.bg1, padding:'36px 32px', transition:'background .25s',
               cursor:'default' }}
               onMouseEnter={e=>e.currentTarget.style.background=C.bg2}
@@ -180,7 +386,7 @@ function Features() {
   )
 }
 
-function SatelliteCallout() {
+function SatelliteCallout({ t }) {
   return (
     <div style={{ position:'relative', overflow:'hidden',
       borderTop:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}` }}>
@@ -193,84 +399,38 @@ function SatelliteCallout() {
       <div style={{ position:'relative', zIndex:1, padding:'80px 56px', maxWidth:580 }}>
         <div style={{ fontSize:11, letterSpacing:'.22em', textTransform:'uppercase',
           color:C.goldDim, marginBottom:14, fontFamily:"'IBM Plex Mono',monospace" }}>
-          Observación terrestre
+          {t.callout.eyebrow}
         </div>
         <h2 style={{ fontSize:'clamp(24px,3.5vw,40px)', fontWeight:800, color:'#fff',
           lineHeight:1.15, marginBottom:18, letterSpacing:'-.02em' }}>
-          La Tierra no<br />
-          <em style={{ fontStyle:'normal', color:C.goldLight }}>tiene secretos.</em>
+          {t.callout.h2a}<br />
+          <em style={{ fontStyle:'normal', color:C.goldLight }}>{t.callout.h2b}</em>
         </h2>
         <p style={{ fontSize:15, color:C.txt2, lineHeight:1.75, marginBottom:12 }}>
-          Integramos datos de satélites de observación para detectar anomalías atmosféricas
-          por zona. Cuando hay actividad inusual — industrial, militar o de infraestructura —
-          las señales lo delatan antes que cualquier comunicado oficial.
+          {t.callout.p}
         </p>
-        <p style={{ fontSize:13, color:C.txt3 }}>Disponible en el plan Command.</p>
+        <p style={{ fontSize:13, color:C.txt3 }}>{t.callout.note}</p>
       </div>
     </div>
   )
 }
 
-function Plans({ onRegister }) {
-  const plans = [
-    {
-      tier:'Tier 01', name:'Scout', price:'$0', period:'/ mes', featured:false,
-      tagline:'Para explorar la plataforma. Datos con retraso y acceso limitado.',
-      feats:[
-        {on:true,  t:'Mapa militar con retraso'},
-        {on:true,  t:'Feed de noticias — últimas 24h'},
-        {on:true,  t:'5 alertas geopolíticas al día'},
-        {on:false, t:'Aviones privados'},
-        {on:false, t:'Tráfico naval'},
-        {on:false, t:'Notificaciones instantáneas'},
-        {on:false, t:'Análisis con IA'},
-      ],
-      cta:'Crear cuenta gratis', plan:'scout',
-    },
-    {
-      tier:'Tier 02', name:'Analyst', price:'$49', period:'/ mes', featured:true, popular:true,
-      tagline:'Acceso completo en tiempo real. Para analistas, periodistas e investigadores.',
-      feats:[
-        {on:true, t:'Mapa en tiempo real — militares + privados'},
-        {on:true, t:'Tráfico naval completo'},
-        {on:true, t:'500+ fuentes + 300+ cuentas monitorizadas'},
-        {on:true, t:'Alertas ilimitadas + notificaciones'},
-        {on:true, t:'Historial de rutas y bases'},
-        {on:true, t:'Documentos y mercados de predicción'},
-        {on:true, t:'Informes diarios · historial 30 días'},
-      ],
-      cta:'Empezar prueba de 7 días →', plan:'analyst',
-    },
-    {
-      tier:'Tier 03', name:'Command', price:'$199', period:'/ mes', featured:false,
-      tagline:'Para equipos e instituciones con necesidades avanzadas de inteligencia.',
-      feats:[
-        {on:true, t:'Todo de Analyst incluido'},
-        {on:true, t:'Datos satelitales de observación'},
-        {on:true, t:'Informes semanales con análisis IA'},
-        {on:true, t:'Acceso API REST'},
-        {on:true, t:'Hasta 5 usuarios'},
-        {on:true, t:'Historial ilimitado'},
-        {on:true, t:'Soporte prioritario'},
-      ],
-      cta:'Contactar ventas', plan:'command',
-    },
-  ]
+function Plans({ t, onRegister }) {
   return (
     <section id="plans" style={{ padding:'96px 0' }}>
       <div style={{ maxWidth:1120, margin:'0 auto', padding:'0 56px' }}>
         <div style={{ fontSize:11, letterSpacing:'.22em', textTransform:'uppercase',
-          color:C.goldDim, marginBottom:14, fontFamily:"'IBM Plex Mono',monospace" }}>Precios</div>
+          color:C.goldDim, marginBottom:14, fontFamily:"'IBM Plex Mono',monospace" }}>{t.plans.eyebrow}</div>
         <h2 style={{ fontSize:'clamp(28px,4vw,46px)', fontWeight:800, color:'#fff',
           lineHeight:1.15, marginBottom:18, letterSpacing:'-.02em' }}>
-          Elige tu nivel<br />
-          <em style={{ fontStyle:'normal', color:C.goldLight }}>de inteligencia.</em>
+          {t.plans.h2a}<br />
+          <em style={{ fontStyle:'normal', color:C.goldLight }}>{t.plans.h2b}</em>
         </h2>
         <p style={{ fontSize:16, color:C.txt2, maxWidth:520, lineHeight:1.75 }}>
-          Sin contratos anuales obligatorios. Cancela cuando quieras. Empieza gratis.
+          {t.plans.sub}
         </p>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginTop:56 }}>
-          {plans.map(p => (
+          {t.plans.items.map(p => (
             <div key={p.name} style={{ background: p.featured ? C.bg2 : C.bg1,
               border:`1px solid ${p.featured ? 'rgba(200,160,60,0.45)' : C.border}`,
               borderRadius:12, padding:32, position:'relative',
@@ -280,7 +440,7 @@ function Plans({ onRegister }) {
                   background:C.gold, color:C.bg0, fontSize:10, fontWeight:700,
                   letterSpacing:'.15em', textTransform:'uppercase', padding:'4px 14px',
                   borderRadius:20, fontFamily:"'IBM Plex Mono',monospace", whiteSpace:'nowrap' }}>
-                  Más popular
+                  {t.plans.popular}
                 </div>
               )}
               <div style={{ fontSize:10, letterSpacing:'.22em', textTransform:'uppercase',
@@ -288,7 +448,7 @@ function Plans({ onRegister }) {
               <div style={{ fontSize:26, fontWeight:800, color:'#fff', marginBottom:4 }}>{p.name}</div>
               <div style={{ margin:'16px 0 8px' }}>
                 <span style={{ fontSize:42, fontWeight:800, color:C.goldLight, letterSpacing:'-.03em' }}>{p.price}</span>
-                <span style={{ fontSize:14, color:C.txt3 }}> {p.period}</span>
+                <span style={{ fontSize:14, color:C.txt3 }}> {t.plans.period}</span>
               </div>
               <div style={{ fontSize:13, color:C.txt2, marginBottom:24, lineHeight:1.5 }}>{p.tagline}</div>
               <div style={{ height:1, background:C.border, marginBottom:20 }} />
@@ -320,7 +480,7 @@ function Plans({ onRegister }) {
   )
 }
 
-function Footer() {
+function Footer({ t }) {
   return (
     <footer style={{ background:C.bg1, borderTop:`1px solid ${C.border}`,
       padding:'40px 56px', display:'flex', justifyContent:'space-between',
@@ -328,11 +488,11 @@ function Footer() {
       <div style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:14, fontWeight:700,
         letterSpacing:'.25em', color:C.goldDim }}>◈ QILIN</div>
       <div style={{ display:'flex', gap:28 }}>
-        {['Términos de uso','Privacidad','Contacto','Status'].map(l => (
+        {t.footer.links.map(l => (
           <a key={l} href="#" style={{ fontSize:12, color:C.txt3, textDecoration:'none' }}>{l}</a>
         ))}
       </div>
-      <div style={{ fontSize:11, color:C.txt3 }}>© 2026 Qilin Intelligence. Todos los derechos reservados.</div>
+      <div style={{ fontSize:11, color:C.txt3 }}>{t.footer.copy}</div>
     </footer>
   )
 }
@@ -341,7 +501,9 @@ function Footer() {
 
 export default function LandingPage() {
   const [aircraftCount, setAircraftCount] = useState(0)
+  const [lang, setLang] = useState('es')
   const navigate = useNavigate()
+  const t = T[lang]
 
   useEffect(() => {
     document.documentElement.style.overflow = 'auto'
@@ -371,16 +533,16 @@ export default function LandingPage() {
 
   return (
     <>
-      <Nav
+      <Nav t={t} lang={lang} setLang={setLang}
         onLogin={() => navigate('/login')}
         onRegister={() => navigate('/register')}
       />
-      <Hero aircraftCount={aircraftCount} onRegister={() => navigate('/register')} />
-      <StatsBar aircraftCount={aircraftCount} />
-      <Features />
-      <SatelliteCallout />
-      <Plans onRegister={plan => navigate(`/register?plan=${plan}`)} />
-      <Footer />
+      <Hero t={t} aircraftCount={aircraftCount} onRegister={() => navigate('/register')} />
+      <StatsBar t={t} aircraftCount={aircraftCount} />
+      <Features t={t} />
+      <SatelliteCallout t={t} />
+      <Plans t={t} onRegister={plan => navigate(`/register?plan=${plan}`)} />
+      <Footer t={t} />
       <ChatBotPublic />
     </>
   )
