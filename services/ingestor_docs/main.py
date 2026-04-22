@@ -196,6 +196,14 @@ async def main():
 
         async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
             while True:
+                # Reconectar DB si perdimos la conexión al arrancar o por timeout
+                if not db and DB_URL:
+                    try:
+                        db = await asyncpg.connect(DB_URL)
+                        log.info("Reconectado a TimescaleDB.")
+                    except Exception as e:
+                        log.warning(f"DB no disponible aún: {e}")
+
                 new_count = 0
                 for source in ordered:
                     new_count += await process_source(client, redis, db, source, browser=browser)

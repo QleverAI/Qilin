@@ -67,16 +67,38 @@ async def scrape_with_playwright(browser, url: str) -> list[dict]:
     return parse_html_links(html, url)
 
 
+async def fetch_rss_with_playwright(browser, url: str) -> list[dict]:
+    """
+    Descarga un feed RSS usando Playwright para bypasear bloqueos CDN/Cloudflare.
+    Usa el cuerpo raw de la respuesta (no el HTML renderizado) y lo parsea como RSS.
+    """
+    page = await browser.new_page()
+    try:
+        response = await page.goto(url, wait_until='networkidle', timeout=30_000)
+        raw = await response.body()
+        text = raw.decode('utf-8', errors='replace')
+    finally:
+        await page.close()
+    return parse_rss_entries(text)
+
+
 async def fetch_source(client: httpx.AsyncClient, source: dict, browser=None) -> list[dict]:
     """
     Descarga y parsea una fuente.
-    - RSS: usa httpx + feedparser (siempre).
-    - Scraping: usa Playwright si browser está disponible, httpx como fallback.
+    - rss: httpx + feedparser.
+    - playwright_rss: Playwright para bypasear bloqueos CDN en feeds RSS.
+    - scrape: Playwright (o httpx como fallback) extrayendo links a PDFs.
     Lanza ValueError si la petición falla.
     """
-    url = source['doc_url']
+    url        = source['doc_url']
+    fetch_type = source['fetch_type']
 
-    if source['fetch_type'] == 'rss':
+    if fetch_type == 'playwright_rss':
+        if browser:
+            return await fetch_rss_with_playwright(browser, url)
+        fetch_type = 'rss'  # fallback si no hay browser
+
+    if fetch_type == 'rss':
         r = await client.get(url, timeout=20)
         if r.status_code != 200:
             raise ValueError(f"HTTP {r.status_code} en {source['slug']}")

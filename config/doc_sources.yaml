@@ -92,7 +92,7 @@ sources:
     country: UN
     org_type: international
     fetch_type: rss
-    doc_url: "https://www.iaea.org/feeds/pressreleases.rss"
+    doc_url: "https://www.iaea.org/feeds/news"
     mandatory: true
     sectors: [nuclear]
     priority: high
@@ -192,7 +192,7 @@ sources:
     name: "38 North"
     country: US
     org_type: think_tank
-    fetch_type: rss
+    fetch_type: playwright_rss
     doc_url: "https://www.38north.org/feed/"
     mandatory: true
     sectors: [nuclear]
@@ -293,7 +293,7 @@ sources:
     name: "IMF"
     country: UN
     org_type: government
-    fetch_type: rss
+    fetch_type: playwright_rss
     doc_url: "https://www.imf.org/en/publications/rss?language=eng&series=World+Economic+Outlook"
     mandatory: false
     sectors: [economia]
