@@ -5,7 +5,7 @@ Fuente: wss://stream.aisstream.io/v0/stream — WebSocket, API key gratuita.
 Estrategia:
   1. Lee zonas desde config/zones.yaml y construye bounding boxes para la suscripción.
   2. Conecta vía WebSocket y suscribe a todas las bounding boxes en un solo mensaje.
-  3. Filtra por vessel_type: tankers (80-89), military (35), unknown (0).
+  3. Filtra: military(35), tankers(80-89), unknown(0); cargo(70-79)/passenger(60-69) solo si coinciden con empresa conocida.
   4. Detecta AIS dark: buque que no emite >30 min habiendo estado activo en zona.
   5. Publica en stream:ais de Redis + persiste en vessel_positions (hypertable).
   6. Reconexión automática con backoff exponencial si cae el WebSocket.
@@ -54,7 +54,7 @@ COMPANY_PREFIXES = [
     ('Q-MAX',     'qatar_gas'),
 ]
 
-# MMSI MID prefix (first 3 digits) → country for military flag enrichment
+# MMSI MID prefix (first 3 digits) → flag state (applied to all tracked vessel types)
 MMSI_FLAG = {
     '338': 'United States', '367': 'United States', '369': 'United States',
     '232': 'United Kingdom', '235': 'United Kingdom',
@@ -179,6 +179,8 @@ async def check_ais_dark(redis, db, zones: list[tuple[str, dict]]):
                 continue
             vessel = json.loads(raw)
             category = vessel.get("category", "unknown")
+            # cargo/passenger company ships tracked but excluded from dark detection —
+            # AIS gaps are less operationally significant for merchant fleet
             if category not in ("tanker", "unknown", "military"):
                 continue
             ttl = await redis.ttl(key)
