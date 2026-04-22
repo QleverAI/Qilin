@@ -180,13 +180,8 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
       map.addImage('plane-civil',    makePlaneIcon('#00c8ff'))
       map.addImage('plane-military', makePlaneIcon('#ff3b4a', 26))
 
-      // ── Zones (círculos con fill + stroke dashed + label) ──
+      // ── Zones (label only) ──
       map.addSource('zones', { type: 'geojson', data: zonesToGeoJSON() })
-      map.addLayer({ id:'zones-fill', type:'fill', source:'zones',
-        paint:{ 'fill-color':['get','fill'], 'fill-opacity':1 } })
-      map.addLayer({ id:'zones-stroke', type:'line', source:'zones',
-        paint:{ 'line-color':['get','stroke'], 'line-width':1.2,
-          'line-dasharray':[5, 3], 'line-opacity':0.9 } })
       map.addLayer({ id:'zones-label', type:'symbol', source:'zones',
         layout:{ 'text-field':['get','label'], 'text-font':['Noto Sans Regular'],
           'text-size':9, 'text-anchor':'center', 'text-allow-overlap':true },
