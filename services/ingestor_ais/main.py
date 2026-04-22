@@ -125,9 +125,7 @@ def should_track(ship_type: int, name: str | None) -> bool:
         return True
     if ship_type in TANKER_TYPES:
         return True
-    if ship_type == 0:
-        return True
-    if ship_type in CARGO_TYPES or ship_type in PASSENGER_TYPES:
+    if ship_type in CARGO_TYPES or ship_type in PASSENGER_TYPES or ship_type == 0:
         return detect_company(name) is not None
     return False
 

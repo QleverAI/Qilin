@@ -1,12 +1,9 @@
 export default function BottomBar({ stats }) {
-  const now = new Date()
-  const ts  = `${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')}:${String(now.getUTCSeconds()).padStart(2,'0')}`
-
   const items = [
-    { icon:'▲', color:'var(--accent)', value: stats.aircraftTotal, label:'aeronaves' },
-    { icon:'▲', color:'var(--red)',   value: stats.aircraftMil,   label:'militares' },
-    { icon:'●', color:'var(--red)',   value: stats.alertsHigh,    label:'high'      },
-    { icon:'●', color:'var(--amber)', value: stats.alertsMedium,  label:'medium'    },
+    { icon:'▲', color:'var(--accent)', value: stats.aircraftTotal,  label:'aeronaves'  },
+    { icon:'▲', color:'var(--red)',    value: stats.aircraftMil,    label:'mil. aire'  },
+    { icon:'◆', color:'var(--red)',    value: stats.vesselMil,      label:'mil. mar'   },
+    { icon:'◆', color:'var(--cyan)',   value: stats.vesselMerchant, label:'mercantes'  },
   ]
 
   return (
@@ -32,12 +29,6 @@ export default function BottomBar({ stats }) {
           <span>{it.label}</span>
         </div>
       ))}
-      <div style={{
-        fontFamily:'var(--mono)', color:'var(--txt-3)', fontSize:'var(--label-sm)',
-        padding:'0 14px', borderRight:'1px solid var(--border)',
-      }}>
-        LAST UPDATE <span style={{ color:'var(--txt-2)' }}>{ts} UTC</span>
-      </div>
       <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'7px',
         fontFamily:'var(--mono)', fontSize:'var(--label-md)', fontWeight:'600',
         letterSpacing:'.15em', textTransform:'uppercase', color:'var(--green)',

@@ -156,13 +156,14 @@ export function useQilinData() {
   }, [])
 
   const stats = {
-    aircraftTotal:  aircraft.length,
-    aircraftMil:    aircraft.filter(a => a.type === 'military').length,
-    vesselTotal:    vessels.length,
-    vesselMil:      vessels.filter(v => v.type === 'military').length,
-    alertsHigh:     alerts.filter(a => a.severity === 'high').length,
-    alertsMedium:   alerts.filter(a => a.severity === 'medium').length,
-    alertsTotal:    alerts.length,
+    aircraftTotal:    aircraft.length,
+    aircraftMil:      aircraft.filter(a => a.type === 'military').length,
+    vesselTotal:      vessels.length,
+    vesselMil:        vessels.filter(v => v.type === 'military').length,
+    vesselMerchant:   vessels.filter(v => v.type !== 'military').length,
+    alertsHigh:       alerts.filter(a => a.severity === 'high').length,
+    alertsMedium:     alerts.filter(a => a.severity === 'medium').length,
+    alertsTotal:      alerts.length,
   }
 
   return { aircraft, vessels, alerts, stats, wsStatus }
