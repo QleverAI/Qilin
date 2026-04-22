@@ -70,7 +70,7 @@ function Pagination({ page, totalPages, onChange }) {
           opacity: page === 1 ? 0.4 : 1,
         }}
       >← Anterior</button>
-      <span style={{ fontSize: '11px', color: 'var(--txt-2)' }}>
+      <span style={{ fontSize: '11px', color: 'var(--txt-2)', fontFamily: 'var(--mono)' }}>
         Página {page} de {totalPages}
       </span>
       <button
@@ -84,6 +84,35 @@ function Pagination({ page, totalPages, onChange }) {
           opacity: page === totalPages ? 0.4 : 1,
         }}
       >Siguiente →</button>
+    </div>
+  )
+}
+
+// ── Filtro colapsable ───────────────────────────────────────────────────────────
+
+function CollapsibleFilter({ label, defaultOpen, children }) {
+  const [open, setOpen] = useState(defaultOpen ?? false)
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '5px',
+          background: 'none', border: 'none', padding: '4px 0',
+          cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <span style={{ fontSize: '8px', color: 'var(--txt-3)', fontFamily: 'var(--mono)', lineHeight: 1, flexShrink: 0 }}>
+          {open ? '▼' : '▶'}
+        </span>
+        <span style={{
+          fontSize: 'var(--label-xs)', fontWeight: '700', letterSpacing: '.2em',
+          color: 'var(--txt-2)', textTransform: 'uppercase', fontFamily: 'var(--mono)',
+        }}>
+          {label}
+        </span>
+      </button>
+      {open && <div>{children}</div>}
     </div>
   )
 }
@@ -409,21 +438,27 @@ export default function SocialPage() {
           />
         </div>
 
-        <FilterGroup
-          label="CATEGORÍA"
-          options={categories}
-          value={catFilter}
-          onChange={setCatFilter}
-          labelFn={c => CAT_LABELS[c] || c}
-          allLabel="TODAS"
-        />
-        <FilterGroup
-          label="ZONA"
-          options={zones}
-          value={zoneFilter}
-          onChange={setZoneFilter}
-          allLabel="TODAS"
-        />
+        <CollapsibleFilter label="CATEGORÍA" defaultOpen={true}>
+          <FilterGroup
+            label="CATEGORÍA"
+            options={categories}
+            value={catFilter}
+            onChange={setCatFilter}
+            labelFn={c => CAT_LABELS[c] || c}
+            allLabel="TODAS"
+            hideLabel
+          />
+        </CollapsibleFilter>
+        <CollapsibleFilter label="ZONA">
+          <FilterGroup
+            label="ZONA"
+            options={zones}
+            value={zoneFilter}
+            onChange={setZoneFilter}
+            allLabel="TODAS"
+            hideLabel
+          />
+        </CollapsibleFilter>
       </aside>
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

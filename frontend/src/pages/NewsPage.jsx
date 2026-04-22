@@ -78,26 +78,12 @@ function RelevanceBar({ value }) {
 
 // ── Paginación ─────────────────────────────────────────────────────────────────
 
-function getPageNums(current, total) {
-  if (total <= 9) return Array.from({ length: total }, (_, i) => i + 1)
-  const set = new Set([1, 2, current - 2, current - 1, current, current + 1, current + 2, total - 1, total])
-  const nums = [...set].filter(n => n >= 1 && n <= total).sort((a, b) => a - b)
-  const result = []
-  for (let i = 0; i < nums.length; i++) {
-    if (i > 0 && nums[i] - nums[i - 1] > 1) result.push('…')
-    result.push(nums[i])
-  }
-  return result
-}
-
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null
-  const nums = getPageNums(page, totalPages)
-
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: '4px', padding: '16px 0 8px',
+      gap: '16px', padding: '16px 0 8px',
       fontFamily: 'var(--mono)',
     }}>
       <button
@@ -107,29 +93,13 @@ function Pagination({ page, totalPages, onChange }) {
           background: 'var(--bg-2)', border: '1px solid var(--border)',
           borderRadius: '2px', color: page === 1 ? 'var(--txt-3)' : 'var(--txt-2)',
           fontFamily: 'var(--mono)', fontSize: '11px',
-          padding: '4px 9px', cursor: page === 1 ? 'default' : 'pointer',
+          padding: '5px 14px', cursor: page === 1 ? 'default' : 'pointer',
           opacity: page === 1 ? 0.4 : 1,
         }}
-      >‹</button>
-
-      {nums.map((n, i) =>
-        n === '…'
-          ? <span key={`e${i}`} style={{ fontSize: '11px', color: 'var(--txt-3)', padding: '0 2px' }}>…</span>
-          : <button
-              key={n}
-              onClick={() => onChange(n)}
-              style={{
-                background: n === page ? 'rgba(0,200,255,0.12)' : 'var(--bg-2)',
-                border: n === page ? '1px solid rgba(0,200,255,0.5)' : '1px solid var(--border)',
-                borderRadius: '2px',
-                color: n === page ? 'var(--cyan)' : 'var(--txt-2)',
-                fontFamily: 'var(--mono)', fontSize: '11px', fontWeight: n === page ? '700' : '400',
-                padding: '4px 8px', minWidth: '28px',
-                cursor: n === page ? 'default' : 'pointer',
-              }}
-            >{n}</button>
-      )}
-
+      >← Anterior</button>
+      <span style={{ fontSize: '11px', color: 'var(--txt-2)', fontFamily: 'var(--mono)' }}>
+        Página {page} de {totalPages}
+      </span>
       <button
         onClick={() => onChange(page + 1)}
         disabled={page === totalPages}
@@ -137,10 +107,39 @@ function Pagination({ page, totalPages, onChange }) {
           background: 'var(--bg-2)', border: '1px solid var(--border)',
           borderRadius: '2px', color: page === totalPages ? 'var(--txt-3)' : 'var(--txt-2)',
           fontFamily: 'var(--mono)', fontSize: '11px',
-          padding: '4px 9px', cursor: page === totalPages ? 'default' : 'pointer',
+          padding: '5px 14px', cursor: page === totalPages ? 'default' : 'pointer',
           opacity: page === totalPages ? 0.4 : 1,
         }}
-      >›</button>
+      >Siguiente →</button>
+    </div>
+  )
+}
+
+// ── Filtro colapsable ───────────────────────────────────────────────────────────
+
+function CollapsibleFilter({ label, defaultOpen, children }) {
+  const [open, setOpen] = useState(defaultOpen ?? false)
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '5px',
+          background: 'none', border: 'none', padding: '4px 0',
+          cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <span style={{ fontSize: '8px', color: 'var(--txt-3)', fontFamily: 'var(--mono)', lineHeight: 1, flexShrink: 0 }}>
+          {open ? '▼' : '▶'}
+        </span>
+        <span style={{
+          fontSize: 'var(--label-xs)', fontWeight: '700', letterSpacing: '.2em',
+          color: 'var(--txt-2)', textTransform: 'uppercase', fontFamily: 'var(--mono)',
+        }}>
+          {label}
+        </span>
+      </button>
+      {open && <div>{children}</div>}
     </div>
   )
 }
@@ -465,11 +464,21 @@ export default function NewsPage() {
           />
         </div>
 
-        <FilterGroup label="SEVERIDAD" options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} />
-        <FilterGroup label="SECTOR" options={sectors} value={sectorFilter} onChange={setSectorFilter} labelFn={s => SECTOR_LABELS[s] || s} />
-        <FilterGroup label="ZONA" options={zones} value={zoneFilter} onChange={setZoneFilter} />
-        <FilterGroup label="PAÍS" options={countries} value={countryFilter} onChange={setCountryFilter} />
-        <FilterGroup label="TIPO" options={sourceTypes} value={typeFilter} onChange={setTypeFilter} labelFn={t => TYPE_LABELS[t] || t} />
+        <CollapsibleFilter label="SEVERIDAD" defaultOpen={true}>
+          <FilterGroup label="SEVERIDAD" options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} hideLabel />
+        </CollapsibleFilter>
+        <CollapsibleFilter label="SECTOR">
+          <FilterGroup label="SECTOR" options={sectors} value={sectorFilter} onChange={setSectorFilter} labelFn={s => SECTOR_LABELS[s] || s} hideLabel />
+        </CollapsibleFilter>
+        <CollapsibleFilter label="ZONA">
+          <FilterGroup label="ZONA" options={zones} value={zoneFilter} onChange={setZoneFilter} hideLabel />
+        </CollapsibleFilter>
+        <CollapsibleFilter label="PAÍS">
+          <FilterGroup label="PAÍS" options={countries} value={countryFilter} onChange={setCountryFilter} hideLabel />
+        </CollapsibleFilter>
+        <CollapsibleFilter label="TIPO">
+          <FilterGroup label="TIPO" options={sourceTypes} value={typeFilter} onChange={setTypeFilter} labelFn={t => TYPE_LABELS[t] || t} hideLabel />
+        </CollapsibleFilter>
       </aside>
 
       {/* Feed principal */}

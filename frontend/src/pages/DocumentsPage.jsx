@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useDocsFeed } from '../hooks/useDocsFeed'
 import { useSourceFavorites } from '../hooks/useSourceFavorites'
 import { SEV_COLOR, SEV_BG, SEV_BORDER } from '../lib/severity'
@@ -40,6 +40,76 @@ const SECTOR_COLOR = {
   ciberseguridad:    'rgba(130,80,255,0.8)',
   crisis_humanitaria:'rgba(0,229,160,0.8)',
   nuclear:           'rgba(255,59,74,1)',
+}
+
+const PAGE_SIZE = 50
+
+// ── Paginación ─────────────────────────────────────────────────────────────────
+
+function Pagination({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      gap: '16px', padding: '12px 0 6px',
+      fontFamily: 'var(--mono)',
+    }}>
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        style={{
+          background: 'var(--bg-2)', border: '1px solid var(--border)',
+          borderRadius: '2px', color: page === 1 ? 'var(--txt-3)' : 'var(--txt-2)',
+          fontFamily: 'var(--mono)', fontSize: '10px',
+          padding: '4px 10px', cursor: page === 1 ? 'default' : 'pointer',
+          opacity: page === 1 ? 0.4 : 1,
+        }}
+      >← Anterior</button>
+      <span style={{ fontSize: '10px', color: 'var(--txt-2)', fontFamily: 'var(--mono)' }}>
+        Página {page} de {totalPages}
+      </span>
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page === totalPages}
+        style={{
+          background: 'var(--bg-2)', border: '1px solid var(--border)',
+          borderRadius: '2px', color: page === totalPages ? 'var(--txt-3)' : 'var(--txt-2)',
+          fontFamily: 'var(--mono)', fontSize: '10px',
+          padding: '4px 10px', cursor: page === totalPages ? 'default' : 'pointer',
+          opacity: page === totalPages ? 0.4 : 1,
+        }}
+      >Siguiente →</button>
+    </div>
+  )
+}
+
+// ── Filtro colapsable ───────────────────────────────────────────────────────────
+
+function CollapsibleFilter({ label, defaultOpen, children }) {
+  const [open, setOpen] = useState(defaultOpen ?? false)
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '5px',
+          background: 'none', border: 'none', padding: '4px 0',
+          cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <span style={{ fontSize: '8px', color: 'var(--txt-3)', fontFamily: 'var(--mono)', lineHeight: 1, flexShrink: 0 }}>
+          {open ? '▼' : '▶'}
+        </span>
+        <span style={{
+          fontSize: 'var(--label-xs)', fontWeight: '700', letterSpacing: '.2em',
+          color: 'var(--txt-2)', textTransform: 'uppercase', fontFamily: 'var(--mono)',
+        }}>
+          {label}
+        </span>
+      </button>
+      {open && <div>{children}</div>}
+    </div>
+  )
 }
 
 function SectorTag({ sector }) {
@@ -260,6 +330,12 @@ export default function DocumentsPage() {
   const [cntFilter,  setCntFilter]  = useState('TODOS')
   const [selected,   setSelected]   = useState(null)
   const [search,     setSearch]     = useState('')
+  const [page,       setPage]       = useState(1)
+
+  const listRef = useRef(null)
+
+  useEffect(() => { setPage(1) }, [sevFilter, orgFilter, secFilter, cntFilter, search])
+  useEffect(() => { if (listRef.current) listRef.current.scrollTop = 0 }, [page])
 
   const filtered = useMemo(() => docs.filter(d => {
     const docSectors = Array.isArray(d.sectors) ? d.sectors : []
@@ -272,6 +348,11 @@ export default function DocumentsPage() {
   }), [docs, sevFilter, orgFilter, secFilter, cntFilter, search])
 
   const selectedDoc = docs.find(d => d.id === selected)
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const rangeEnd   = Math.min(page * PAGE_SIZE, filtered.length)
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-0)' }}>
@@ -322,10 +403,18 @@ export default function DocumentsPage() {
             />
           </div>
 
-          <FilterGroup label="SEVERIDAD" options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} />
-          <FilterGroup label="ORGANISMO" options={orgTypes} value={orgFilter} onChange={setOrgFilter} labelFn={t => ORG_LABELS[t] || t} />
-          <FilterGroup label="SECTOR" options={sectors} value={secFilter} onChange={setSecFilter} labelFn={s => SECTOR_LABELS[s] || s} />
-          <FilterGroup label="PAÍS" options={countries} value={cntFilter} onChange={setCntFilter} />
+          <CollapsibleFilter label="SEVERIDAD" defaultOpen={true}>
+            <FilterGroup label="SEVERIDAD" options={['high', 'medium', 'low']} value={sevFilter} onChange={setSevFilter} hideLabel />
+          </CollapsibleFilter>
+          <CollapsibleFilter label="ORGANISMO">
+            <FilterGroup label="ORGANISMO" options={orgTypes} value={orgFilter} onChange={setOrgFilter} labelFn={t => ORG_LABELS[t] || t} hideLabel />
+          </CollapsibleFilter>
+          <CollapsibleFilter label="SECTOR">
+            <FilterGroup label="SECTOR" options={sectors} value={secFilter} onChange={setSecFilter} labelFn={s => SECTOR_LABELS[s] || s} hideLabel />
+          </CollapsibleFilter>
+          <CollapsibleFilter label="PAÍS">
+            <FilterGroup label="PAÍS" options={countries} value={cntFilter} onChange={setCntFilter} hideLabel />
+          </CollapsibleFilter>
         </aside>
 
         {/* Lista de documentos */}
@@ -335,11 +424,16 @@ export default function DocumentsPage() {
               DOCUMENTOS OFICIALES
             </span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--txt-3)', marginLeft: 'auto' }}>
-              {loading ? 'Cargando…' : `${filtered.length} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`}
+              {loading
+                ? 'Cargando…'
+                : filtered.length > 0
+                  ? `${rangeStart}–${rangeEnd} de ${filtered.length} · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+                  : `0 · ${lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}`
+              }
             </span>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+          <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
             {loading && <LoadingRows count={8} />}
             {!loading && filtered.length === 0 && (
               <EmptyState
@@ -348,7 +442,7 @@ export default function DocumentsPage() {
                 icon="◧"
               />
             )}
-            {!loading && filtered.map(doc => (
+            {!loading && paginated.map(doc => (
               <DocRow
                 key={doc.id}
                 doc={doc}
@@ -361,6 +455,7 @@ export default function DocumentsPage() {
                 }}
               />
             ))}
+            {!loading && <Pagination page={page} totalPages={totalPages} onChange={setPage} />}
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 // Shared sidebar filter group — used by NewsPage, DocumentsPage, SocialPage, MarketsPage
 
-export default function FilterGroup({ label, options, value, onChange, labelFn, accentColor, allLabel = 'TODOS' }) {
+export default function FilterGroup({ label, options, value, onChange, labelFn, accentColor, allLabel = 'TODOS', hideLabel = false }) {
   const accent = accentColor || 'var(--accent)'
   const accentBg = accentColor
     ? `${accentColor}14`
@@ -8,13 +8,15 @@ export default function FilterGroup({ label, options, value, onChange, labelFn, 
 
   return (
     <div>
-      <div style={{
-        fontSize: 'var(--label-xs)', fontWeight: '700', letterSpacing: '.2em',
-        color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px',
-        fontFamily: 'var(--mono)',
-      }}>
-        {label}
-      </div>
+      {!hideLabel && (
+        <div style={{
+          fontSize: 'var(--label-xs)', fontWeight: '700', letterSpacing: '.2em',
+          color: 'var(--txt-3)', textTransform: 'uppercase', marginBottom: '6px',
+          fontFamily: 'var(--mono)',
+        }}>
+          {label}
+        </div>
+      )}
       {[allLabel, ...options].map(opt => {
         const active = value === opt
         return (
