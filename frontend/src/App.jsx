@@ -16,8 +16,11 @@ import SocialPage        from './pages/SocialPage'
 import SentinelPage      from './pages/SentinelPage'
 import FilingsPage       from './pages/FilingsPage'
 import PolymarketPage    from './pages/PolymarketPage'
+import ProfilePage       from './pages/ProfilePage'
+import PlansPage         from './pages/PlansPage'
 import LoadingState      from './components/LoadingSkeleton'
 import { useQilinData }  from './hooks/useQilinData'
+import { clearProfileCache } from './hooks/useProfile'
 import { useAircraftTrail } from './hooks/useAircraftTrail'
 
 const MapView = lazy(() => import('./components/MapView'))
@@ -37,6 +40,13 @@ function AppShell() {
   const [selectedAircraft, setSelectedAircraft] = useState(null)
   const navigate = useNavigate()
 
+  function handleLogout() {
+    clearProfileCache()
+    sessionStorage.removeItem('qilin_token')
+    sessionStorage.removeItem('qilin_user')
+    navigate('/login')
+  }
+
   const { aircraft, alerts, stats, wsStatus } = useQilinData()
   const { trails, addTrail, removeTrail, clearAll } = useAircraftTrail()
 
@@ -46,7 +56,7 @@ function AppShell() {
       <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
         <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
           onNavigate={v => { setView(v); setActiveView('map') }}
-          activeMode={activeView} onModeChange={setActiveView} />
+          activeMode={activeView} onModeChange={setActiveView} onLogout={handleLogout} />
         <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
           <AnalystView />
         </div>
@@ -61,7 +71,7 @@ function AppShell() {
       <div style={{ display:'grid', gridTemplateRows:'52px 1fr 44px',
         gridTemplateColumns:'1fr 340px', height:'100vh', width:'100vw', overflow:'hidden' }}>
         <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
-          onNavigate={setView} activeMode={activeView} onModeChange={setActiveView} />
+          onNavigate={setView} activeMode={activeView} onModeChange={setActiveView} onLogout={handleLogout} />
         <Suspense fallback={
           <div style={{ gridColumn:1, gridRow:2, display:'flex', alignItems:'center',
             justifyContent:'center', background:'var(--bg-0)' }}>
@@ -96,7 +106,7 @@ function AppShell() {
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
       <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
-        onNavigate={setView} activeMode={activeView} onModeChange={setActiveView} />
+        onNavigate={setView} activeMode={activeView} onModeChange={setActiveView} onLogout={handleLogout} />
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
         {view === 'home'       && <HomePage aircraft={aircraft} alerts={alerts} onNavigate={setView} />}
         {view === 'news'       && <NewsPage />}
@@ -105,6 +115,8 @@ function AppShell() {
         {view === 'sentinel'   && <SentinelPage />}
         {view === 'markets'    && <FilingsPage />}
         {view === 'polymarket' && <PolymarketPage />}
+        {view === 'profile'   && <ProfilePage onNavigate={setView} />}
+        {view === 'plans'     && <PlansPage   onNavigate={setView} />}
       </div>
       <ChatBot />
     </div>
