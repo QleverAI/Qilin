@@ -17,7 +17,7 @@ import bcrypt
 import jwt
 import yaml
 import redis.asyncio as aioredis
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status, BackgroundTasks
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status, BackgroundTasks, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -224,6 +224,81 @@ async def public_stats():
     except Exception as e:
         log.warning(f"stats endpoint error: {e}")
         return {"aircraft_active": 0}
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+
+
+_LANDING_CHAT_SYSTEM = """Eres Qilin, el asistente de la plataforma de inteligencia geopolítica Qilin.
+
+Tu función es ayudar a visitantes de la web a entender la plataforma y elegir el plan correcto.
+
+Sobre Qilin:
+- Plataforma de inteligencia geopolítica en tiempo real
+- Monitoriza aeronaves militares y privadas, flotas navales, alertas con IA y señales satelitales
+- Agrega más de 500 fuentes de noticias e inteligencia globales
+- Mercados de predicción integrados para cruzar probabilidades con eventos geopolíticos
+
+Planes:
+- Scout ($0/mes): mapa militar con retraso, 20 noticias/día, 5 alertas/día. Para explorar.
+- Analyst ($49/mes): tiempo real completo, aviones privados, tráfico naval, alertas ilimitadas, historial 30 días. Para analistas e investigadores.
+- Command ($199/mes): todo de Analyst + señales satelitales, informes semanales con IA, API REST, hasta 5 usuarios. Para equipos e instituciones.
+
+Responde SOLO sobre Qilin, sus funcionalidades y planes. Si preguntan algo fuera de este contexto, redirige amablemente a la plataforma.
+Sé conciso y útil. Responde en el idioma del usuario."""
+
+
+@app.post("/api/chat/public")
+async def chat_public(req: ChatRequest, request: Request):
+    """Chat público para la landing page. Sin auth, limitado por IP."""
+    client_ip = request.client.host if request.client else "unknown"
+    redis = app.state.redis
+
+    # Rate limiting: 20 req/hour per IP
+    rate_key = f"ratelimit:chat:public:{client_ip}"
+    try:
+        count = await redis.incr(rate_key)
+        if count == 1:
+            await redis.expire(rate_key, 3600)
+        if count > 20:
+            raise HTTPException(status_code=429, detail="Demasiadas solicitudes. Inténtalo en una hora.")
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # Redis error → allow through
+
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        raise HTTPException(status_code=503, detail="Chatbot no disponible")
+
+    messages = [{"role": m.role, "content": m.content} for m in req.messages[-6:]]
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={
+                    "model": "claude-haiku-4-5-20251001",
+                    "max_tokens": 300,
+                    "system": _LANDING_CHAT_SYSTEM,
+                    "messages": messages,
+                },
+                timeout=30,
+            )
+            resp.raise_for_status()
+            reply = resp.json()["content"][0]["text"].strip()
+            return {"reply": reply}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.warning(f"chat/public error: {e}")
+        raise HTTPException(status_code=500, detail="Error del chatbot")
 
 
 @app.get("/health")
@@ -1301,13 +1376,6 @@ manager = ConnectionManager()
 
 
 # ── CHATBOT ───────────────────────────────────────────────────────────────────
-
-class ChatMessage(BaseModel):
-    role: str
-    content: str
-
-class ChatRequest(BaseModel):
-    messages: list[ChatMessage]
 
 _CHAT_SYSTEM = """Eres el asistente de Qilin, una plataforma de inteligencia geopolítica en tiempo real.
 
