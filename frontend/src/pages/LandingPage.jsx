@@ -344,6 +344,17 @@ export default function LandingPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    document.documentElement.style.overflow = 'auto'
+    document.body.style.overflow = 'auto'
+    document.getElementById('root').style.overflow = 'auto'
+    return () => {
+      document.documentElement.style.overflow = ''
+      document.body.style.overflow = ''
+      document.getElementById('root').style.overflow = ''
+    }
+  }, [])
+
+  useEffect(() => {
     async function fetchStats() {
       try {
         const r = await fetch('/api/stats')
