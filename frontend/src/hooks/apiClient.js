@@ -21,3 +21,9 @@ export async function apiFetch(path) {
 export function getApiBase() {
   return API_BASE
 }
+
+export async function apiFetchPublic(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, options)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
