@@ -94,6 +94,7 @@ MARKET_ASSETS = [
 ]
 
 _PERIOD_INTERVAL = {"1d": "5m", "5d": "1h", "1mo": "1d", "3mo": "1d", "1y": "1wk"}
+_VALID_SYMBOLS = {a["symbol"] for a in MARKET_ASSETS}
 
 # ── Helpers JWT ───────────────────────────────────────────────────────────────
 
@@ -1882,7 +1883,7 @@ async def get_market_quotes(_user: str = Depends(get_current_user)):
                     "symbol":     sym,
                     "name":       asset["name"],
                     "group":      asset["group"],
-                    "price":      round(price, 4) if price else None,
+                    "price":      round(price, 4) if price is not None else None,
                     "change_pct": pct,
                     "currency":   getattr(fi, "currency", None),
                 })
@@ -1912,6 +1913,8 @@ async def get_market_history(
 ):
     if period not in _PERIOD_INTERVAL:
         raise HTTPException(status_code=400, detail=f"period must be one of {list(_PERIOD_INTERVAL)}")
+    if symbol not in _VALID_SYMBOLS:
+        raise HTTPException(status_code=400, detail="Unknown symbol")
 
     cache_key = f"cache:markets:history:{symbol}:{period}"
     redis = app.state.redis

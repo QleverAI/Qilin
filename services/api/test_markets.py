@@ -106,3 +106,9 @@ def test_history_invalid_period(client):
     tc, _ = client
     resp = tc.get("/markets/history?symbol=CL=F&period=10y")
     assert resp.status_code == 400
+
+
+def test_history_unknown_symbol(client):
+    tc, _ = client
+    resp = tc.get("/markets/history?symbol=FAKESYM&period=1mo")
+    assert resp.status_code == 400
