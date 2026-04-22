@@ -50,8 +50,7 @@ export default function ChatBot() {
           color: '#00c8ff', fontSize: open ? 20 : 16, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 2px 16px rgba(0,200,255,0.15)',
-          transition: 'all .15s',
-          fontFamily: 'inherit',
+          transition: 'all .15s', fontFamily: 'inherit',
         }}
       >
         {open ? '×' : '◎'}
@@ -62,33 +61,50 @@ export default function ChatBot() {
           position: 'fixed', bottom: 72, right: 20, zIndex: 999,
           width: 320, height: 440,
           background: 'rgba(7,14,28,0.97)',
-          border: '1px solid rgba(0,200,255,0.25)',
-          borderRadius: 4,
-          boxShadow: '0 4px 32px rgba(0,0,0,0.75)',
+          border: '1px solid rgba(0,200,255,0.18)',
+          borderRadius: 10,
+          boxShadow: '0 4px 40px rgba(0,0,0,0.7), 0 0 20px rgba(0,200,255,0.06)',
           display: 'flex', flexDirection: 'column',
           fontFamily: "'IBM Plex Mono', monospace",
           overflow: 'hidden',
         }}>
+          {/* Header */}
           <div style={{
             padding: '9px 14px', flexShrink: 0,
-            borderBottom: '1px solid rgba(0,200,255,0.12)',
+            borderBottom: '1px solid rgba(0,200,255,0.1)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.2em', color: 'rgba(0,200,255,0.55)', textTransform: 'uppercase' }}>
-              ◎ ASISTENTE QILIN
-            </span>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'rgba(0,200,255,0.08)',
+              border: '1px solid rgba(0,200,255,0.2)',
+              borderRadius: 20, padding: '3px 10px',
+            }}>
+              <div style={{
+                width: 5, height: 5, borderRadius: '50%',
+                background: '#00c8ff', animation: 'blink 1.5s ease-in-out infinite',
+              }} />
+              <span style={{
+                fontSize: 8, fontWeight: 700, letterSpacing: '.15em',
+                color: 'rgba(0,200,255,0.8)', textTransform: 'uppercase',
+              }}>ASISTENTE QILIN</span>
+            </div>
             {messages.length > 0 && (
               <button
                 onClick={() => setMessages([])}
-                title="Limpiar conversación"
-                style={{ background: 'none', border: 'none', color: 'rgba(0,200,255,0.3)', cursor: 'pointer', fontSize: 10, padding: 0 }}
-              >
-                limpiar
-              </button>
+                style={{
+                  background: 'none', border: 'none',
+                  color: 'rgba(0,200,255,0.3)', cursor: 'pointer', fontSize: 10, padding: 0,
+                }}
+              >limpiar</button>
             )}
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Messages */}
+          <div style={{
+            flex: 1, overflowY: 'auto', padding: '12px 12px',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
             {messages.length === 0 && (
               <div style={{ fontSize: 11, color: 'rgba(200,216,232,0.35)', lineHeight: 1.7, marginTop: 4 }}>
                 Pregúntame sobre Qilin — qué muestra el mapa, cómo funcionan las alertas, qué aviones VIP se monitorean…
@@ -97,9 +113,8 @@ export default function ChatBot() {
             {messages.map((m, i) => (
               <div key={i} style={{
                 alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '86%',
-                padding: '7px 10px',
-                borderRadius: m.role === 'user' ? '8px 8px 2px 8px' : '2px 8px 8px 8px',
+                maxWidth: '86%', padding: '7px 10px',
+                borderRadius: m.role === 'user' ? '12px 6px 6px 12px' : '6px 12px 12px 6px',
                 background: m.role === 'user' ? 'rgba(0,200,255,0.10)' : 'rgba(255,255,255,0.04)',
                 border: `1px solid ${m.role === 'user' ? 'rgba(0,200,255,0.22)' : 'rgba(255,255,255,0.07)'}`,
                 fontSize: 12, lineHeight: 1.55,
@@ -110,16 +125,18 @@ export default function ChatBot() {
               </div>
             ))}
             {loading && (
-              <div style={{ alignSelf: 'flex-start', fontSize: 13, color: 'rgba(0,200,255,0.4)', letterSpacing: '.15em', padding: '2px 4px' }}>
-                · · ·
-              </div>
+              <div style={{
+                alignSelf: 'flex-start', fontSize: 13,
+                color: 'rgba(0,200,255,0.4)', letterSpacing: '.15em', padding: '2px 4px',
+              }}>· · ·</div>
             )}
             <div ref={bottomRef} />
           </div>
 
+          {/* Input */}
           <div style={{
             padding: '8px 10px', flexShrink: 0,
-            borderTop: '1px solid rgba(0,200,255,0.12)',
+            borderTop: '1px solid rgba(0,200,255,0.1)',
             display: 'flex', gap: 7,
           }}>
             <input
@@ -131,9 +148,9 @@ export default function ChatBot() {
               autoFocus
               style={{
                 flex: 1,
-                background: 'rgba(0,200,255,0.05)',
-                border: '1px solid rgba(0,200,255,0.18)',
-                borderRadius: 3, padding: '6px 9px',
+                background: 'rgba(0,200,255,0.04)',
+                border: '1px solid rgba(0,200,255,0.15)',
+                borderRadius: 8, padding: '6px 9px',
                 color: '#c8d8e8', fontSize: 12,
                 fontFamily: 'inherit', outline: 'none',
               }}
@@ -144,15 +161,13 @@ export default function ChatBot() {
               style={{
                 background: 'rgba(0,200,255,0.10)',
                 border: '1px solid rgba(0,200,255,0.28)',
-                borderRadius: 3, color: '#00c8ff',
+                borderRadius: 8, color: '#00c8ff',
                 fontSize: 14, padding: '0 11px',
                 cursor: (loading || !input.trim()) ? 'default' : 'pointer',
                 opacity: (loading || !input.trim()) ? 0.35 : 1,
                 transition: 'opacity .1s',
               }}
-            >
-              ➤
-            </button>
+            >➤</button>
           </div>
         </div>
       )}
