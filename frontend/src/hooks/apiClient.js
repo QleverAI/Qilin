@@ -31,3 +31,9 @@ export async function apiFetchPublic(path, options = {}) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+export async function apiFetchBlob(path) {
+  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.blob()
+}

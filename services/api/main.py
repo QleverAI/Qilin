@@ -238,6 +238,10 @@ class FavoriteRequest(BaseModel):
     callsign: str | None = None
 
 
+class SourceFavoriteRequest(BaseModel):
+    source_name: str | None = None
+
+
 _LANDING_CHAT_SYSTEM = """Eres Qilin, el asistente de la plataforma de inteligencia geopolítica Qilin.
 
 Tu función es ayudar a visitantes de la web a entender la plataforma y elegir el plan correcto.
@@ -1452,6 +1456,82 @@ async def remove_favorite(icao24: str, user: str = Depends(get_current_user)):
         )
     except Exception as e:
         log.error(f"remove_favorite error: {e}")
+        return {"ok": False}
+    return {"ok": True}
+
+
+VALID_SOURCE_TYPES = {"news", "social", "docs"}
+SOURCE_LIMIT = 10
+
+@app.get("/source-favorites")
+async def get_source_favorites(user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return {"news": [], "social": [], "docs": []}
+    try:
+        rows = await app.state.db.fetch(
+            "SELECT source_type, source_id, source_name, added_at FROM user_source_favorites WHERE username=$1 ORDER BY added_at DESC",
+            user,
+        )
+        result: dict = {"news": [], "social": [], "docs": []}
+        for r in rows:
+            t = r["source_type"]
+            if t in result:
+                result[t].append({
+                    "source_id": r["source_id"],
+                    "source_name": r["source_name"],
+                    "added_at": r["added_at"].isoformat(),
+                })
+        return result
+    except Exception as e:
+        log.error(f"get_source_favorites error: {e}")
+        return {"news": [], "social": [], "docs": []}
+
+
+@app.post("/source-favorites/{source_type}/{source_id:path}")
+async def add_source_favorite(
+    source_type: str,
+    source_id: str,
+    req: SourceFavoriteRequest,
+    user: str = Depends(get_current_user),
+):
+    if source_type not in VALID_SOURCE_TYPES:
+        raise HTTPException(status_code=422, detail="source_type must be news, social, or docs")
+    if not app.state.db:
+        return {"ok": False}
+    try:
+        count = await app.state.db.fetchval(
+            "SELECT COUNT(*) FROM user_source_favorites WHERE username=$1 AND source_type=$2",
+            user, source_type,
+        )
+        if count >= SOURCE_LIMIT:
+            raise HTTPException(status_code=400, detail=f"Limit of {SOURCE_LIMIT} favorites per type reached")
+        await app.state.db.execute(
+            "INSERT INTO user_source_favorites (username, source_type, source_id, source_name) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
+            user, source_type, source_id, req.source_name,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"add_source_favorite error: {e}")
+        return {"ok": False}
+    return {"ok": True}
+
+
+@app.delete("/source-favorites/{source_type}/{source_id:path}")
+async def remove_source_favorite(
+    source_type: str,
+    source_id: str,
+    user: str = Depends(get_current_user),
+):
+    if not app.state.db:
+        return {"ok": False}
+    try:
+        await app.state.db.execute(
+            "DELETE FROM user_source_favorites WHERE username=$1 AND source_type=$2 AND source_id=$3",
+            user, source_type, source_id,
+        )
+    except Exception as e:
+        log.error(f"remove_source_favorite error: {e}")
         return {"ok": False}
     return {"ok": True}
 

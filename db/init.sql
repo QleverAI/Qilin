@@ -339,3 +339,14 @@ CREATE TABLE IF NOT EXISTS user_favorites (
 );
 
 CREATE INDEX IF NOT EXISTS favorites_username_idx ON user_favorites (username);
+
+CREATE TABLE IF NOT EXISTS user_source_favorites (
+    username     TEXT        NOT NULL,
+    source_type  TEXT        NOT NULL,   -- 'news' | 'social' | 'docs'
+    source_id    TEXT        NOT NULL,
+    source_name  TEXT,
+    added_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (username, source_type, source_id)
+);
+
+CREATE INDEX IF NOT EXISTS src_fav_user_type_idx ON user_source_favorites (username, source_type);
