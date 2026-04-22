@@ -31,6 +31,7 @@ function AppShell() {
   const [view,       setView]       = useState('home')
   const [flyTarget,        setFlyTarget]        = useState(null)
   const [selectedAircraft, setSelectedAircraft] = useState(null)
+  const [selectedVessel,   setSelectedVessel]   = useState(null)
   const navigate = useNavigate()
 
   function handleLogout() {
@@ -40,7 +41,14 @@ function AppShell() {
     navigate('/login')
   }
 
-  const { aircraft, alerts, stats, wsStatus } = useQilinData()
+  function handleSelectVessel(raw) {
+    if (!raw) { setSelectedVessel(null); return }
+    const mmsi = raw.mmsi || raw.id
+    const full = vessels.find(v => (v.mmsi || v.id) === mmsi) || raw
+    setSelectedVessel(full)
+  }
+
+  const { aircraft, vessels, alerts, stats, wsStatus } = useQilinData()
   const { trails, addTrail, removeTrail, clearAll } = useAircraftTrail()
 
   // Analyst view
@@ -71,9 +79,9 @@ function AppShell() {
             <LoadingState message="CARGANDO MAPA..." variant="map" />
           </div>
         }>
-          <MapView aircraft={aircraft} alerts={[]} flyTarget={flyTarget}
+          <MapView aircraft={aircraft} vessels={vessels} alerts={[]} flyTarget={flyTarget}
             trails={trails} onAddTrail={addTrail} onRemoveTrail={removeTrail} onClearTrails={clearAll}
-            onSelectAircraft={setSelectedAircraft} />
+            onSelectAircraft={setSelectedAircraft} onSelectVessel={handleSelectVessel} />
         </Suspense>
         <aside style={{ gridColumn:2, gridRow:2, display:'flex', flexDirection:'column',
           background:'var(--bg-1)', borderLeft:'1px solid var(--border-md)', overflow:'hidden' }}>
@@ -86,6 +94,12 @@ function AppShell() {
             onFlyTo={(icao24) => {
               const a = aircraft.find(x => x.id === icao24)
               if (a) setFlyTarget({ lon: a.lon, lat: a.lat })
+            }}
+            selectedVessel={selectedVessel}
+            onSelectVessel={handleSelectVessel}
+            onFlyToVessel={(mmsi) => {
+              const v = vessels.find(x => (x.mmsi || x.id) === mmsi)
+              if (v) setFlyTarget({ lon: v.lon, lat: v.lat })
             }}
           />
         </aside>
