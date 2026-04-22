@@ -63,7 +63,7 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-    return R * 2 * math.asin(math.sqrt(a))
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def find_nearest_port(lat: float, lon: float) -> dict | None:
@@ -102,7 +102,7 @@ async def process_port_calls(db):
                 mmsi, port["id"]
             )
             if existing:
-                time_since = (now - existing["last_seen"].replace(tzinfo=timezone.utc)).total_seconds()
+                time_since = (now - existing["last_seen"]).total_seconds()
                 if time_since < 3600:
                     continue  # already recorded this visit in the last hour
                 await db.execute(
@@ -139,6 +139,7 @@ async def process_routes(db):
         """
         SELECT mmsi, port_id, port_name, last_seen
         FROM vessel_ports
+        WHERE last_seen > NOW() - INTERVAL '30 days'
         ORDER BY mmsi, last_seen ASC
         """
     )
@@ -175,16 +176,28 @@ async def main():
         return
 
     db = None
+    while db is None:
+        try:
+            db = await asyncpg.connect(DB_URL)
+            log.info("Conectado a TimescaleDB.")
+        except Exception as e:
+            log.warning(f"DB no disponible aún: {e} — reintentando en 10s")
+            await asyncio.sleep(10)
+
     while True:
         try:
-            if db is None:
-                db = await asyncpg.connect(DB_URL)
-                log.info("Conectado a TimescaleDB.")
             await process_port_calls(db)
             await process_routes(db)
         except Exception as e:
             log.error(f"Error en ciclo principal: {e}")
             db = None
+            while db is None:
+                try:
+                    db = await asyncpg.connect(DB_URL)
+                    log.info("Reconectado a TimescaleDB.")
+                except Exception as e2:
+                    log.warning(f"Reconexión fallida: {e2} — reintentando en 10s")
+                    await asyncio.sleep(10)
         await asyncio.sleep(POLL_INTERVAL)
 
 
