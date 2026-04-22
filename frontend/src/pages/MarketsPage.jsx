@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createChart, CandlestickSeries, HistogramSeries } from 'lightweight-charts'
 import { useMarkets } from '../hooks/useMarkets'
 
@@ -8,6 +8,11 @@ const PERIODS = [
   { label: '1M', value: '1mo' },
   { label: '3M', value: '3mo' },
   { label: '1A', value: '1y' },
+]
+
+const GROUP_ORDER = [
+  'Materias primas', 'Defensa EEUU', 'Defensa Europa',
+  'Energía', 'Semiconductores', 'Minería crítica', 'ETFs',
 ]
 
 function PriceChange({ pct }) {
@@ -87,6 +92,7 @@ function PriceChart({ symbol, fetchHistory }) {
   useEffect(() => {
     if (!containerRef.current) return
 
+    // Hardcoded colors: TradingView chart renders to canvas, CSS variables don't resolve there
     const chart = createChart(containerRef.current, {
       layout: {
         background: { color: 'transparent' },
@@ -222,16 +228,11 @@ export default function MarketsPage() {
   }, [quotes, selected])
 
   // Group quotes by group field
-  const groups = quotes.reduce((acc, q) => {
+  const groups = useMemo(() => quotes.reduce((acc, q) => {
     if (!acc[q.group]) acc[q.group] = []
     acc[q.group].push(q)
     return acc
-  }, {})
-
-  const GROUP_ORDER = [
-    'Materias primas', 'Defensa EEUU', 'Defensa Europa',
-    'Energía', 'Semiconductores', 'Minería crítica', 'ETFs',
-  ]
+  }, {}), [quotes])
 
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
