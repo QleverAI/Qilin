@@ -15,7 +15,7 @@ function normalizeAircraft(raw) {
   return {
     id:           raw.icao24,
     callsign:     raw.callsign || null,
-    type:         raw.category === 'military' ? 'military' : 'civil',
+    type:         raw.category === 'military' ? 'military' : raw.category === 'vip' ? 'vip' : 'civil',
     lat:          raw.lat,
     lon:          raw.lon,
     altitude:     raw.altitude,
@@ -25,6 +25,8 @@ function normalizeAircraft(raw) {
     registration:   raw.registration    || null,
     type_code:      raw.type_code       || null,
     origin_country: raw.origin_country  || null,
+    vip_owner:      raw.vip_owner       || null,
+    vip_category:   raw.vip_category    || null,
   }
 }
 

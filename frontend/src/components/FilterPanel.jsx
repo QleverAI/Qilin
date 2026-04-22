@@ -1,6 +1,7 @@
 const FILTERS_CONFIG = [
   { key:'civil',             icon:'▲', label:'Civil',      color:'#4f9cf9' },
   { key:'military_aircraft', icon:'▲', label:'Mil. Aéreo', color:'#f43f5e' },
+  { key:'vip',               icon:'◆', label:'VIP',        color:'#ffd60a' },
   { key:'alerts',            icon:'●', label:'Alertas',    color:'#f43f5e' },
 ]
 

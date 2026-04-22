@@ -20,6 +20,7 @@ const MapView = lazy(() => import('./components/MapView'))
 const DEFAULT_FILTERS = {
   civil:             true,
   military_aircraft: true,
+  vip:               true,
   alerts:            true,
 }
 
@@ -43,17 +44,20 @@ export default function App() {
     setFilters(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const visibleAircraft = useMemo(() => aircraft.filter(a =>
-    a.type === 'military' ? filters.military_aircraft : filters.civil
-  ), [aircraft, filters])
+  const visibleAircraft = useMemo(() => aircraft.filter(a => {
+    if (a.type === 'military') return filters.military_aircraft
+    if (a.type === 'vip')      return filters.vip
+    return filters.civil
+  }), [aircraft, filters])
 
   const visibleAlerts = useMemo(() =>
     filters.alerts ? alerts : []
   , [alerts, filters])
 
   const counts = useMemo(() => ({
-    civil:             aircraft.filter(a => a.type !== 'military').length,
+    civil:             aircraft.filter(a => a.type === 'civil').length,
     military_aircraft: aircraft.filter(a => a.type === 'military').length,
+    vip:               aircraft.filter(a => a.type === 'vip').length,
     alerts:            alerts.length,
   }), [aircraft, alerts])
 

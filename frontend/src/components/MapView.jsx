@@ -90,13 +90,15 @@ function toGeoJSON(entities, iconFn) {
       type: 'Feature',
       properties: {
         id:       e.id,
-        label:    e.callsign || e.name || e.id,
+        label:    e.type === 'vip' ? (e.vip_owner || e.callsign || e.id) : (e.callsign || e.name || e.id),
         type:     e.type,
         heading:  e.heading || 0,
         speed:    e.speed,
         altitude: e.altitude,
         zone:     e.zone,
         origin_country: e.origin_country,
+        vip_owner:    e.vip_owner    || null,
+        vip_category: e.vip_category || null,
         icon:     iconFn(e),
       },
       geometry: { type: 'Point', coordinates: [e.lon, e.lat] },
@@ -179,6 +181,7 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
       // ── Register icons ──
       map.addImage('plane-civil',    makePlaneIcon('#00c8ff'))
       map.addImage('plane-military', makePlaneIcon('#ff3b4a', 26))
+      map.addImage('plane-vip',      makePlaneIcon('#ffd60a', 26))
 
       // ── Zones (label only) ──
       map.addSource('zones', { type: 'geojson', data: zonesToGeoJSON() })
@@ -243,7 +246,7 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
     if (!ready || !mapRef.current) return
     try {
       mapRef.current.getSource('aircraft-src')?.setData(
-        toGeoJSON(aircraft, a => a.type === 'military' ? 'plane-military' : 'plane-civil')
+        toGeoJSON(aircraft, a => a.type === 'military' ? 'plane-military' : a.type === 'vip' ? 'plane-vip' : 'plane-civil')
       )
     } catch (_) {}
   }, [aircraft, ready])
@@ -448,11 +451,16 @@ export default function MapView({ aircraft, alerts, flyTarget, trails = {}, onAd
               {/* Header */}
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
                 <div>
-                  <div style={{ fontSize:'9px', color: detail.type === 'military' ? '#ff3b4a' : 'rgba(0,200,255,0.45)', letterSpacing:'.15em', textTransform:'uppercase' }}>
-                    {detail.type === 'military' ? '⬛ MILITAR' : '▲ CIVIL'}
+                  <div style={{ fontSize:'9px', color: detail.type === 'military' ? '#ff3b4a' : detail.type === 'vip' ? '#ffd60a' : 'rgba(0,200,255,0.45)', letterSpacing:'.15em', textTransform:'uppercase' }}>
+                    {detail.type === 'military' ? '⬛ MILITAR' : detail.type === 'vip' ? '◆ VIP' : '▲ CIVIL'}
                   </div>
-                  <div style={{ fontSize:'15px', fontWeight:'600', color:'#00c8ff', marginTop:'1px', letterSpacing:'.05em' }}>
-                    {detail.label || '—'}
+                  {detail.vip_owner && (
+                    <div style={{ fontSize:'13px', fontWeight:'700', color:'#ffd60a', marginTop:'1px', letterSpacing:'.02em' }}>
+                      {detail.vip_owner}
+                    </div>
+                  )}
+                  <div style={{ fontSize:'15px', fontWeight:'600', color: detail.type === 'vip' ? 'rgba(255,214,10,0.7)' : '#00c8ff', marginTop:'1px', letterSpacing:'.05em' }}>
+                    {detail.vip_owner ? (detail.label !== detail.vip_owner ? detail.label : null) : (detail.label || '—')}
                   </div>
                   {(meta?.model || detail.type_code) && (
                     <div style={{ fontSize:'10px', color:'rgba(200,216,232,0.6)', marginTop:'1px' }}>
