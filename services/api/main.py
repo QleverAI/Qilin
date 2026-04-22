@@ -135,15 +135,67 @@ class TokenResponse(BaseModel):
 
 @app.post("/auth/login", response_model=TokenResponse)
 async def login(form: OAuth2PasswordRequestForm = Depends()):
-    if not verify_password(form.username, form.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales incorrectas",
-            headers={"WWW-Authenticate": "Bearer"},
+    # 1. Check env-var users first (existing behaviour)
+    if verify_password(form.username, form.password):
+        token = create_token(form.username)
+        log.info(f"Login correcto: {form.username}")
+        return TokenResponse(access_token=token, username=form.username)
+
+    # 2. Fallback: check DB users table
+    db = app.state.db
+    if db:
+        row = await db.fetchrow(
+            "SELECT username, password_hash FROM users WHERE username=$1",
+            form.username.lower()
         )
-    token = create_token(form.username)
-    log.info(f"Login correcto: {form.username}")
-    return TokenResponse(access_token=token, username=form.username)
+        if row:
+            try:
+                match = bcrypt.checkpw(form.password.encode(), row["password_hash"].encode())
+            except Exception:
+                match = False
+            if match:
+                token = create_token(row["username"])
+                log.info(f"Login correcto (DB): {row['username']}")
+                return TokenResponse(access_token=token, username=row["username"])
+
+    raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+
+
+@app.post("/auth/register")
+async def register(req: RegisterRequest):
+    if len(req.username) < 3:
+        raise HTTPException(status_code=422, detail="Username mínimo 3 caracteres")
+    if len(req.password) < 8:
+        raise HTTPException(status_code=422, detail="Contraseña mínimo 8 caracteres")
+    if not req.email or "@" not in req.email:
+        raise HTTPException(status_code=422, detail="Email inválido")
+
+    db = app.state.db
+    if not db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+
+    # Check duplicate username or email
+    existing = await db.fetchrow(
+        "SELECT id FROM users WHERE username=$1 OR email=$2",
+        req.username.lower(), req.email.lower()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Usuario o email ya registrado")
+
+    hashed = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt(12)).decode()
+    await db.execute(
+        "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3)",
+        req.username.lower(), req.email.lower(), hashed
+    )
+    log.info(f"Nuevo usuario registrado: {req.username.lower()}")
+    token = create_token(req.username.lower())
+    return {"access_token": token, "token_type": "bearer", "username": req.username.lower()}
 
 
 # ── REST ENDPOINTS ────────────────────────────────────────────────────────────
