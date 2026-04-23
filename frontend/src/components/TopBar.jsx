@@ -3,6 +3,7 @@ import { useLang } from '../hooks/useLanguage'
 
 const NAV_ITEMS = [
   { id: 'home',       key: 'nav.home'      },
+  { id: 'intel',      key: 'nav.intel'     },
   { id: 'tactical',   key: 'nav.tactical'  },
   { id: 'news',       key: 'nav.news'      },
   { id: 'documents',  key: 'nav.documents' },
@@ -166,20 +167,23 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
 
         {/* Alerts badge */}
         {alertsTotal > 0 && (
-          <div style={{
-            display:'flex', alignItems:'center', gap:'5px',
-            background:'rgba(244,63,94,0.10)',
-            border:'1px solid rgba(244,63,94,0.30)',
-            borderRadius:'3px', padding:'3px 8px',
-            fontFamily:'var(--mono)', fontSize:'var(--label-sm)', fontWeight:'600',
-            color:'var(--red)',
-          }}>
+          <button
+            onClick={() => onNavigate('intel')}
+            style={{
+              display:'flex', alignItems:'center', gap:'5px',
+              background:'rgba(244,63,94,0.10)',
+              border:'1px solid rgba(244,63,94,0.30)',
+              borderRadius:'3px', padding:'3px 8px',
+              fontFamily:'var(--mono)', fontSize:'var(--label-sm)', fontWeight:'600',
+              color:'var(--red)', cursor:'pointer',
+            }}
+          >
             <div style={{
               width:'4px', height:'4px', borderRadius:'50%',
               background:'var(--red)', animation:'blink 1.2s ease-in-out infinite',
             }} />
             {alertsTotal} ALT
-          </div>
+          </button>
         )}
 
         {/* Clock */}

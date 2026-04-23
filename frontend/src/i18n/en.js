@@ -1,6 +1,7 @@
 export const en = {
   // Navigation
   'nav.home':       'HOME',
+  'nav.intel':      'INTEL',
   'nav.tactical':   'TACTICAL',
   'nav.news':       'NEWS',
   'nav.documents':  'DOCUMENTS',
