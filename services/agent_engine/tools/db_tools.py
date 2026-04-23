@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import asyncpg
 
@@ -22,7 +22,7 @@ async def get_aircraft_history(
           AND lon BETWEEN $4 AND $5
     """
     params = [
-        f"{hours} hours",
+        timedelta(hours=hours),
         zone_bbox["min_lat"], zone_bbox["max_lat"],
         zone_bbox["min_lon"], zone_bbox["max_lon"],
     ]
@@ -48,7 +48,7 @@ async def get_vessel_history(
           AND lon BETWEEN $4 AND $5
         ORDER BY time DESC LIMIT 500
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         zone_bbox["min_lat"], zone_bbox["max_lat"],
         zone_bbox["min_lon"], zone_bbox["max_lon"],
     )
@@ -72,7 +72,7 @@ async def get_ais_dark_events(
           AND ais_active = FALSE
         ORDER BY mmsi, time DESC
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         zone_bbox["min_lat"], zone_bbox["max_lat"],
         zone_bbox["min_lon"], zone_bbox["max_lon"],
     )
@@ -99,7 +99,7 @@ async def search_news(
         ORDER BY relevance DESC, time DESC
         LIMIT $3
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         keywords,
         limit,
     )
@@ -124,7 +124,7 @@ async def search_social(
         ORDER BY likes DESC, time DESC
         LIMIT 50
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         keywords,
     )
     return [dict(r) for r in rows]
@@ -145,7 +145,7 @@ async def get_market_signals(
           AND ticker = ANY($2::text[])
         ORDER BY time DESC
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         tickers,
     )
     return [dict(r) for r in rows]
@@ -167,7 +167,7 @@ async def get_polymarket_signals(
         ORDER BY time DESC
         LIMIT 50
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         zone,
     )
     return [dict(r) for r in rows]
@@ -187,7 +187,7 @@ async def get_sentinel_data(
           AND zone_id = $2
         ORDER BY time DESC
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         zone_id,
     )
     return [dict(r) for r in rows]
@@ -212,7 +212,7 @@ async def get_analyzed_events(
         ORDER BY time DESC
         LIMIT 20
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         zone,
         min_severity,
     )
@@ -294,7 +294,7 @@ async def fetch_previous_findings(
         LIMIT $3
         """,
         agent_name,
-        f"{hours} hours",
+        timedelta(hours=hours),
         limit,
     )
     return [dict(r) for r in rows]
@@ -317,7 +317,7 @@ async def fetch_analyzed_events_window(
         ORDER BY time DESC
         LIMIT $3
         """,
-        f"{hours} hours",
+        timedelta(hours=hours),
         min_severity,
         limit,
     )
@@ -344,7 +344,7 @@ async def get_aircraft_history_global(
         FROM aircraft_positions
         WHERE time >= NOW() - $1::interval
     """
-    params = [f"{hours} hours"]
+    params = [timedelta(hours=hours)]
     if military_only:
         query += " AND category = 'military'"
     query += " ORDER BY time DESC LIMIT $2"
@@ -365,7 +365,7 @@ async def get_vessel_history_global(
         FROM vessel_positions
         WHERE time >= NOW() - $1::interval
     """
-    params = [f"{hours} hours"]
+    params = [timedelta(hours=hours)]
     if categories:
         query += " AND category = ANY($2::text[])"
         params.append(categories)
@@ -392,9 +392,20 @@ async def get_ais_dark_events_global(
         ORDER BY mmsi, time DESC
         LIMIT $2
         """,
-        f"{hours} hours", limit,
+        timedelta(hours=hours), limit,
     )
     return [dict(r) for r in rows]
+
+
+_SEVERITY_RANK_SQL = """
+        CASE LOWER(COALESCE(severity, ''))
+          WHEN 'critical' THEN 4
+          WHEN 'high'     THEN 3
+          WHEN 'medium'   THEN 2
+          WHEN 'low'      THEN 1
+          ELSE 0
+        END
+"""
 
 
 async def get_recent_news(
@@ -404,17 +415,17 @@ async def get_recent_news(
     limit: int = 120,
 ) -> list[dict]:
     rows = await pool.fetch(
-        """
+        f"""
         SELECT time, source, title, url,
                SUBSTRING(summary, 1, 300) AS summary,
                zones, keywords, severity, relevance, source_type, sectors
         FROM news_events
         WHERE time >= NOW() - $1::interval
-          AND severity >= $2
-        ORDER BY severity DESC, relevance DESC, time DESC
+          AND {_SEVERITY_RANK_SQL} >= $2
+        ORDER BY {_SEVERITY_RANK_SQL} DESC, relevance DESC, time DESC
         LIMIT $3
         """,
-        f"{hours} hours", min_severity, limit,
+        timedelta(hours=hours), min_severity, limit,
     )
     return [dict(r) for r in rows]
 
@@ -432,6 +443,6 @@ async def get_recent_social(
         ORDER BY likes DESC, time DESC
         LIMIT $2
         """,
-        f"{hours} hours", limit,
+        timedelta(hours=hours), limit,
     )
     return [dict(r) for r in rows]

@@ -6,6 +6,7 @@ import time
 import anthropic
 
 from cost_tracker import track_spend, is_over_cap
+from json_utils import parse_llm_json
 
 log = logging.getLogger(__name__)
 
@@ -87,10 +88,10 @@ class BaseAgent:
             if response.stop_reason == "end_turn":
                 for block in response.content:
                     if hasattr(block, "text"):
-                        try:
-                            return json.loads(block.text)
-                        except (json.JSONDecodeError, ValueError):
-                            return {"raw": block.text}
+                        parsed = parse_llm_json(block.text)
+                        if parsed is not None:
+                            return parsed
+                        return {"raw": block.text}
                 return {}
 
             if response.stop_reason == "tool_use":

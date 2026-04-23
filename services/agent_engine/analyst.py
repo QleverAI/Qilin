@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import re
 import time
 from datetime import datetime, timezone
 
@@ -10,6 +9,7 @@ import asyncpg
 
 from tools import db_tools
 from cost_tracker import track_spend
+from json_utils import clean_json as _clean_json
 
 log = logging.getLogger(__name__)
 
@@ -56,13 +56,6 @@ Reglas severity:
   3-4:  ruido, sin correlación
   1-2:  panorama normal, sin señal\
 """
-
-_CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
-
-
-def _clean_json(text: str) -> str:
-    return _CODE_FENCE_RE.sub("", text).strip()
-
 
 class Analyst:
     def __init__(self, pool: asyncpg.Pool | None) -> None:
@@ -162,7 +155,10 @@ class Analyst:
                     "polymarket_implications": None,
                     "recommended_action": analysis.get("recommended_action"),
                     "tags": analysis.get("tags") or [],
-                    "raw_input": {"cycle_id": cycle_id, "findings": agent_findings},
+                    "raw_input": json.dumps(
+                        {"cycle_id": cycle_id, "findings": agent_findings},
+                        default=str, ensure_ascii=False,
+                    ),
                     "processing_time_ms": processing_ms,
                 }
                 saved_id = await db_tools.save_analyzed_event(self.pool, db_record)
