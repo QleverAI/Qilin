@@ -9,6 +9,7 @@ globs: frontend/src/**/*.{js,jsx}
 - Estado global mínimo en `App.jsx`, pasado como props hacia abajo
 - Lógica de datos (API calls, WebSocket) exclusivamente en `src/hooks/useQilinData.js`
 - Datos mock en `src/data/` para desarrollo sin backend
+- **Code-splitting**: todos los `pages/*` se importan con `React.lazy()` dentro de `App.jsx` y se envuelven en `<Suspense>`. El bundle inicial (`index-*.js`) ronda los 220 KB (~69 KB gzip); MapLibre (~1 MB) es un chunk propio que solo se descarga al entrar en la vista táctica. Al añadir una página nueva, mantén el patrón `const FooPage = lazy(() => import('./pages/FooPage'))`.
 
 ## Estilos
 - CSS-in-JS con objetos `style={{...}}` inline — no crear archivos `.css` por componente

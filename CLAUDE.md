@@ -116,6 +116,7 @@ npm run build
 - `SENTINEL_POLL_INTERVAL` — intervalo Sentinel-5P en segundos (default 21600 = 6h)
 - `JWT_SECRET` — clave de firma de tokens (cambiar en producción)
 - `AUTH_USER_N` — usuarios con formato `username:$2b$12$bcrypt_hash`
+- `DB_POOL_MIN` / `DB_POOL_MAX` — conexiones mínimas/máximas del pool asyncpg en la API (default `4`/`20`)
 - `CYCLE_SCHEDULE` — horas UTC de ciclos (default `6,14,22`)
 - `CYCLE_HOURS_LOOKBACK` — ventana de análisis (default 8)
 - `ENABLED_AGENTS` — lista de agentes activos (default `adsb,maritime,news,social`)
@@ -183,9 +184,13 @@ Todo lo que va por usuario o cambia segundo a segundo: `/aircraft`, `/vessels`, 
 
 `/etc/nginx/sites-available/qilin` tiene `gzip on` con `gzip_min_length 1024` y tipos `application/json text/css application/javascript text/plain`. Reduce `news/feed` de ~800 KB a ~240 KB. La config vive en el repo en `deploy/nginx/qilin.conf` como referencia (el fichero en el VPS se edita a mano con `.deploy_ssh.py`).
 
-### Invalidación manual
+### Invalidación
 
-Desde Python con la API corriendo: `await invalidate_cache("news.feed")`. Desde CLI de Redis: `redis-cli --scan --pattern 'cache:news.feed:*' | xargs -r redis-cli DEL`.
+- **Reactiva desde ingestores** (activa): tras cada ciclo con ≥1 item nuevo, el ingestor publica el prefijo en el canal Redis `cache.invalidate`. La API (cualquier réplica) está suscrita y borra las claves `cache:{prefix}:*`. Mapeo actual: `ingestor_news → news.feed`, `ingestor_social → social.feed`, `ingestor_docs → docs.feed`, `ingestor_sec → sec.feed`, `ingestor_polymarket → polymarket.feed`, `agent_engine → intel.timeline` + `intel.spend` tras cada ciclo 06/14/22 UTC.
+- **Manual**:
+  - Desde Python con la API corriendo: `await invalidate_cache("news.feed")`.
+  - Desde CLI de Redis (pub/sub): `redis-cli PUBLISH cache.invalidate news.feed`.
+  - Borrado directo: `redis-cli --scan --pattern 'cache:news.feed:*' | xargs -r redis-cli DEL`.
 
 ## Zonas configurables
 
