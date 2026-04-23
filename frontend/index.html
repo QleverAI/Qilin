@@ -4,13 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#02060e" />
+    <meta name="color-scheme" content="dark" />
 
     <title>Qilin — Inteligencia geopolítica en tiempo real</title>
     <meta name="description" content="Aeronaves militares y privadas, flotas navales, alertas con IA, documentos oficiales, señales satelitales y mercados de predicción — todo en un solo panel, en tiempo real." />
 
+    <!-- Crawlers: habilitamos indexado y rich previews -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Canonical e idiomas alternativos.
+         Cambia las URL a tu dominio cuando lo tengas. -->
+    <link rel="canonical" href="http://178.104.238.122/" />
+    <link rel="alternate" hreflang="es"        href="http://178.104.238.122/" />
+    <link rel="alternate" hreflang="en"        href="http://178.104.238.122/" />
+    <link rel="alternate" hreflang="x-default" href="http://178.104.238.122/" />
+
+    <!-- Favicons + PWA manifest -->
+    <link rel="icon"             type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-512.svg" />
+    <link rel="mask-icon"        href="/favicon.svg" color="#c8a03c" />
+    <link rel="manifest"         href="/manifest.webmanifest" />
+
     <!-- Open Graph / Facebook / LinkedIn -->
     <meta property="og:type"        content="website" />
     <meta property="og:site_name"   content="Qilin" />
+    <meta property="og:url"         content="http://178.104.238.122/" />
     <meta property="og:title"       content="Qilin — Inteligencia geopolítica en tiempo real" />
     <meta property="og:description" content="Militares + jets privados, tráfico naval, 500+ fuentes de noticias, alertas con IA y señales satelitales. Ve lo que otros no ven." />
     <meta property="og:image"       content="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1200&q=80" />
@@ -37,9 +55,71 @@
           imagesizes="100vw">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+    <!-- Structured data: Organization + SoftwareApplication
+         Google usa esto para rich results (logo, sitelinks, pricing). -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Qilin Intelligence",
+      "alternateName": "Qilin",
+      "url": "http://178.104.238.122/",
+      "logo": "http://178.104.238.122/icon-512.svg",
+      "description": "Plataforma de inteligencia geopolítica en tiempo real: ADS-B militar, AIS naval, noticias, documentos oficiales, satélites Sentinel y mercados de predicción.",
+      "foundingDate": "2026"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Qilin",
+      "description": "Plataforma SaaS de inteligencia geopolítica: aeronaves militares y privadas en tiempo real, tráfico naval, alertas con IA, 500+ fuentes de noticias, documentos oficiales, señales satelitales Sentinel y mercados de predicción Polymarket.",
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "Geopolitical Intelligence",
+      "operatingSystem": "Web, iOS, Android",
+      "url": "http://178.104.238.122/",
+      "inLanguage": ["es", "en"],
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Scout",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "Mapa militar con retraso, 5 alertas/día, feed de noticias 24h.",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "@type": "Offer",
+          "name": "Analyst",
+          "price": "49",
+          "priceCurrency": "USD",
+          "description": "Tiempo real completo, aviones privados, tráfico naval, alertas ilimitadas, historial 30 días.",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "@type": "Offer",
+          "name": "Command",
+          "price": "199",
+          "priceCurrency": "USD",
+          "description": "Todo de Analyst + señales satelitales, informes semanales IA, API REST, hasta 5 usuarios.",
+          "availability": "https://schema.org/InStock"
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Fallback para bots/navegadores sin JS: al menos saben de qué va -->
+    <noscript>
+      <div style="padding:24px;color:#c8a03c;background:#02060e;font-family:sans-serif">
+        <h1>Qilin — Inteligencia geopolítica en tiempo real</h1>
+        <p>Esta aplicación requiere JavaScript. Desbloquéalo para continuar.</p>
+        <p>Aeronaves militares y privadas, flotas navales, alertas con IA, documentos oficiales, señales satelitales y mercados de predicción — todo en un solo panel.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

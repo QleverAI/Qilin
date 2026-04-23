@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /app/
+
+Sitemap: http://178.104.238.122/sitemap.xml

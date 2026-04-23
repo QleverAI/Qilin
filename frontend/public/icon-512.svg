@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="40%" r="70%">
+      <stop offset="0%"   stop-color="#071020"/>
+      <stop offset="100%" stop-color="#02060e"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <path d="M256 62 L450 256 L256 450 L62 256 Z"
+        fill="none" stroke="#c8a03c" stroke-width="22" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="44" fill="#c8a03c"/>
+  <text x="256" y="488" text-anchor="middle"
+        font-family="'IBM Plex Mono',ui-monospace,monospace" font-weight="700"
+        font-size="34" letter-spacing="8" fill="#c8a03c">QILIN</text>
+</svg>
