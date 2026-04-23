@@ -329,3 +329,25 @@ async def update_analyzed_event_cycle(pool: asyncpg.Pool, event_id: int, cycle_i
         "UPDATE analyzed_events SET cycle_id = $1 WHERE id = $2",
         cycle_id, event_id,
     )
+
+
+async def get_aircraft_history_global(
+    pool: asyncpg.Pool,
+    hours: int,
+    military_only: bool = True,
+    limit: int = 2000,
+) -> list[dict]:
+    """Global (no bbox) aircraft query. Used by scheduled adsb_agent."""
+    query = """
+        SELECT time, icao24, callsign, lat, lon, altitude, velocity,
+               heading, on_ground, category, origin_country, zone
+        FROM aircraft_positions
+        WHERE time >= NOW() - $1::interval
+    """
+    params = [f"{hours} hours"]
+    if military_only:
+        query += " AND category = 'military'"
+    query += " ORDER BY time DESC LIMIT $2"
+    params.append(limit)
+    rows = await pool.fetch(query, *params)
+    return [dict(r) for r in rows]
