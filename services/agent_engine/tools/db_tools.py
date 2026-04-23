@@ -395,3 +395,43 @@ async def get_ais_dark_events_global(
         f"{hours} hours", limit,
     )
     return [dict(r) for r in rows]
+
+
+async def get_recent_news(
+    pool: asyncpg.Pool,
+    hours: int,
+    min_severity: int = 0,
+    limit: int = 120,
+) -> list[dict]:
+    rows = await pool.fetch(
+        """
+        SELECT time, source, title, url,
+               SUBSTRING(summary, 1, 300) AS summary,
+               zones, keywords, severity, relevance, source_type, sectors
+        FROM news_events
+        WHERE time >= NOW() - $1::interval
+          AND severity >= $2
+        ORDER BY severity DESC, relevance DESC, time DESC
+        LIMIT $3
+        """,
+        f"{hours} hours", min_severity, limit,
+    )
+    return [dict(r) for r in rows]
+
+
+async def get_recent_social(
+    pool: asyncpg.Pool,
+    hours: int,
+    limit: int = 200,
+) -> list[dict]:
+    rows = await pool.fetch(
+        """
+        SELECT time, handle, display, category, zone, content, likes, retweets, url
+        FROM social_posts
+        WHERE time >= NOW() - $1::interval
+        ORDER BY likes DESC, time DESC
+        LIMIT $2
+        """,
+        f"{hours} hours", limit,
+    )
+    return [dict(r) for r in rows]
