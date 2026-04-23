@@ -227,11 +227,11 @@ async def save_analyzed_event(pool: asyncpg.Pool, event: dict) -> int:
         INSERT INTO analyzed_events (
             time, zone, event_type, severity, confidence, headline, summary,
             signals_used, market_implications, polymarket_implications,
-            recommended_action, tags, raw_input, processing_time_ms
+            recommended_action, tags, raw_input, processing_time_ms, cycle_id
         ) VALUES (
             $1, $2, $3, $4, $5, $6, $7,
             $8, $9, $10,
-            $11, $12, $13, $14
+            $11, $12, $13, $14, $15
         ) RETURNING id
         """,
         ts,
@@ -248,5 +248,84 @@ async def save_analyzed_event(pool: asyncpg.Pool, event: dict) -> int:
         event.get("tags") or [],
         event.get("raw_input"),
         event.get("processing_time_ms"),
+        event.get("cycle_id"),
     )
     return row["id"]
+
+
+async def save_agent_finding(pool: asyncpg.Pool, finding: dict) -> int:
+    """Insert into agent_findings. Returns generated id."""
+    ts = finding.get("time") or datetime.now(timezone.utc)
+    row = await pool.fetchrow(
+        """
+        INSERT INTO agent_findings (
+            time, cycle_id, agent_name, anomaly_score, summary,
+            raw_output, tools_called, duration_ms, telegram_sent
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id
+        """,
+        ts,
+        finding["cycle_id"],
+        finding["agent_name"],
+        int(finding.get("anomaly_score") or 0),
+        finding.get("summary") or "",
+        json.dumps(finding.get("raw_output") or {}),
+        finding.get("tools_called") or [],
+        finding.get("duration_ms"),
+        bool(finding.get("telegram_sent", False)),
+    )
+    return row["id"]
+
+
+async def fetch_previous_findings(
+    pool: asyncpg.Pool,
+    agent_name: str,
+    hours: int = 24,
+    limit: int = 5,
+) -> list[dict]:
+    """Return this agent's own recent findings for memory context."""
+    rows = await pool.fetch(
+        """
+        SELECT time, cycle_id, anomaly_score, summary, raw_output
+        FROM agent_findings
+        WHERE agent_name = $1
+          AND time >= NOW() - $2::interval
+        ORDER BY time DESC
+        LIMIT $3
+        """,
+        agent_name,
+        f"{hours} hours",
+        limit,
+    )
+    return [dict(r) for r in rows]
+
+
+async def fetch_analyzed_events_window(
+    pool: asyncpg.Pool,
+    hours: int = 24,
+    min_severity: int = 0,
+    limit: int = 10,
+) -> list[dict]:
+    """Master memory: recent analyzed_events across all zones."""
+    rows = await pool.fetch(
+        """
+        SELECT id, time, cycle_id, zone, event_type, severity, confidence,
+               headline, summary, signals_used, recommended_action, tags
+        FROM analyzed_events
+        WHERE time >= NOW() - $1::interval
+          AND severity >= $2
+        ORDER BY time DESC
+        LIMIT $3
+        """,
+        f"{hours} hours",
+        min_severity,
+        limit,
+    )
+    return [dict(r) for r in rows]
+
+
+async def update_analyzed_event_cycle(pool: asyncpg.Pool, event_id: int, cycle_id: str) -> None:
+    await pool.execute(
+        "UPDATE analyzed_events SET cycle_id = $1 WHERE id = $2",
+        cycle_id, event_id,
+    )
