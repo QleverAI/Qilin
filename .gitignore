@@ -13,8 +13,12 @@ build/
 # Claude Code — archivos locales (no compartir)
 CLAUDE.local.md
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 .worktrees/
 
 # Superpowers — archivos locales del sistema
 .superpowers/
 docs/superpowers/
+
+# Local deploy helpers (contain credentials)
+.deploy_ssh.py

@@ -1950,7 +1950,7 @@ async def get_market_history(
     return data
 
 
-@app.get("/api/intel/timeline")
+@app.get("/intel/timeline")
 async def intel_timeline(
     hours: int = 48,
     min_score: int = 0,
@@ -1974,10 +1974,10 @@ async def intel_timeline(
         ORDER BY time DESC
         LIMIT 200
         """,
-        f"{hours} hours", min_score,
+        timedelta(hours=hours), min_score,
     )
     domain_filter = ""
-    params: list = [f"{hours} hours", min_score]
+    params: list = [timedelta(hours=hours), min_score]
     if domain and domain != "all":
         domain_filter = " AND agent_name = $3"
         params.append(f"{domain}_agent")
@@ -2034,7 +2034,7 @@ async def intel_timeline(
     return {"items": items, "count": len(items)}
 
 
-@app.get("/api/intel/cycle/{cycle_id}")
+@app.get("/intel/cycle/{cycle_id}")
 async def intel_cycle(cycle_id: str, _user: str = Depends(get_current_user)):
     db = app.state.db
     if not db:
@@ -2063,7 +2063,7 @@ async def intel_cycle(cycle_id: str, _user: str = Depends(get_current_user)):
     }
 
 
-@app.get("/api/intel/spend")
+@app.get("/intel/spend")
 async def intel_spend(_user: str = Depends(get_current_user)):
     """Current day's AI spend (USD)."""
     today = date.today().isoformat()
