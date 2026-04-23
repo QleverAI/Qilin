@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from urllib.parse import quote
 
 import asyncpg
@@ -1950,6 +1950,131 @@ async def get_market_history(
     return data
 
 
+@app.get("/api/intel/timeline")
+async def intel_timeline(
+    hours: int = 48,
+    min_score: int = 0,
+    domain: str = "all",
+    _user: str = Depends(get_current_user),
+):
+    """Unified timeline: master analyses + agent findings, DESC."""
+    db = app.state.db
+    if not db:
+        return {"items": [], "count": 0}
+    hours = max(1, min(hours, 168))
+
+    masters = await db.fetch(
+        """
+        SELECT id, time, cycle_id, zone, event_type, severity, confidence,
+               headline, summary, signals_used, recommended_action, tags
+        FROM analyzed_events
+        WHERE time >= NOW() - $1::interval
+          AND cycle_id IS NOT NULL
+          AND severity >= $2
+        ORDER BY time DESC
+        LIMIT 200
+        """,
+        f"{hours} hours", min_score,
+    )
+    domain_filter = ""
+    params: list = [f"{hours} hours", min_score]
+    if domain and domain != "all":
+        domain_filter = " AND agent_name = $3"
+        params.append(f"{domain}_agent")
+    findings = await db.fetch(
+        f"""
+        SELECT id, time, cycle_id, agent_name, anomaly_score, summary,
+               raw_output, tools_called, duration_ms, telegram_sent
+        FROM agent_findings
+        WHERE time >= NOW() - $1::interval
+          AND anomaly_score >= $2
+          {domain_filter}
+        ORDER BY time DESC
+        LIMIT 500
+        """,
+        *params,
+    )
+
+    items = []
+    for m in masters:
+        items.append({
+            "type": "master",
+            "time": m["time"].isoformat(),
+            "cycle_id": str(m["cycle_id"]) if m["cycle_id"] else None,
+            "zone": m["zone"],
+            "event_type": m["event_type"],
+            "severity": m["severity"],
+            "confidence": m["confidence"],
+            "headline": m["headline"],
+            "summary": m["summary"],
+            "signals_used": m["signals_used"],
+            "recommended_action": m["recommended_action"],
+            "tags": m["tags"],
+        })
+    for f in findings:
+        raw = f["raw_output"]
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except Exception:
+                raw = {}
+        items.append({
+            "type": "finding",
+            "time": f["time"].isoformat(),
+            "cycle_id": str(f["cycle_id"]) if f["cycle_id"] else None,
+            "agent_name": f["agent_name"],
+            "anomaly_score": f["anomaly_score"],
+            "summary": f["summary"],
+            "raw_output": raw,
+            "tools_called": f["tools_called"],
+            "duration_ms": f["duration_ms"],
+            "telegram_sent": f["telegram_sent"],
+        })
+    items.sort(key=lambda x: x["time"], reverse=True)
+    return {"items": items, "count": len(items)}
+
+
+@app.get("/api/intel/cycle/{cycle_id}")
+async def intel_cycle(cycle_id: str, _user: str = Depends(get_current_user)):
+    db = app.state.db
+    if not db:
+        return {"master": None, "findings": []}
+    master_row = await db.fetchrow(
+        "SELECT * FROM analyzed_events WHERE cycle_id = $1 ORDER BY time DESC LIMIT 1",
+        cycle_id,
+    )
+    findings = await db.fetch(
+        "SELECT * FROM agent_findings WHERE cycle_id = $1 ORDER BY time ASC",
+        cycle_id,
+    )
+
+    def _row_to_dict(r):
+        d = dict(r)
+        for k, v in list(d.items()):
+            if isinstance(v, datetime):
+                d[k] = v.isoformat()
+            elif hasattr(v, "hex"):  # UUID
+                d[k] = str(v)
+        return d
+
+    return {
+        "master": _row_to_dict(master_row) if master_row else None,
+        "findings": [_row_to_dict(r) for r in findings],
+    }
+
+
+@app.get("/api/intel/spend")
+async def intel_spend(_user: str = Depends(get_current_user)):
+    """Current day's AI spend (USD)."""
+    today = date.today().isoformat()
+    key = f"daily_spend:{today}"
+    cap = float(os.getenv("DAILY_SPEND_CAP", "5.00"))
+    redis = app.state.redis
+    raw = await redis.get(key) if redis else None
+    spent = float(raw) if raw else 0.0
+    return {"date": today, "spent_usd": round(spent, 4), "cap_usd": cap}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket, token: str | None = None):
     """
@@ -1971,15 +2096,22 @@ async def websocket_endpoint(ws: WebSocket, token: str | None = None):
 
     await manager.connect(ws)
     redis = app.state.redis
-    last_alert_id = "$"
+    last_ids = {"stream:alerts": "$", "stream:intel": "$"}
 
     try:
         while True:
-            results = await redis.xread({"stream:alerts": last_alert_id}, count=10, block=500)
-            for _, messages in (results or []):
+            results = await redis.xread(last_ids, count=10, block=500)
+            for stream_name, messages in (results or []):
                 for msg_id, msg in messages:
-                    await ws.send_json({"type": "alert", "data": json.loads(msg["data"])})
-                    last_alert_id = msg_id
+                    if stream_name == "stream:intel":
+                        await ws.send_json({"type": "intel", "data": msg})
+                    else:
+                        try:
+                            payload = json.loads(msg["data"])
+                        except Exception:
+                            payload = msg
+                        await ws.send_json({"type": "alert", "data": payload})
+                    last_ids[stream_name] = msg_id
             await asyncio.sleep(0.2)
     except WebSocketDisconnect:
         manager.disconnect(ws)
