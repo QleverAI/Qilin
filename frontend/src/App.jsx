@@ -9,6 +9,7 @@ import LandingPage       from './pages/LandingPage'
 import LoginPage         from './pages/LoginPage'
 import RegisterPage      from './pages/RegisterPage'
 import HomePage          from './pages/HomePage'
+import IntelPage         from './pages/IntelPage'
 import NewsPage          from './pages/NewsPage'
 import DocumentsPage     from './pages/DocumentsPage'
 import SocialPage        from './pages/SocialPage'
@@ -105,6 +106,7 @@ function AppShell() {
         onNavigate={setView} onLogout={handleLogout} />
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
         {view === 'home'       && <HomePage aircraft={aircraft} alerts={alerts} onNavigate={setView} />}
+        {view === 'intel'      && <IntelPage />}
         {view === 'news'       && <NewsPage />}
         {view === 'documents'  && <DocumentsPage />}
         {view === 'social'     && <SocialPage />}
