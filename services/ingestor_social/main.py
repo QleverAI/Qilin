@@ -282,6 +282,11 @@ async def main():
             try:
                 count = await run_cycle(client, redis, db, ordered)
                 log.info(f"Ciclo completo — {count} entradas nuevas de {len(ordered)} fuentes")
+                if count > 0:
+                    try:
+                        await redis.publish("cache.invalidate", "social.feed")
+                    except Exception as e:
+                        log.warning(f"[cache.invalidate] publish error: {e}")
             except Exception as e:
                 log.error(f"Error en ciclo: {e}")
             await asyncio.sleep(POLL_INTERVAL)

@@ -200,6 +200,11 @@ async def main():
                 await asyncio.sleep(0.5)  # cortesía entre empresas (~10 req/s SEC limit)
 
             log.info(f"Ciclo completo — {new_count} filings nuevos de {len(ordered)} empresas")
+            if new_count > 0:
+                try:
+                    await redis.publish("cache.invalidate", "sec.feed")
+                except Exception as e:
+                    log.warning(f"[cache.invalidate] publish error: {e}")
             await asyncio.sleep(SEC_POLL_INTERVAL)
 
 

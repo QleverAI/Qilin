@@ -210,6 +210,11 @@ async def main():
                     await asyncio.sleep(1.0)  # cortesía entre fuentes
 
                 log.info(f"Ciclo completo — {new_count} documentos nuevos de {len(ordered)} fuentes")
+                if new_count > 0:
+                    try:
+                        await redis.publish("cache.invalidate", "docs.feed")
+                    except Exception as e:
+                        log.warning(f"[cache.invalidate] publish error: {e}")
                 await asyncio.sleep(POLL_INTERVAL)
 
         await browser.close()

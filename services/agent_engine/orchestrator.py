@@ -200,6 +200,15 @@ class Orchestrator:
             except Exception as exc:
                 log.warning("[CYCLE] xadd master error: %s", exc)
 
+        # Invalidar cache del API: timeline (nuevos findings+master) y spend
+        # (ha subido por el coste del ciclo recién completado).
+        if self.redis:
+            for prefix in ("intel.timeline", "intel.spend"):
+                try:
+                    await self.redis.publish("cache.invalidate", prefix)
+                except Exception as exc:
+                    log.warning("[CYCLE] cache.invalidate %s error: %s", prefix, exc)
+
         # Budget warning check
         if self.redis:
             try:

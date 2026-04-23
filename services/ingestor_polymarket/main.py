@@ -311,6 +311,12 @@ async def poll_loop(redis_client: aioredis.Redis, db: asyncpg.Connection | None)
                 await cache_markets(redis_client, markets)
                 emitted = await process_signals(markets, redis_client, db)
                 log.info(f"Ciclo completo: {len(markets)} relevantes, {emitted} señales emitidas")
+                # Los mercados refrescan en cada ciclo (~2-5 min) — invalidamos
+                # siempre, ya que /polymarket/feed sirve el cache:polymarket:markets.
+                try:
+                    await redis_client.publish("cache.invalidate", "polymarket.feed")
+                except Exception as e:
+                    log.warning(f"[cache.invalidate] publish error: {e}")
             except Exception as exc:
                 log.error(f"Error en ciclo: {exc}")
             await asyncio.sleep(POLL_INTERVAL)

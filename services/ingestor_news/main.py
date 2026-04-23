@@ -286,6 +286,11 @@ async def main():
                 f"({img_count} con og:image), "
                 f"{fail_count} fuentes fallidas de {len(ordered)}"
             )
+            if new_count > 0:
+                try:
+                    await redis.publish("cache.invalidate", "news.feed")
+                except Exception as e:
+                    log.warning(f"[cache.invalidate] publish error: {e}")
             await asyncio.sleep(POLL_INTERVAL)
 
 
