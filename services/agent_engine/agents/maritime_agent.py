@@ -3,140 +3,84 @@ import logging
 
 import asyncpg
 
-from tools import db_tools, geo_tools
+from tools import db_tools
 from .base_agent import BaseAgent
 
 log = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-Eres un analista especializado en tráfico marítimo.
-Detectas anomalías en el movimiento de buques:
-AIS dark (transponder apagado), grupos navales,
-buques en zonas restringidas, comportamiento inusual
-de tankers y cargueros. Conoces las rutas comerciales
-principales y sabes cuándo algo se desvía.
+Eres un analista marítimo GLOBAL. Analizas las últimas 8h de tráfico AIS mundial
+para detectar: concentraciones de buques militares, buques con AIS desactivado
+(dark), movimientos anómalos de tankers en chokepoints.
 
-Usa las herramientas disponibles para recopilar datos de la zona indicada.
-Cuando hayas completado el análisis, responde ÚNICAMENTE con un JSON con esta estructura exacta:
+Tienes `previous_findings` de ciclos anteriores para evaluar continuidad y escalada.
+
+Usa las herramientas disponibles. Al terminar responde ÚNICAMENTE con JSON:
 {
-  "zone": "<nombre de zona>",
   "anomaly_score": <0-10>,
-  "vessel_count": <int total>,
-  "ais_dark_count": <int buques sin AIS>,
-  "military_vessels": <int buques militares>,
-  "suspicious_types": ["<tipo sospechoso>"],
-  "summary": "<1-2 frases del hallazgo>"
+  "total_military_vessels": <int>,
+  "total_ais_dark": <int>,
+  "military_hotspots": [{"area": "<geografía>", "count": <int>}],
+  "ais_dark_events": [{"mmsi": "...", "name": "...", "last_zone": "..."}],
+  "notable_vessels": ["<nombre o MMSI>"],
+  "delta_vs_previous_cycles": "<aumenta|estable|disminuye|n/a>",
+  "summary": "<2-3 frases>"
 }\
 """
 
 _TOOLS = [
     {
-        "name": "get_vessel_history",
-        "description": "Obtiene el historial de posiciones de embarcaciones en una zona geográfica.",
+        "name": "get_vessels_global",
+        "description": "Devuelve buques con categorías dadas (default military) en las últimas N horas a escala global.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "zone": {"type": "string", "description": "Nombre de la zona (clave de zones.yaml)"},
-                "hours": {"type": "integer", "description": "Horas de historial a consultar"},
+                "hours": {"type": "integer"},
+                "categories": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Categorías a incluir (military, tanker, cargo...). Default: [military].",
+                },
             },
-            "required": ["zone", "hours"],
+            "required": ["hours"],
         },
     },
     {
-        "name": "get_ais_dark_events",
-        "description": (
-            "Obtiene buques que apagaron su transponder AIS (ais_active=FALSE) "
-            "dentro de la zona en el período indicado."
-        ),
+        "name": "get_ais_dark_global",
+        "description": "Devuelve buques con AIS desactivado en las últimas N horas a escala global.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "zone": {"type": "string", "description": "Nombre de la zona"},
-                "hours": {"type": "integer", "description": "Horas de historial"},
-            },
-            "required": ["zone", "hours"],
-        },
-    },
-    {
-        "name": "get_vessel_types",
-        "description": "Obtiene embarcaciones de la zona agrupadas por categoría y tipo de barco.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "zone": {"type": "string", "description": "Nombre de la zona"},
-                "hours": {"type": "integer", "description": "Horas de historial"},
-            },
-            "required": ["zone", "hours"],
+            "properties": {"hours": {"type": "integer"}},
+            "required": ["hours"],
         },
     },
 ]
 
 
 class MaritimeAgent(BaseAgent):
-    def __init__(self, pool: asyncpg.Pool, zones: dict) -> None:
-        super().__init__(
-            name="maritime_agent",
-            tools=_TOOLS,
-            system_prompt=_SYSTEM_PROMPT,
-        )
+    def __init__(self, pool: asyncpg.Pool) -> None:
+        super().__init__(name="maritime_agent", tools=_TOOLS, system_prompt=_SYSTEM_PROMPT)
         self.pool = pool
-        self.zones = zones
 
-    # ── Tool implementations ──────────────────────────────────────────────────
+    async def _tool_get_vessels_global(self, tool_input: dict) -> str:
+        hours = int(tool_input.get("hours", 8))
+        categories = tool_input.get("categories") or ["military"]
+        rows = await db_tools.get_vessel_history_global(self.pool, hours, categories=categories)
+        by_cat: dict[str, int] = {}
+        by_flag: dict[str, int] = {}
+        for r in rows:
+            by_cat[r.get("category") or "unknown"] = by_cat.get(r.get("category") or "unknown", 0) + 1
+            by_flag[r.get("flag") or "UNK"] = by_flag.get(r.get("flag") or "UNK", 0) + 1
+        log.info("[AGENT:maritime] global hours=%d categories=%s → %d", hours, categories, len(rows))
+        return json.dumps({
+            "total": len(rows),
+            "by_category": by_cat,
+            "top_flags": sorted(by_flag.items(), key=lambda x: -x[1])[:20],
+            "sample": rows[:40],
+        }, default=str)
 
-    async def _tool_get_vessel_history(self, tool_input: dict) -> str:
-        zone_name = tool_input.get("zone", "")
-        hours = int(tool_input.get("hours", 6))
-        bbox = geo_tools.get_zone_bbox(zone_name, self.zones)
-        rows = await db_tools.get_vessel_history(self.pool, bbox, hours)
-        log.info(
-            "[AGENT:maritime] get_vessel_history zone=%s hours=%d → %d filas",
-            zone_name, hours, len(rows),
-        )
-        return json.dumps(rows, default=str)
-
-    async def _tool_get_ais_dark_events(self, tool_input: dict) -> str:
-        zone_name = tool_input.get("zone", "")
-        hours = int(tool_input.get("hours", 6))
-        bbox = geo_tools.get_zone_bbox(zone_name, self.zones)
-        rows = await db_tools.get_ais_dark_events(self.pool, bbox, hours)
-        log.info(
-            "[AGENT:maritime] get_ais_dark_events zone=%s hours=%d → %d eventos",
-            zone_name, hours, len(rows),
-        )
-        return json.dumps(rows, default=str)
-
-    async def _tool_get_vessel_types(self, tool_input: dict) -> str:
-        zone_name = tool_input.get("zone", "")
-        hours = int(tool_input.get("hours", 6))
-        bbox = geo_tools.get_zone_bbox(zone_name, self.zones)
-        rows = await db_tools.get_vessel_history(self.pool, bbox, hours)
-
-        by_category: dict[str, int] = {}
-        by_ship_type: dict[str, int] = {}
-        names: list[str] = []
-
-        for row in rows:
-            cat = row.get("category") or "unknown"
-            by_category[cat] = by_category.get(cat, 0) + 1
-
-            stype = str(row.get("ship_type") or "unknown")
-            by_ship_type[stype] = by_ship_type.get(stype, 0) + 1
-
-            name = row.get("name") or ""
-            if name and name not in names:
-                names.append(name)
-
-        log.info(
-            "[AGENT:maritime] get_vessel_types zone=%s → %d embarcaciones",
-            zone_name, len(rows),
-        )
-        return json.dumps(
-            {
-                "total": len(rows),
-                "by_category": by_category,
-                "by_ship_type": by_ship_type,
-                "vessel_names": names[:50],
-            },
-            default=str,
-        )
+    async def _tool_get_ais_dark_global(self, tool_input: dict) -> str:
+        hours = int(tool_input.get("hours", 8))
+        rows = await db_tools.get_ais_dark_events_global(self.pool, hours)
+        log.info("[AGENT:maritime] ais_dark_global → %d", len(rows))
+        return json.dumps({"count": len(rows), "events": rows[:30]}, default=str)

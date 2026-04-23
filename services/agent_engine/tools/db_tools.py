@@ -351,3 +351,47 @@ async def get_aircraft_history_global(
     params.append(limit)
     rows = await pool.fetch(query, *params)
     return [dict(r) for r in rows]
+
+
+async def get_vessel_history_global(
+    pool: asyncpg.Pool,
+    hours: int,
+    categories: list[str] | None = None,
+    limit: int = 2000,
+) -> list[dict]:
+    query = """
+        SELECT time, mmsi, name, lat, lon, speed, course, heading,
+               ship_type, category, flag, destination, ais_active, zone
+        FROM vessel_positions
+        WHERE time >= NOW() - $1::interval
+    """
+    params = [f"{hours} hours"]
+    if categories:
+        query += " AND category = ANY($2::text[])"
+        params.append(categories)
+        query += f" ORDER BY time DESC LIMIT ${len(params) + 1}"
+    else:
+        query += " ORDER BY time DESC LIMIT $2"
+    params.append(limit)
+    rows = await pool.fetch(query, *params)
+    return [dict(r) for r in rows]
+
+
+async def get_ais_dark_events_global(
+    pool: asyncpg.Pool,
+    hours: int,
+    limit: int = 500,
+) -> list[dict]:
+    rows = await pool.fetch(
+        """
+        SELECT DISTINCT ON (mmsi)
+            time, mmsi, name, lat, lon, ship_type, category, flag, zone
+        FROM vessel_positions
+        WHERE time >= NOW() - $1::interval
+          AND ais_active = FALSE
+        ORDER BY mmsi, time DESC
+        LIMIT $2
+        """,
+        f"{hours} hours", limit,
+    )
+    return [dict(r) for r in rows]
