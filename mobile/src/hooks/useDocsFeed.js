@@ -1,22 +1,35 @@
 import { useState, useEffect, useMemo } from 'react'
-import { authFetch } from './apiClient'
+import { fetchWithCache, getCached, hydrateFromStorage, prefetch } from './feedCache'
+
+const FEED_PATH = '/docs/feed?limit=100'
 
 export function useDocsFeed() {
-  const [documents, setDocuments] = useState([])
-  const [loading,   setLoading]   = useState(true)
+  const cached = getCached(FEED_PATH)
+
+  const [documents, setDocuments] = useState(cached || [])
+  const [loading,   setLoading]   = useState(!cached)
 
   useEffect(() => {
     let cancelled = false
 
     async function fetchAll() {
       try {
-        const raw = await authFetch('/docs/feed?limit=100')
+        const raw = await fetchWithCache(FEED_PATH)
         if (!cancelled) setDocuments(raw || [])
       } catch (err) {
         console.warn('[useDocsFeed]', err.message)
       } finally {
         if (!cancelled) setLoading(false)
       }
+    }
+
+    if (!cached) {
+      hydrateFromStorage(FEED_PATH).then(data => {
+        if (data && !cancelled) {
+          setDocuments(data)
+          setLoading(false)
+        }
+      })
     }
 
     fetchAll()
@@ -30,4 +43,8 @@ export function useDocsFeed() {
   )
 
   return { documents, orgTypes, loading }
+}
+
+export function prefetchDocsFeed() {
+  prefetch(FEED_PATH)
 }

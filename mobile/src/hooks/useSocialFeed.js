@@ -1,22 +1,35 @@
 import { useState, useEffect, useMemo } from 'react'
-import { authFetch } from './apiClient'
+import { fetchWithCache, getCached, hydrateFromStorage, prefetch } from './feedCache'
+
+const FEED_PATH = '/social/feed?limit=100'
 
 export function useSocialFeed() {
-  const [posts,   setPosts]   = useState([])
-  const [loading, setLoading] = useState(true)
+  const cached = getCached(FEED_PATH)
+
+  const [posts,   setPosts]   = useState(cached || [])
+  const [loading, setLoading] = useState(!cached)
 
   useEffect(() => {
     let cancelled = false
 
     async function fetchAll() {
       try {
-        const raw = await authFetch('/social/feed?limit=100')
+        const raw = await fetchWithCache(FEED_PATH)
         if (!cancelled) setPosts(raw || [])
       } catch (err) {
         console.warn('[useSocialFeed]', err.message)
       } finally {
         if (!cancelled) setLoading(false)
       }
+    }
+
+    if (!cached) {
+      hydrateFromStorage(FEED_PATH).then(data => {
+        if (data && !cancelled) {
+          setPosts(data)
+          setLoading(false)
+        }
+      })
     }
 
     fetchAll()
@@ -35,4 +48,8 @@ export function useSocialFeed() {
   )
 
   return { posts, zones, categories, loading }
+}
+
+export function prefetchSocialFeed() {
+  prefetch(FEED_PATH)
 }

@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
-import { authFetch } from './apiClient'
+import { fetchWithCache, getCached, hydrateFromStorage, prefetch } from './feedCache'
+
+const FEED_PATH    = '/sec/feed?limit=100'
+const SOURCES_PATH = '/sec/sources'
 
 const SECTOR_COLOR = {
   defense:        'rgba(255,59,74,0.9)',
@@ -20,9 +23,12 @@ const SECTOR_LABEL = {
 export { SECTOR_COLOR, SECTOR_LABEL }
 
 export function useSecFeed() {
-  const [filings,  setFilings]  = useState([])
-  const [sources,  setSources]  = useState([])
-  const [loading,  setLoading]  = useState(true)
+  const cachedFilings = getCached(FEED_PATH)
+  const cachedSources = getCached(SOURCES_PATH)
+
+  const [filings, setFilings] = useState(cachedFilings || [])
+  const [sources, setSources] = useState(cachedSources || [])
+  const [loading, setLoading] = useState(!(cachedFilings && cachedSources))
 
   useEffect(() => {
     let cancelled = false
@@ -30,8 +36,8 @@ export function useSecFeed() {
     async function fetchAll() {
       try {
         const [filingsResult, sourcesResult] = await Promise.allSettled([
-          authFetch('/sec/feed?limit=100'),
-          authFetch('/sec/sources'),
+          fetchWithCache(FEED_PATH),
+          fetchWithCache(SOURCES_PATH),
         ])
         if (!cancelled) {
           if (filingsResult.status === 'fulfilled') setFilings(filingsResult.value || [])
@@ -42,6 +48,17 @@ export function useSecFeed() {
       } finally {
         if (!cancelled) setLoading(false)
       }
+    }
+
+    if (!cachedFilings) {
+      hydrateFromStorage(FEED_PATH).then(data => {
+        if (data && !cancelled) setFilings(data)
+      })
+    }
+    if (!cachedSources) {
+      hydrateFromStorage(SOURCES_PATH).then(data => {
+        if (data && !cancelled) setSources(data)
+      })
     }
 
     fetchAll()
@@ -60,4 +77,9 @@ export function useSecFeed() {
   )
 
   return { filings, sources, sectors, failingSources, loading }
+}
+
+export function prefetchSecFeed() {
+  prefetch(FEED_PATH)
+  prefetch(SOURCES_PATH)
 }
