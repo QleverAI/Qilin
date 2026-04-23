@@ -5,6 +5,8 @@ JWT para autenticación; sin credenciales el endpoint /auth/login devuelve token
 """
 
 import asyncio
+import functools
+import hashlib
 import json
 import logging
 import os
@@ -20,7 +22,8 @@ import yaml
 import yfinance as yf
 import redis.asyncio as aioredis
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status, BackgroundTasks, Request
-from fastapi.responses import FileResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -149,6 +152,134 @@ app.add_middleware(
 )
 
 
+# ── CAPA DE CACHE (2 + 3) ─────────────────────────────────────────────────────
+# 1) @cached(prefix, ttl): guarda el resultado JSON en Redis por hash de kwargs.
+# 2) Middleware HTTP: añade ETag + Cache-Control + Vary: Authorization y responde
+#    304 si If-None-Match coincide. Para rutas NO cacheables fuerza no-store.
+#
+# CACHEABLE_PATHS usa la ruta INTERNA que ve FastAPI (nginx hace strip de /api/).
+# Ej.: el cliente pide /api/news/feed → FastAPI ve /news/feed.
+# Excepción: /api/stats está registrado literal para la landing pública.
+CACHEABLE_PATHS: dict[str, int] = {
+    "/news/feed":        60,
+    "/news/sources":    300,
+    "/social/feed":      60,
+    "/social/accounts": 300,
+    "/docs/feed":       120,
+    "/docs/sources":    300,
+    "/sec/feed":        120,
+    "/sec/sources":     300,
+    "/polymarket/feed":  60,
+    "/markets/quotes":   60,
+    "/intel/timeline":   30,
+    "/intel/spend":      10,
+    "/api/stats":        60,
+}
+
+
+def cached(prefix: str, ttl: int):
+    """Cachea la respuesta JSON de un endpoint FastAPI en Redis.
+
+    Key: ``cache:{prefix}:{sha1(kwargs)[:16]}``. Se ignoran kwargs con prefijo
+    ``_`` (p.ej. ``_user``) y objetos ``Request``. Si Redis no está disponible
+    o falla, sirve sin cache — no rompe el endpoint.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            redis = getattr(app.state, "redis", None)
+            if redis is None:
+                return await func(*args, **kwargs)
+
+            key_parts: list[str] = []
+            for k in sorted(kwargs.keys()):
+                if k.startswith("_"):
+                    continue
+                v = kwargs[k]
+                if isinstance(v, Request):
+                    continue
+                key_parts.append(f"{k}={v!r}")
+            keyhash = hashlib.sha1("|".join(key_parts).encode()).hexdigest()[:16]
+            cache_key = f"cache:{prefix}:{keyhash}"
+
+            try:
+                raw = await redis.get(cache_key)
+                if raw:
+                    return json.loads(raw)
+            except Exception as e:
+                log.warning(f"[cache] read error {cache_key}: {e}")
+
+            result = await func(*args, **kwargs)
+            try:
+                payload = json.dumps(jsonable_encoder(result))
+                await redis.setex(cache_key, ttl, payload)
+            except Exception as e:
+                log.warning(f"[cache] write error {cache_key}: {e}")
+            return result
+        return wrapper
+    return decorator
+
+
+async def invalidate_cache(prefix: str) -> int:
+    """Borra todas las claves ``cache:{prefix}:*`` en Redis.
+
+    No se llama automáticamente desde los ingestores (decisión abierta). Devuelve
+    el número de claves borradas.
+    """
+    redis = getattr(app.state, "redis", None)
+    if redis is None:
+        return 0
+    pattern = f"cache:{prefix}:*"
+    deleted = 0
+    try:
+        async for key in redis.scan_iter(match=pattern, count=500):
+            await redis.delete(key)
+            deleted += 1
+        if deleted:
+            log.info(f"[cache] invalidated {deleted} keys for prefix={prefix}")
+    except Exception as e:
+        log.warning(f"[cache] invalidate error {prefix}: {e}")
+    return deleted
+
+
+@app.middleware("http")
+async def etag_and_cache_control(request: Request, call_next):
+    response = await call_next(request)
+
+    if request.method != "GET":
+        return response
+
+    content_type = response.headers.get("content-type", "")
+    if response.status_code != 200 or "application/json" not in content_type:
+        return response
+
+    body_chunks: list[bytes] = []
+    async for chunk in response.body_iterator:
+        body_chunks.append(chunk)
+    body = b"".join(body_chunks)
+
+    etag = '"' + hashlib.sha1(body).hexdigest()[:16] + '"'
+    path = request.url.path
+    ttl = CACHEABLE_PATHS.get(path)
+
+    headers = dict(response.headers)
+    headers.pop("content-length", None)
+    headers["etag"] = etag
+    headers["vary"] = "Authorization"
+    headers["cache-control"] = f"private, max-age={ttl}" if ttl is not None else "no-store"
+
+    # nginx convierte ETag strong → weak ("W/...") al gzipar, así que comparamos
+    # normalizando el prefijo en ambos lados (RFC 7232 weak comparison).
+    def _norm(e: str) -> str:
+        return e.strip().removeprefix("W/").strip()
+
+    if _norm(request.headers.get("if-none-match", "")) == _norm(etag):
+        no_body_headers = {k: v for k, v in headers.items() if k.lower() != "content-type"}
+        return Response(status_code=304, headers=no_body_headers)
+
+    return Response(content=body, status_code=200, headers=headers)
+
+
 @app.on_event("startup")
 async def startup():
     app.state.redis = aioredis.from_url(REDIS_URL, decode_responses=True)
@@ -252,6 +383,7 @@ async def register(req: RegisterRequest):
 # ── REST ENDPOINTS ────────────────────────────────────────────────────────────
 
 @app.get("/api/stats")
+@cached("api.stats", ttl=60)
 async def public_stats():
     """Estadísticas públicas para la landing page. Sin autenticación."""
     redis = app.state.redis
@@ -851,6 +983,7 @@ async def get_aircraft_meta(icao24: str, _user: str = Depends(get_current_user))
 # ── SOCIAL FEED ───────────────────────────────────────────────────────────────
 
 @app.get("/social/feed")
+@cached("social.feed", ttl=60)
 async def get_social_feed(
     limit: int = 50,
     category: str | None = None,
@@ -900,6 +1033,7 @@ async def get_social_feed(
 
 
 @app.get("/social/accounts")
+@cached("social.accounts", ttl=300)
 async def get_social_accounts(_user: str = Depends(get_current_user)):
     """Lista de cuentas monitorizadas con sus metadatos desde social_accounts.yaml."""
     config_path = "/app/config/social_accounts.yaml"
@@ -915,6 +1049,7 @@ async def get_social_accounts(_user: str = Depends(get_current_user)):
 # ── NEWS FEED ────────────────────────────────────────────────────────────────
 
 @app.get("/news/feed")
+@cached("news.feed", ttl=60)
 async def get_news_feed(
     limit: int = 50,
     zone: str | None = None,
@@ -971,6 +1106,7 @@ async def get_news_feed(
 
 
 @app.get("/news/sources")
+@cached("news.sources", ttl=300)
 async def get_news_sources(_user: str = Depends(get_current_user)):
     """Lista de fuentes RSS monitorizadas desde news_sources.yaml."""
     config_path = "/app/config/news_sources.yaml"
@@ -986,6 +1122,7 @@ async def get_news_sources(_user: str = Depends(get_current_user)):
 # ── DOCS FEED ─────────────────────────────────────────────────────────────────
 
 @app.get("/docs/feed")
+@cached("docs.feed", ttl=120)
 async def get_docs_feed(
     limit:      int            = 50,
     org_type:   str | None     = None,
@@ -1040,6 +1177,7 @@ async def get_docs_feed(
 
 
 @app.get("/docs/sources")
+@cached("docs.sources", ttl=300)
 async def get_docs_sources(_user: str = Depends(get_current_user)):
     """
     Lista de fuentes de documentos desde doc_sources.yaml.
@@ -1063,6 +1201,7 @@ async def get_docs_sources(_user: str = Depends(get_current_user)):
 # ── SEC FILINGS FEED ─────────────────────────────────────────────────────────
 
 @app.get("/sec/feed")
+@cached("sec.feed", ttl=120)
 async def get_sec_feed(
     limit:     int             = 50,
     sector:    str | None      = None,
@@ -1119,6 +1258,7 @@ async def get_sec_feed(
 
 
 @app.get("/sec/sources")
+@cached("sec.sources", ttl=300)
 async def get_sec_sources(_user: str = Depends(get_current_user)):
     """
     Lista de empresas monitorizadas desde sec_sources.yaml.
@@ -1142,6 +1282,7 @@ async def get_sec_sources(_user: str = Depends(get_current_user)):
 # ── POLYMARKET ────────────────────────────────────────────────────────────────
 
 @app.get("/polymarket/feed")
+@cached("polymarket.feed", ttl=60)
 async def get_polymarket_feed(_user: str = Depends(get_current_user)):
     try:
         raw = await app.state.redis.get("cache:polymarket:markets")
@@ -1861,6 +2002,7 @@ async def chat(req: ChatRequest, _user: str = Depends(get_current_user)):
 # ── Markets ────────────────────────────────────────────────────────────────────
 
 @app.get("/markets/quotes")
+@cached("markets.quotes", ttl=60)
 async def get_market_quotes(_user: str = Depends(get_current_user)):
     redis = app.state.redis
     cached = await redis.get("cache:markets:quotes")
@@ -1951,6 +2093,7 @@ async def get_market_history(
 
 
 @app.get("/intel/timeline")
+@cached("intel.timeline", ttl=30)
 async def intel_timeline(
     hours: int = 48,
     min_score: int = 0,
@@ -2064,6 +2207,7 @@ async def intel_cycle(cycle_id: str, _user: str = Depends(get_current_user)):
 
 
 @app.get("/intel/spend")
+@cached("intel.spend", ttl=10)
 async def intel_spend(_user: str = Depends(get_current_user)):
     """Current day's AI spend (USD)."""
     today = date.today().isoformat()
