@@ -145,6 +145,47 @@ Redis keys:
 - `daily_spend:YYYY-MM-DD` — contador USD gastado por día (TTL 36h)
 - `current:aircraft:{icao24}` — posición actual, TTL 120s
 - `current:vessel:{mmsi}` — posición actual
+- `cache:{prefix}:{hash}` — cache de respuestas de la API (ver "Capa de cache")
+
+## Capa de cache
+
+Tres niveles coordinados para minimizar trabajo repetido y latencia percibida:
+
+1. **Redis API cache** (`services/api/main.py`): decorator `@cached(prefix, ttl)` sobre endpoints user-agnostic. La clave es `cache:{prefix}:{sha1(kwargs)[:16]}`. Si Redis no está disponible el decorator es transparente y el endpoint sirve sin cache. Función `invalidate_cache(prefix)` para limpiar por prefijo (no se dispara automáticamente desde los ingestores — decisión abierta).
+2. **ETag + Cache-Control middleware** (mismo archivo): calcula `ETag = sha1(body)[:16]`, responde `304 Not Modified` si `If-None-Match` coincide (comparación weak que ignora prefijo `W/` añadido por nginx al gzipar). Añade `Cache-Control: private, max-age=N` a rutas cacheables y `no-store` al resto; `Vary: Authorization` siempre.
+3. **Cliente** (`frontend/src/hooks/feedCache.js`): `fetchWithCache` deduplica peticiones en vuelo y mantiene cache en memoria del módulo (sobrevive al desmontar la página dentro de la SPA) + persistencia en `localStorage` con TTL de 5 minutos (sobrevive a F5). `prefetch(url)` precalienta silenciosamente. AppShell llama a `prefetchNewsFeed/Social/Docs/Markets/Polymarket/IntelTimeline` al montar.
+
+### TTLs aplicados (prefix → TTL seg)
+
+| Endpoint FastAPI       | Prefix            | TTL |
+|------------------------|-------------------|----:|
+| `/news/feed`           | `news.feed`       |  60 |
+| `/news/sources`        | `news.sources`    | 300 |
+| `/social/feed`         | `social.feed`     |  60 |
+| `/social/accounts`     | `social.accounts` | 300 |
+| `/docs/feed`           | `docs.feed`       | 120 |
+| `/docs/sources`        | `docs.sources`    | 300 |
+| `/sec/feed`            | `sec.feed`        | 120 |
+| `/sec/sources`         | `sec.sources`     | 300 |
+| `/polymarket/feed`     | `polymarket.feed` |  60 |
+| `/markets/quotes`      | `markets.quotes`  |  60 |
+| `/intel/timeline`      | `intel.timeline`  |  30 |
+| `/intel/spend`         | `intel.spend`     |  10 |
+| `/api/stats`           | `api.stats`       |  60 |
+
+Los TTLs del middleware `Cache-Control: max-age=N` coinciden con los del decorator por diseño (ambos se leen del mismo `CACHEABLE_PATHS`).
+
+### Rutas explícitamente NO cacheadas
+
+Todo lo que va por usuario o cambia segundo a segundo: `/aircraft`, `/vessels`, `/me`, `/favorites`, `/vessel-favorites`, `/source-favorites`, `/chat`, `/auth/*`, `/reports*`, `/analyzed-events*`, `/sentinel/zones`. Estas reciben `Cache-Control: no-store`.
+
+### nginx
+
+`/etc/nginx/sites-available/qilin` tiene `gzip on` con `gzip_min_length 1024` y tipos `application/json text/css application/javascript text/plain`. Reduce `news/feed` de ~800 KB a ~240 KB. La config vive en el repo en `deploy/nginx/qilin.conf` como referencia (el fichero en el VPS se edita a mano con `.deploy_ssh.py`).
+
+### Invalidación manual
+
+Desde Python con la API corriendo: `await invalidate_cache("news.feed")`. Desde CLI de Redis: `redis-cli --scan --pattern 'cache:news.feed:*' | xargs -r redis-cli DEL`.
 
 ## Zonas configurables
 
