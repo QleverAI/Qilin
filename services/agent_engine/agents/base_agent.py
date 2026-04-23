@@ -5,6 +5,8 @@ import time
 
 import anthropic
 
+from cost_tracker import track_spend, is_over_cap
+
 log = logging.getLogger(__name__)
 
 _TOOL_PREFIX = "_tool_"
@@ -12,13 +14,15 @@ _TOOL_PREFIX = "_tool_"
 
 class BaseAgent:
     model = "claude-haiku-4-5-20251001"
-    timeout_seconds = 30
+    timeout_seconds = 120  # scheduled mode: generous budget per agent
 
     def __init__(self, name: str, tools: list, system_prompt: str) -> None:
         self.name = name
         self.client = anthropic.AsyncAnthropic()
         self.tools = tools
         self.system_prompt = system_prompt
+        # Injected by Orchestrator at cycle start
+        self.redis = None
 
     async def run(self, context: dict) -> dict:
         start_ms = int(time.monotonic() * 1000)
@@ -27,8 +31,17 @@ class BaseAgent:
         error: str | None = None
 
         try:
+            if self.redis and await is_over_cap(self.redis):
+                return {
+                    "agent_name": self.name,
+                    "success": False,
+                    "result": None,
+                    "error": "budget_cap_exceeded",
+                    "duration_ms": int(time.monotonic() * 1000) - start_ms,
+                    "tools_called": [],
+                }
             messages: list[dict] = [
-                {"role": "user", "content": json.dumps(context, ensure_ascii=False)}
+                {"role": "user", "content": json.dumps(context, ensure_ascii=False, default=str)}
             ]
             result = await asyncio.wait_for(
                 self._agent_loop(messages, tools_called),
@@ -64,6 +77,13 @@ class BaseAgent:
                 messages=msgs,
             )
 
+            # Track spend after every response
+            if self.redis and response.usage:
+                try:
+                    await track_spend(self.redis, self.model, response.usage)
+                except Exception as exc:
+                    log.warning("[COST] track_spend failed: %s", exc)
+
             if response.stop_reason == "end_turn":
                 for block in response.content:
                     if hasattr(block, "text"):
@@ -90,11 +110,9 @@ class BaseAgent:
                 msgs.append({"role": "user", "content": tool_results})
                 continue
 
-            # Unexpected stop reason
             return {}
 
     async def _execute_tool(self, tool_name: str, tool_input: dict) -> str:
-        """Dispatch to _tool_<name> method on the subclass."""
         method = getattr(self, f"{_TOOL_PREFIX}{tool_name}", None)
         if method is None:
             return json.dumps({"error": f"Tool '{tool_name}' not implemented"})
