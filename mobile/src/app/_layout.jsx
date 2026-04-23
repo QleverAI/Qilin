@@ -1,25 +1,47 @@
-import { useEffect } from 'react'
-import { Stack }      from 'expo-router'
-import { StatusBar }  from 'expo-status-bar'
-import * as SplashScreen from 'expo-splash-screen'
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { C } from '../theme'
-import { loadToken } from '../hooks/apiClient'
+import { useEffect, useState }        from 'react'
+import { Stack, router }               from 'expo-router'
+import { StatusBar }                   from 'expo-status-bar'
+import * as SplashScreen               from 'expo-splash-screen'
+import { GestureHandlerRootView }      from 'react-native-gesture-handler'
+import { SafeAreaProvider }            from 'react-native-safe-area-context'
+import { C }                           from '../theme'
+import { loadToken, getToken }         from '../hooks/apiClient'
+import { LanguageProvider }            from '../hooks/useLanguage'
 
-SplashScreen.preventAutoHideAsync()
+SplashScreen.preventAutoHideAsync().catch(() => {})
 
 export default function RootLayout() {
+  const [ready, setReady] = useState(false)
+
   useEffect(() => {
-    loadToken().finally(() => SplashScreen.hideAsync())
+    loadToken()
+      .then(() => {
+        // Si no hay token, salto a la landing/login en vez de fallar en fetchs.
+        if (!getToken()) router.replace('/landing')
+      })
+      .finally(() => {
+        SplashScreen.hideAsync().catch(() => {})
+        setReady(true)
+      })
   }, [])
+
+  if (!ready) return null
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.bg0 }}>
-      <StatusBar style="light" backgroundColor={C.bg0} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg0 } }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="login"  />
-      </Stack>
+      <SafeAreaProvider>
+        <LanguageProvider>
+          <StatusBar style="light" backgroundColor={C.bg0} />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg0 } }}>
+            <Stack.Screen name="(tabs)"   />
+            <Stack.Screen name="landing"  options={{ animation: 'fade' }} />
+            <Stack.Screen name="login"    options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="register" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="profile"  options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="plans"    options={{ animation: 'slide_from_right' }} />
+          </Stack>
+        </LanguageProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   )
 }

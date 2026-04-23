@@ -1,16 +1,20 @@
-import { useState }                      from 'react'
+import { useState }                                from 'react'
 import { View, Text, TextInput, Pressable,
          KeyboardAvoidingView, Platform,
          StyleSheet, ActivityIndicator,
-         SafeAreaView }                   from 'react-native'
-import { router }                         from 'expo-router'
-import * as Haptics                        from 'expo-haptics'
-import { C, T }                           from '../theme'
-import { setToken }                       from '../hooks/apiClient'
+         SafeAreaView }                           from 'react-native'
+import { router, Stack }                          from 'expo-router'
+import * as Haptics                               from 'expo-haptics'
+import { C, T }                                   from '../theme'
+import { setToken }                               from '../hooks/apiClient'
+import { useLang }                                from '../hooks/useLanguage'
+import { useBreakpoint }                          from '../theme/responsive'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'
 
 export default function LoginPage() {
+  const { t } = useLang()
+  const { maxContentWidth } = useBreakpoint()
   const [user,    setUser]    = useState('')
   const [pass,    setPass]    = useState('')
   const [error,   setError]   = useState('')
@@ -32,13 +36,14 @@ export default function LoginPage() {
         router.replace('/(tabs)')
         return
       }
-      setError('Credenciales incorrectas')
+      setError(t('login.error_creds'))
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     } catch {
+      // Fallback modo dev
       if (user === 'carlos' && pass === '12345') {
         router.replace('/(tabs)')
       } else {
-        setError('Sin conexión con el servidor')
+        setError(t('login.error_conn'))
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
       }
     } finally {
@@ -48,21 +53,22 @@ export default function LoginPage() {
 
   return (
     <SafeAreaView style={s.safe}>
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={s.root}
       >
-        <View style={s.container}>
+        <View style={[s.container, { alignSelf: 'center', width: '100%', maxWidth: maxContentWidth }]}>
           <View style={s.brand}>
             <Text style={s.logo}>QILIN</Text>
-            <Text style={s.tagline}>Inteligencia Geopolítica</Text>
+            <Text style={s.tagline}>{t('home.tagline')}</Text>
           </View>
 
           <View style={s.form}>
             <View style={s.inputGroup}>
               <TextInput
                 style={s.input}
-                placeholder="Usuario"
+                placeholder={t('login.user')}
                 placeholderTextColor={C.txt3}
                 value={user}
                 onChangeText={setUser}
@@ -73,7 +79,7 @@ export default function LoginPage() {
               <View style={s.inputSep} />
               <TextInput
                 style={s.input}
-                placeholder="Contraseña"
+                placeholder={t('login.password')}
                 placeholderTextColor={C.txt3}
                 value={pass}
                 onChangeText={setPass}
@@ -83,9 +89,7 @@ export default function LoginPage() {
               />
             </View>
 
-            {error ? (
-              <Text style={s.error}>{error}</Text>
-            ) : null}
+            {error ? <Text style={s.error}>{error}</Text> : null}
 
             <Pressable
               style={({ pressed }) => [s.btn, pressed && { opacity: 0.85 }]}
@@ -94,12 +98,19 @@ export default function LoginPage() {
             >
               {loading
                 ? <ActivityIndicator color="#ffffff" />
-                : <Text style={s.btnText}>Iniciar sesión</Text>
+                : <Text style={s.btnText}>{t('login.submit')}</Text>
               }
             </Pressable>
+
+            <View style={s.footerRow}>
+              <Text style={s.footerText}>{t('login.no_account')}</Text>
+              <Pressable onPress={() => router.push('/register')}>
+                <Text style={s.footerLink}>{t('login.register')}</Text>
+              </Pressable>
+            </View>
           </View>
 
-          <Text style={s.disclaimer}>Sistema restringido — uso autorizado únicamente</Text>
+          <Text style={s.disclaimer}>{t('login.disclaimer')}</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -118,8 +129,10 @@ const s = StyleSheet.create({
   input:       { paddingHorizontal: 16, paddingVertical: 14, fontSize: 17, color: '#ffffff' },
   inputSep:    { height: StyleSheet.hairlineWidth, backgroundColor: C.separator, marginLeft: 16 },
   error:       { fontSize: 15, color: C.red, textAlign: 'center' },
-  btn:         { backgroundColor: C.blue, borderRadius: 12, paddingVertical: 16,
-                 alignItems: 'center' },
+  btn:         { backgroundColor: C.blue, borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
   btnText:     { fontSize: 17, fontWeight: '600', color: '#ffffff' },
+  footerRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  footerText:  { fontSize: 14, color: C.txt3 },
+  footerLink:  { fontSize: 14, color: C.blue, fontWeight: '600' },
   disclaimer:  { ...T.caption1, textAlign: 'center' },
 })
