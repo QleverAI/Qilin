@@ -173,7 +173,7 @@ CACHEABLE_PATHS: dict[str, int] = {
     "/markets/quotes":   60,
     "/intel/timeline":   30,
     "/intel/spend":      10,
-    "/api/stats":        60,
+    "/stats":            60,
 }
 
 
@@ -428,10 +428,14 @@ async def register(req: RegisterRequest):
 
 # ── REST ENDPOINTS ────────────────────────────────────────────────────────────
 
-@app.get("/api/stats")
+@app.get("/stats")
 @cached("api.stats", ttl=60)
 async def public_stats():
-    """Estadísticas públicas para la landing page. Sin autenticación."""
+    """Estadísticas públicas para la landing page. Sin autenticación.
+
+    Registrada como ``/stats`` — accesible externamente via ``/api/stats``
+    porque nginx hace strip de ``/api/`` (proxy_pass con trailing slash).
+    """
     redis = app.state.redis
     if not redis:
         return {"aircraft_active": 0}
