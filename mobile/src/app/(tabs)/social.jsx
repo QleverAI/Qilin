@@ -2,22 +2,24 @@ import { useState, useMemo, useCallback }                      from 'react'
 import { View, Text, Pressable, StyleSheet,
          FlatList, ScrollView, RefreshControl }               from 'react-native'
 import { useSocialFeed }                                      from '../../hooks/useSocialFeed'
+import { useLang }                                            from '../../hooks/useLanguage'
 import { PageHeader }                                         from '../../components/PageHeader'
 import { FilterPill }                                         from '../../components/FilterPill'
 import { EmptyState }                                         from '../../components/EmptyState'
 import { C, T }                                               from '../../theme'
+import { useBreakpoint }                                      from '../../theme/responsive'
 
 function fmtTime(iso) {
   if (!iso) return '—'
   const d = new Date(iso)
   const now = new Date()
   const diffMin = Math.floor((now - d) / 60000)
-  if (diffMin < 60) return `hace ${diffMin}m`
-  if (diffMin < 1440) return `hace ${Math.floor(diffMin / 60)}h`
+  if (diffMin < 60) return `${diffMin}m`
+  if (diffMin < 1440) return `${Math.floor(diffMin / 60)}h`
   return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
 }
 
-function PostCard({ post }) {
+function PostCard({ post, interactionsLabel }) {
   const engagement = (post.likes || 0) + (post.retweets || 0)
   return (
     <View style={s.post}>
@@ -45,29 +47,27 @@ function PostCard({ post }) {
       <Text style={s.content}>{post.content}</Text>
 
       {engagement > 0 ? (
-        <Text style={s.engagement}>
-          {engagement >= 1000
-            ? `${(engagement / 1000).toFixed(1)}K interacciones`
-            : `${engagement} interacciones`}
-        </Text>
+        <Text style={s.engagement}>{interactionsLabel({ n: engagement })}</Text>
       ) : null}
     </View>
   )
 }
 
 export default function SocialScreen() {
+  const { t } = useLang()
   const { posts, zones, categories, loading } = useSocialFeed()
+  const { hPad, columns } = useBreakpoint()
 
-  const [zoneFilter,     setZoneFilter]     = useState('Todas')
-  const [categoryFilter, setCategoryFilter] = useState('Todos')
+  const [zoneFilter,     setZoneFilter]     = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [refreshing,     setRefreshing]     = useState(false)
 
-  const allZones      = ['Todas', ...zones]
-  const allCategories = ['Todos', ...categories]
+  const allZones      = ['all', ...zones]
+  const allCategories = ['all', ...categories]
 
   const filtered = useMemo(() => posts.filter(p => {
-    if (zoneFilter     !== 'Todas' && p.zone     !== zoneFilter)     return false
-    if (categoryFilter !== 'Todos' && p.category !== categoryFilter) return false
+    if (zoneFilter     !== 'all' && p.zone     !== zoneFilter)     return false
+    if (categoryFilter !== 'all' && p.category !== categoryFilter) return false
     return true
   }), [posts, zoneFilter, categoryFilter])
 
@@ -78,18 +78,18 @@ export default function SocialScreen() {
 
   return (
     <View style={s.root}>
-      <PageHeader title="Social" subtitle={`${filtered.length} publicaciones`} />
+      <PageHeader title={t('social.title')} subtitle={t('social.count', { n: filtered.length })} />
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={s.pillRow}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 8 }}
+        contentContainerStyle={{ paddingHorizontal: hPad, gap: 8, paddingBottom: 8 }}
       >
         {allZones.map(z => (
           <FilterPill
             key={z}
-            label={z}
+            label={z === 'all' ? t('common.allF') : z}
             active={zoneFilter === z}
             onPress={() => setZoneFilter(z)}
           />
@@ -98,7 +98,7 @@ export default function SocialScreen() {
         {allCategories.map(c => (
           <FilterPill
             key={c}
-            label={c}
+            label={c === 'all' ? t('common.all') : c}
             active={categoryFilter === c}
             onPress={() => setCategoryFilter(c)}
           />
@@ -106,17 +106,25 @@ export default function SocialScreen() {
       </ScrollView>
 
       <FlatList
+        key={`social-cols-${columns}`}
+        numColumns={columns}
         data={filtered}
         keyExtractor={p => String(p.tweet_id || p.id)}
         contentContainerStyle={{ paddingBottom: 32 }}
+        columnWrapperStyle={columns > 1 ? { gap: 0 } : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.txt3} />}
-        ItemSeparatorComponent={() => <View style={s.sep} />}
-        renderItem={({ item }) => <PostCard post={item} />}
+        ItemSeparatorComponent={columns === 1 ? () => <View style={s.sep} /> : undefined}
+        renderItem={({ item }) => (
+          <View style={columns > 1 ? { flex: 1, borderWidth: StyleSheet.hairlineWidth,
+            borderColor: C.separator, marginLeft: -StyleSheet.hairlineWidth, marginTop: -StyleSheet.hairlineWidth } : undefined}>
+            <PostCard post={item} interactionsLabel={(params) => t('social.interactions', params)} />
+          </View>
+        )}
         ListEmptyComponent={
           <EmptyState
             icon={loading ? null : '💬'}
-            title={loading ? 'Cargando publicaciones...' : 'Sin publicaciones'}
-            subtitle={loading ? null : 'Prueba ajustando los filtros'}
+            title={loading ? t('social.loading') : t('social.empty')}
+            subtitle={loading ? null : t('social.suggest')}
           />
         }
       />

@@ -1,19 +1,20 @@
-import { useState, useEffect, useCallback }                   from 'react'
+import { useState, useEffect, useCallback, useMemo }          from 'react'
 import { View, Text, Pressable, StyleSheet, FlatList,
          Modal, ScrollView, SafeAreaView, RefreshControl }   from 'react-native'
 import * as DocumentPicker                                    from 'expo-document-picker'
 import * as Haptics                                           from 'expo-haptics'
 import { useDocsFeed }                                        from '../../hooks/useDocsFeed'
+import { useLang }                                            from '../../hooks/useLanguage'
 import { PageHeader }                                         from '../../components/PageHeader'
 import { SeverityBadge }                                      from '../../components/SeverityBadge'
 import { EmptyState }                                         from '../../components/EmptyState'
 import { C, T }                                               from '../../theme'
+import { useBreakpoint }                                      from '../../theme/responsive'
 
 const STATUS_MAP    = { processed: 'analyzed', failed: 'archived', pending: 'pending' }
-const STATUS_LABEL  = { analyzed: 'Analizado', analyzing: 'Analizando', pending: 'Pendiente', archived: 'Archivado' }
 const STATUS_COLOR  = { analyzed: C.green, analyzing: C.amber, pending: C.txt3, archived: C.red }
 const ORG_ICONS     = { defense: '🛡', international: '🌐', think_tank: '🔬', energy: '⚡', government: '🏛', default: '📄' }
-const FILTERS       = ['Todos', 'Analizado', 'Pendiente', 'Archivado']
+const FILTER_KEYS   = ['all', 'analyzed', 'pending', 'archived']
 
 function mapStatus(s) { return STATUS_MAP[s] || 'pending' }
 
@@ -27,7 +28,7 @@ function fmtSize(kb) {
   return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`
 }
 
-function DocRow({ doc, onPress }) {
+function DocRow({ doc, onPress, statusLabel, pagesLabel }) {
   const status = mapStatus(doc.status)
   const color  = STATUS_COLOR[status]
   const icon   = ORG_ICONS[doc.org_type] || ORG_ICONS.default
@@ -37,7 +38,7 @@ function DocRow({ doc, onPress }) {
       <View style={{ flex: 1 }}>
         <Text style={s.rowTitle} numberOfLines={1}>{doc.title}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
-          <Text style={[s.rowStatus, { color }]}>{STATUS_LABEL[status]}</Text>
+          <Text style={[s.rowStatus, { color }]}>{statusLabel(status)}</Text>
           {(doc.sectors || []).slice(0, 2).map(sec => (
             <Text key={sec} style={s.rowSector}>{sec}</Text>
           ))}
@@ -45,14 +46,14 @@ function DocRow({ doc, onPress }) {
       </View>
       <View style={{ alignItems: 'flex-end', gap: 2 }}>
         <Text style={s.rowSize}>{fmtSize(doc.file_size_kb)}</Text>
-        <Text style={s.rowPages}>{doc.page_count || '?'} pág.</Text>
+        <Text style={s.rowPages}>{pagesLabel({ n: doc.page_count })}</Text>
       </View>
       <Text style={s.rowChevron}>›</Text>
     </Pressable>
   )
 }
 
-function DocModal({ doc, onClose }) {
+function DocModal({ doc, onClose, statusLabel, t }) {
   if (!doc) return null
   const status = mapStatus(doc.status)
   const color  = STATUS_COLOR[status]
@@ -73,16 +74,16 @@ function DocModal({ doc, onClose }) {
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={[s.statusBadge, { backgroundColor: `${color}20` }]}>
-              <Text style={[s.statusBadgeText, { color }]}>{STATUS_LABEL[status]}</Text>
+              <Text style={[s.statusBadgeText, { color }]}>{statusLabel(status)}</Text>
             </View>
-            <Text style={s.modalMeta}>{fmtSize(doc.file_size_kb)} · {doc.page_count || '?'} pág.</Text>
+            <Text style={s.modalMeta}>{fmtSize(doc.file_size_kb)} · {t('docs.pages', { n: doc.page_count })}</Text>
           </View>
 
           <View style={s.metaCard}>
             {[
-              ['Fuente',   doc.source],
-              ['Fecha',    fmtDate(doc.time)],
-              ['Sectores', (doc.sectors || []).join(', ') || '—'],
+              [t('sec.meta_date'),     fmtDate(doc.time)],
+              ['Source',               doc.source],
+              [t('docs.status_' + status), statusLabel(status)],
             ].map(([k, v]) => (
               <View key={k} style={s.metaRow}>
                 <Text style={s.metaKey}>{k}</Text>
@@ -93,13 +94,13 @@ function DocModal({ doc, onClose }) {
 
           <View style={s.divider} />
 
-          <Text style={s.sectionLabel}>Resumen</Text>
+          <Text style={s.sectionLabel}>{t('sec.summary')}</Text>
           {status === 'analyzed' && doc.summary ? (
             <>
               <Text style={s.summary}>{doc.summary}</Text>
               {doc.relevance != null && (
                 <View style={{ gap: 6 }}>
-                  <Text style={s.sectionLabel}>Relevancia geopolítica</Text>
+                  <Text style={s.sectionLabel}>{t('sec.relevance')}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <View style={s.relTrack}>
                       <View style={[s.relFill, {
@@ -114,7 +115,7 @@ function DocModal({ doc, onClose }) {
             </>
           ) : (
             <Text style={[s.summary, { color: status === 'analyzing' ? C.amber : C.txt3 }]}>
-              {status === 'analyzing' ? 'Análisis en curso...' : 'En cola para análisis'}
+              {statusLabel(status)}
             </Text>
           )}
         </ScrollView>
@@ -124,11 +125,22 @@ function DocModal({ doc, onClose }) {
 }
 
 export default function DocumentsScreen() {
+  const { t } = useLang()
   const { documents, loading } = useDocsFeed()
+  const { hPad } = useBreakpoint()
   const [localDocs,  setLocalDocs]  = useState([])
-  const [filter,     setFilter]     = useState('Todos')
+  const [filter,     setFilter]     = useState('all')
   const [selectedDoc, setSelectedDoc] = useState(null)
   const [refreshing,  setRefreshing]  = useState(false)
+
+  const statusLabel = useCallback((key) => {
+    return t(`docs.status_${key}`) || key
+  }, [t])
+
+  const filterLabel = useCallback((key) => {
+    if (key === 'all') return t('common.all')
+    return t(`docs.status_${key}`) || key
+  }, [t])
 
   useEffect(() => {
     setLocalDocs(prev => {
@@ -158,37 +170,38 @@ export default function DocumentsScreen() {
     setTimeout(() => setRefreshing(false), 1200)
   }, [])
 
-  const filtered = filter === 'Todos'
+  const filtered = filter === 'all'
     ? localDocs
-    : localDocs.filter(d => STATUS_LABEL[mapStatus(d.status)] === filter)
+    : localDocs.filter(d => mapStatus(d.status) === filter)
 
-  const counts = {
-    Todos:     localDocs.length,
-    Analizado: localDocs.filter(d => mapStatus(d.status) === 'analyzed').length,
-    Pendiente: localDocs.filter(d => mapStatus(d.status) === 'pending').length,
-    Archivado: localDocs.filter(d => mapStatus(d.status) === 'archived').length,
-  }
+  const counts = useMemo(() => {
+    const out = { all: localDocs.length }
+    for (const k of ['analyzed', 'pending', 'archived']) {
+      out[k] = localDocs.filter(d => mapStatus(d.status) === k).length
+    }
+    return out
+  }, [localDocs])
 
   return (
     <View style={s.root}>
       <PageHeader
-        title="Documentos"
-        subtitle={`${localDocs.length} documentos`}
+        title={t('docs.title')}
+        subtitle={t('docs.count', { n: localDocs.length })}
         right={
           <Pressable style={s.uploadBtn} onPress={pickDocument}>
-            <Text style={s.uploadText}>+ Añadir</Text>
+            <Text style={s.uploadText}>+ {t('common.save')}</Text>
           </Pressable>
         }
       />
 
       <View style={s.filterTabs}>
-        {FILTERS.map(f => (
+        {FILTER_KEYS.map(f => (
           <Pressable key={f} style={[s.filterTab, filter === f && s.filterTabActive]} onPress={() => {
             Haptics.selectionAsync()
             setFilter(f)
           }}>
-            <Text style={[s.filterTabLabel, filter === f && s.filterTabLabelActive]}>{f}</Text>
-            <Text style={[s.filterTabCount, filter === f && { color: C.blue }]}>{counts[f]}</Text>
+            <Text style={[s.filterTabLabel, filter === f && s.filterTabLabelActive]}>{filterLabel(f)}</Text>
+            <Text style={[s.filterTabCount, filter === f && { color: C.blue }]}>{counts[f] || 0}</Text>
           </Pressable>
         ))}
       </View>
@@ -200,18 +213,23 @@ export default function DocumentsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.txt3} />}
         ItemSeparatorComponent={() => <View style={[s.sep, { marginLeft: 58 }]} />}
         renderItem={({ item }) => (
-          <DocRow doc={item} onPress={() => setSelectedDoc(item)} />
+          <DocRow
+            doc={item}
+            onPress={() => setSelectedDoc(item)}
+            statusLabel={statusLabel}
+            pagesLabel={(params) => t('docs.pages', params)}
+          />
         )}
         ListEmptyComponent={
           <EmptyState
             icon={loading ? null : '📁'}
-            title={loading ? 'Cargando documentos...' : 'Sin documentos'}
-            subtitle={loading ? null : 'Toca "+ Añadir" para subir documentos'}
+            title={loading ? t('docs.loading') : t('docs.empty')}
+            subtitle={loading ? null : t('docs.suggest')}
           />
         }
       />
 
-      <DocModal doc={selectedDoc} onClose={() => setSelectedDoc(null)} />
+      <DocModal doc={selectedDoc} onClose={() => setSelectedDoc(null)} statusLabel={statusLabel} t={t} />
     </View>
   )
 }

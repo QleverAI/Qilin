@@ -7,13 +7,15 @@ import { useNewsFeed }            from '../../hooks/useNewsFeed'
 import { useDocsFeed }            from '../../hooks/useDocsFeed'
 import { useSocialFeed }          from '../../hooks/useSocialFeed'
 import { useSecFeed }             from '../../hooks/useSecFeed'
+import { useIntelTimeline }       from '../../hooks/useIntelTimeline'
+import { useLang }                from '../../hooks/useLanguage'
 import { StatTile }               from '../../components/StatTile'
 import { SectionHeader }          from '../../components/SectionHeader'
 import { SeverityBadge }          from '../../components/SeverityBadge'
 import { C, T, SEV_COLOR }        from '../../theme'
+import { useBreakpoint }          from '../../theme/responsive'
 
 const WS_COLOR = { live: C.green, connecting: C.amber, reconnecting: C.amber, error: C.red }
-const WS_LABEL = { live: 'En vivo', connecting: 'Conectando', reconnecting: 'Reconectando', error: 'Error' }
 
 function fmt(iso) {
   if (!iso) return '—'
@@ -26,7 +28,7 @@ function AlertRow({ alert }) {
     <View style={s.alertRow}>
       <View style={[s.alertStripe, { backgroundColor: SEV_COLOR[alert.severity] || C.txt3 }]} />
       <View style={{ flex: 1, paddingVertical: 12, paddingRight: 16 }}>
-        <Text style={s.alertTitle} numberOfLines={2}>{alert.title || alert.rule || 'Alerta'}</Text>
+        <Text style={s.alertTitle} numberOfLines={2}>{alert.title || alert.rule || 'Alert'}</Text>
         <Text style={s.alertMeta}>{alert.zone || '—'} · {fmt(alert.time)}</Text>
       </View>
       <SeverityBadge severity={alert.severity} />
@@ -57,7 +59,9 @@ function QuickLink({ label, count, color, onPress }) {
 }
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets()
+  const { t }      = useLang()
+  const insets     = useSafeAreaInsets()
+  const { hPad, isWide, maxContentWidth } = useBreakpoint()
   const [refreshing, setRefreshing] = useState(false)
 
   const { aircraft, vessels, alerts, wsStatus } = useQilinData()
@@ -65,6 +69,7 @@ export default function HomeScreen() {
   const { documents } = useDocsFeed()
   const { posts }     = useSocialFeed()
   const { filings }   = useSecFeed()
+  const { items: intelItems } = useIntelTimeline()
 
   const onRefresh = useCallback(() => {
     setRefreshing(true)
@@ -75,33 +80,40 @@ export default function HomeScreen() {
   const recentNews  = articles.slice(0, 4)
   const milAircraft = aircraft.filter(a => a.type === 'military' || a.category === 'military')
 
+  const wsLabels = {
+    live:         t('home.ws_live'),
+    connecting:   t('home.ws_connecting'),
+    reconnecting: t('home.ws_reconnecting'),
+    error:        t('home.ws_error'),
+  }
+
   return (
     <ScrollView
       style={s.root}
-      contentContainerStyle={{ paddingBottom: 32 }}
+      contentContainerStyle={{ paddingBottom: 32, alignSelf: 'center', width: '100%', maxWidth: maxContentWidth }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.txt3} />}
     >
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={s.title}>Qilin</Text>
-        <Text style={s.subtitle}>Inteligencia Geopolítica</Text>
+      <View style={[s.header, { paddingTop: insets.top + 12, paddingHorizontal: hPad }]}>
+        <Text style={s.title}>{t('home.title')}</Text>
+        <Text style={s.subtitle}>{t('home.tagline')}</Text>
         <View style={s.wsBadge}>
           <View style={[s.wsDot, { backgroundColor: WS_COLOR[wsStatus] || C.amber }]} />
           <Text style={[s.wsLabel, { color: WS_COLOR[wsStatus] || C.amber }]}>
-            {WS_LABEL[wsStatus] || wsStatus}
+            {wsLabels[wsStatus] || wsStatus}
           </Text>
         </View>
       </View>
 
-      <View style={s.statsRow}>
-        <StatTile value={aircraft.length} label="Aeronaves" color={C.cyan} />
-        <StatTile value={milAircraft.length} label="Militares" color={C.red} />
-        <StatTile value={highAlerts.length} label="Alertas altas" color={highAlerts.length > 0 ? C.red : C.txt2} />
+      <View style={[s.statsRow, { paddingHorizontal: hPad }]}>
+        <StatTile value={aircraft.length}     label={t('home.stats_aircraft')}     color={C.cyan} />
+        <StatTile value={milAircraft.length}  label={t('home.stats_military')}     color={C.red} />
+        <StatTile value={highAlerts.length}   label={t('home.stats_high_alerts')}  color={highAlerts.length > 0 ? C.red : C.txt2} />
       </View>
 
       {highAlerts.length > 0 && (
         <>
-          <SectionHeader title="Alertas activas" count={highAlerts.length} />
-          <View style={s.card}>
+          <SectionHeader title={t('home.section_active_alerts')} count={highAlerts.length} />
+          <View style={[s.card, { marginHorizontal: hPad }]}>
             {highAlerts.slice(0, 5).map((a, i) => (
               <View key={a.id ?? i}>
                 <AlertRow alert={a} />
@@ -114,8 +126,8 @@ export default function HomeScreen() {
 
       {recentNews.length > 0 && (
         <>
-          <SectionHeader title="Noticias recientes" count={articles.length} />
-          <View style={s.card}>
+          <SectionHeader title={t('home.section_recent_news')} count={articles.length} />
+          <View style={[s.card, { marginHorizontal: hPad }]}>
             {recentNews.map((n, i) => (
               <View key={n.id ?? i}>
                 <Pressable onPress={() => router.push('/(tabs)/news')}>
@@ -128,31 +140,17 @@ export default function HomeScreen() {
         </>
       )}
 
-      <SectionHeader title="Acceso rápido" />
-      <View style={s.card}>
-        <QuickLink
-          label="Mapa táctico"
-          count={`${aircraft.length} aeronaves`}
-          onPress={() => router.push('/(tabs)/tactical')}
-        />
+      <SectionHeader title={t('home.section_quick_access')} />
+      <View style={[s.card, { marginHorizontal: hPad }]}>
+        <QuickLink label={t('home.quick_map')}   count={`${aircraft.length}`} onPress={() => router.push('/(tabs)/tactical')} />
         <View style={s.sep} />
-        <QuickLink
-          label="Documentos"
-          count={documents.length || null}
-          onPress={() => router.push('/(tabs)/documents')}
-        />
+        <QuickLink label={t('home.quick_intel')} count={intelItems.length || null} onPress={() => router.push('/(tabs)/intel')} />
         <View style={s.sep} />
-        <QuickLink
-          label="Social"
-          count={posts.length || null}
-          onPress={() => router.push('/(tabs)/social')}
-        />
+        <QuickLink label={t('home.quick_social')} count={posts.length || null}    onPress={() => router.push('/(tabs)/social')} />
         <View style={s.sep} />
-        <QuickLink
-          label="Mercados SEC"
-          count={filings.length || null}
-          onPress={() => router.push('/(tabs)/markets')}
-        />
+        <QuickLink label={t('home.quick_docs')}   count={documents.length || null} onPress={() => router.push('/(tabs)/documents')} />
+        <View style={s.sep} />
+        <QuickLink label={t('home.quick_sec')}    count={filings.length || null}   onPress={() => router.push('/(tabs)/sec')} />
       </View>
     </ScrollView>
   )
@@ -160,14 +158,14 @@ export default function HomeScreen() {
 
 const s = StyleSheet.create({
   root:        { flex: 1, backgroundColor: C.bg0 },
-  header:      { paddingHorizontal: 16, paddingBottom: 16 },
+  header:      { paddingBottom: 16 },
   title:       { ...T.largeTitle },
   subtitle:    { ...T.footnote, marginTop: 2 },
   wsBadge:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   wsDot:       { width: 8, height: 8, borderRadius: 4 },
   wsLabel:     { fontSize: 13, fontWeight: '500' },
-  statsRow:    { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 4 },
-  card:        { marginHorizontal: 16, backgroundColor: C.bg1, borderRadius: 12, overflow: 'hidden' },
+  statsRow:    { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  card:        { backgroundColor: C.bg1, borderRadius: 12, overflow: 'hidden' },
   sep:         { height: StyleSheet.hairlineWidth, backgroundColor: C.separator },
   alertRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, paddingRight: 16 },
   alertStripe: { width: 3, alignSelf: 'stretch', borderRadius: 1.5 },

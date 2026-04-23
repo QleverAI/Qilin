@@ -3,14 +3,15 @@ import { View, Text, TextInput, Pressable,
          StyleSheet, FlatList, ScrollView,
          Image, RefreshControl }             from 'react-native'
 import { useNewsFeed }                       from '../../hooks/useNewsFeed'
+import { useLang }                           from '../../hooks/useLanguage'
 import { PageHeader }                        from '../../components/PageHeader'
 import { FilterPill }                        from '../../components/FilterPill'
 import { SeverityBadge }                     from '../../components/SeverityBadge'
 import { EmptyState }                        from '../../components/EmptyState'
 import { C, T, SEV_COLOR }                   from '../../theme'
+import { useBreakpoint }                     from '../../theme/responsive'
 
-const SEV_FILTERS = ['Todos', 'high', 'medium', 'low']
-const SEV_NAMES   = { high: 'Alto', medium: 'Medio', low: 'Bajo' }
+const SEV_FILTERS = ['all', 'high', 'medium', 'low']
 
 function fmt(iso) {
   if (!iso) return '—'
@@ -23,16 +24,9 @@ function NewsCard({ article, expanded, onPress }) {
   const sevColor = SEV_COLOR[article.severity] || C.txt3
 
   return (
-    <Pressable
-      style={[s.card, expanded && s.cardExpanded]}
-      onPress={onPress}
-    >
+    <Pressable style={[s.card, expanded && s.cardExpanded]} onPress={onPress}>
       {hasImg && (
-        <Image
-          source={{ uri: article.image_url }}
-          style={s.cardImg}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: article.image_url }} style={s.cardImg} resizeMode="cover" />
       )}
       <View style={s.cardBody}>
         <View style={s.cardTop}>
@@ -66,19 +60,22 @@ function NewsCard({ article, expanded, onPress }) {
 }
 
 export default function NewsScreen() {
+  const { t } = useLang()
   const { articles, zones, loading } = useNewsFeed()
+  const { hPad, columns } = useBreakpoint()
 
-  const [sevFilter,  setSevFilter]  = useState('Todos')
-  const [zoneFilter, setZoneFilter] = useState('Todas')
+  const [sevFilter,  setSevFilter]  = useState('all')
+  const [zoneFilter, setZoneFilter] = useState('all')
   const [search,     setSearch]     = useState('')
   const [expanded,   setExpanded]   = useState(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const allZones = ['Todas', ...zones]
+  const allZones = ['all', ...zones]
+  const SEV_LABEL = { all: t('common.all'), high: t('common.high'), medium: t('common.medium'), low: t('common.low') }
 
   const filtered = useMemo(() => articles.filter(n => {
-    if (sevFilter !== 'Todos' && n.severity !== sevFilter) return false
-    if (zoneFilter !== 'Todas' && !(n.zones || []).includes(zoneFilter)) return false
+    if (sevFilter !== 'all' && n.severity !== sevFilter) return false
+    if (zoneFilter !== 'all' && !(n.zones || []).includes(zoneFilter)) return false
     if (search && !n.title.toLowerCase().includes(search.toLowerCase())) return false
     return true
   }), [articles, sevFilter, zoneFilter, search])
@@ -90,15 +87,12 @@ export default function NewsScreen() {
 
   return (
     <View style={s.root}>
-      <PageHeader
-        title="Noticias"
-        subtitle={`${filtered.length} artículos`}
-      />
+      <PageHeader title={t('news.title')} subtitle={t('news.count', { n: filtered.length })} />
 
-      <View style={s.searchWrap}>
+      <View style={[s.searchWrap, { paddingHorizontal: hPad }]}>
         <TextInput
           style={s.search}
-          placeholder="Buscar noticias..."
+          placeholder={t('news.search')}
           placeholderTextColor={C.txt3}
           value={search}
           onChangeText={setSearch}
@@ -110,12 +104,12 @@ export default function NewsScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={s.pillRow}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 8 }}
+        contentContainerStyle={{ paddingHorizontal: hPad, gap: 8, paddingBottom: 8 }}
       >
         {SEV_FILTERS.map(f => (
           <FilterPill
             key={f}
-            label={f === 'Todos' ? 'Todos' : SEV_NAMES[f]}
+            label={SEV_LABEL[f]}
             active={sevFilter === f}
             onPress={() => setSevFilter(f)}
           />
@@ -124,7 +118,7 @@ export default function NewsScreen() {
         {allZones.map(z => (
           <FilterPill
             key={z}
-            label={z}
+            label={z === 'all' ? t('common.allF') : z}
             active={zoneFilter === z}
             onPress={() => setZoneFilter(z)}
           />
@@ -132,22 +126,27 @@ export default function NewsScreen() {
       </ScrollView>
 
       <FlatList
+        key={`news-cols-${columns}`}
+        numColumns={columns}
         data={filtered}
         keyExtractor={a => String(a.id)}
-        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: hPad, gap: 12, paddingBottom: 32 }}
+        columnWrapperStyle={columns > 1 ? { gap: 12 } : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.txt3} />}
         renderItem={({ item }) => (
-          <NewsCard
-            article={item}
-            expanded={expanded === item.id}
-            onPress={() => setExpanded(expanded === item.id ? null : item.id)}
-          />
+          <View style={columns > 1 ? { flex: 1 } : undefined}>
+            <NewsCard
+              article={item}
+              expanded={expanded === item.id}
+              onPress={() => setExpanded(expanded === item.id ? null : item.id)}
+            />
+          </View>
         )}
         ListEmptyComponent={
           <EmptyState
             icon={loading ? null : '📰'}
-            title={loading ? 'Cargando noticias...' : 'Sin resultados'}
-            subtitle={loading ? null : 'Prueba ajustando los filtros'}
+            title={loading ? t('news.loading') : t('news.empty')}
+            subtitle={loading ? null : t('news.suggest')}
           />
         }
       />
@@ -157,7 +156,7 @@ export default function NewsScreen() {
 
 const s = StyleSheet.create({
   root:       { flex: 1, backgroundColor: C.bg0 },
-  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  searchWrap: { paddingTop: 12, paddingBottom: 4 },
   search:     { backgroundColor: C.bg2, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11,
                 fontSize: 15, color: '#ffffff' },
   pillRow:    { flexGrow: 0, paddingTop: 8 },
