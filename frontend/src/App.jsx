@@ -5,19 +5,6 @@ import TopBar            from './components/TopBar'
 import TacticalPanel     from './components/TacticalPanel'
 import BottomBar         from './components/BottomBar'
 import ChatBot           from './components/ChatBot'
-import LandingPage       from './pages/LandingPage'
-import LoginPage         from './pages/LoginPage'
-import RegisterPage      from './pages/RegisterPage'
-import HomePage          from './pages/HomePage'
-import IntelPage         from './pages/IntelPage'
-import NewsPage          from './pages/NewsPage'
-import DocumentsPage     from './pages/DocumentsPage'
-import SocialPage        from './pages/SocialPage'
-import SentinelPage      from './pages/SentinelPage'
-import MarketsPage       from './pages/MarketsPage'
-import PolymarketPage    from './pages/PolymarketPage'
-import ProfilePage       from './pages/ProfilePage'
-import PlansPage         from './pages/PlansPage'
 import LoadingState      from './components/LoadingSkeleton'
 import { useQilinData }  from './hooks/useQilinData'
 import { clearProfileCache } from './hooks/useProfile'
@@ -31,7 +18,35 @@ import { prefetchMarkets }       from './hooks/useMarkets'
 import { prefetchPolymarket }    from './hooks/usePolymarketFeed'
 import { prefetchIntelTimeline } from './hooks/useIntelTimeline'
 
+// ── Lazy-loaded pages/chunks ─────────────────────────────────────────────────
+// Cada page se carga bajo demanda para evitar que todo el bundle inicial incluya
+// MapLibre, dependencias de markets y demás. El first paint (landing/login) solo
+// debería cargar su chunk + el runtime común de React/router.
+const LandingPage   = lazy(() => import('./pages/LandingPage'))
+const LoginPage     = lazy(() => import('./pages/LoginPage'))
+const RegisterPage  = lazy(() => import('./pages/RegisterPage'))
+const HomePage      = lazy(() => import('./pages/HomePage'))
+const IntelPage     = lazy(() => import('./pages/IntelPage'))
+const NewsPage      = lazy(() => import('./pages/NewsPage'))
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'))
+const SocialPage    = lazy(() => import('./pages/SocialPage'))
+const SentinelPage  = lazy(() => import('./pages/SentinelPage'))
+const MarketsPage   = lazy(() => import('./pages/MarketsPage'))
+const PolymarketPage= lazy(() => import('./pages/PolymarketPage'))
+const ProfilePage   = lazy(() => import('./pages/ProfilePage'))
+const PlansPage     = lazy(() => import('./pages/PlansPage'))
+
 const MapView = lazy(() => import('./components/MapView'))
+
+// Fallback genérico — los chunks cargan en <100 KB tras gzip, así que esto
+// solo se ve fugazmente la primera vez que entras a una vista.
+function PageFallback({ message = 'CARGANDO…' }) {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <LoadingState message={message} />
+    </div>
+  )
+}
 
 // ── Dashboard shell — all /app/* views ───────────────────────────────────────
 function AppShell() {
@@ -123,16 +138,18 @@ function AppShell() {
       <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
         onNavigate={setView} onLogout={handleLogout} />
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-        {view === 'home'       && <HomePage aircraft={aircraft} alerts={alerts} onNavigate={setView} />}
-        {view === 'intel'      && <IntelPage />}
-        {view === 'news'       && <NewsPage />}
-        {view === 'documents'  && <DocumentsPage />}
-        {view === 'social'     && <SocialPage />}
-        {view === 'sentinel'   && <SentinelPage />}
-        {view === 'markets'    && <MarketsPage />}
-        {view === 'polymarket' && <PolymarketPage />}
-        {view === 'profile'   && <ProfilePage onNavigate={setView} />}
-        {view === 'plans'     && <PlansPage   onNavigate={setView} />}
+        <Suspense fallback={<PageFallback />}>
+          {view === 'home'       && <HomePage aircraft={aircraft} alerts={alerts} onNavigate={setView} />}
+          {view === 'intel'      && <IntelPage />}
+          {view === 'news'       && <NewsPage />}
+          {view === 'documents'  && <DocumentsPage />}
+          {view === 'social'     && <SocialPage />}
+          {view === 'sentinel'   && <SentinelPage />}
+          {view === 'markets'    && <MarketsPage />}
+          {view === 'polymarket' && <PolymarketPage />}
+          {view === 'profile'    && <ProfilePage onNavigate={setView} />}
+          {view === 'plans'      && <PlansPage   onNavigate={setView} />}
+        </Suspense>
       </div>
       <ChatBot />
     </div>
@@ -142,12 +159,14 @@ function AppShell() {
 // ── Root router ───────────────────────────────────────────────────────────────
 export default function App() {
   return (
-    <Routes>
-      <Route path="/"         element={<LandingPage />} />
-      <Route path="/login"    element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/app"      element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
-      <Route path="/app/*"    element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
-    </Routes>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route path="/"         element={<LandingPage />} />
+        <Route path="/login"    element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/app"      element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
+        <Route path="/app/*"    element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
+      </Routes>
+    </Suspense>
   )
 }
