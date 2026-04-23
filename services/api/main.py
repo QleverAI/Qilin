@@ -280,25 +280,71 @@ async def etag_and_cache_control(request: Request, call_next):
     return Response(content=body, status_code=200, headers=headers)
 
 
+DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "4"))
+DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "20"))
+
+
 @app.on_event("startup")
 async def startup():
     app.state.redis = aioredis.from_url(REDIS_URL, decode_responses=True)
     if DB_URL:
         try:
-            app.state.db = await asyncpg.connect(DB_URL)
-            log.info("Conectado a TimescaleDB.")
+            # Pool de conexiones: permite que N endpoints no-cacheados corran
+            # queries concurrentes. Los métodos .fetch/.fetchrow/.fetchval/
+            # .execute del Pool adquieren y liberan conexión automáticamente,
+            # así que el código cliente queda idéntico al de una Connection.
+            app.state.db = await asyncpg.create_pool(
+                DB_URL,
+                min_size=DB_POOL_MIN,
+                max_size=DB_POOL_MAX,
+                command_timeout=30,
+            )
+            log.info(f"Pool TimescaleDB listo (min={DB_POOL_MIN} max={DB_POOL_MAX}).")
         except Exception as e:
             log.warning(f"No se pudo conectar a DB: {e}. Endpoints de DB desactivados.")
             app.state.db = None
     else:
         app.state.db = None
+
+    # Suscriptor pub/sub para invalidación reactiva desde ingestores.
+    # Los ingestores publican `cache.invalidate` con el prefix afectado y
+    # cualquier réplica del API borra sus entradas cache:{prefix}:* en Redis.
+    app.state._invalidate_task = asyncio.create_task(_cache_invalidate_listener())
     log.info("Qilin API lista.")
 
 
 @app.on_event("shutdown")
 async def shutdown():
+    task = getattr(app.state, "_invalidate_task", None)
+    if task:
+        task.cancel()
     if app.state.db:
         await app.state.db.close()
+
+
+async def _cache_invalidate_listener():
+    """Escucha el canal Redis ``cache.invalidate`` y borra los prefijos
+    publicados por los ingestores. Reintenta si Redis cae momentáneamente."""
+    while True:
+        try:
+            redis = getattr(app.state, "redis", None)
+            if redis is None:
+                await asyncio.sleep(1)
+                continue
+            pubsub = redis.pubsub()
+            await pubsub.subscribe("cache.invalidate")
+            async for message in pubsub.listen():
+                if message.get("type") != "message":
+                    continue
+                prefix = str(message.get("data", "")).strip()
+                if not prefix:
+                    continue
+                await invalidate_cache(prefix)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            log.warning(f"[cache.invalidate] listener error: {e}; reintentando en 2s")
+            await asyncio.sleep(2)
 
 
 # ── AUTH ──────────────────────────────────────────────────────────────────────
