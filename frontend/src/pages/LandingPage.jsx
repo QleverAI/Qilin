@@ -11,6 +11,23 @@ const C = {
   border:'rgba(200,160,60,0.12)',
 }
 
+// ── Viewport hook ─────────────────────────────────────────────────────────────
+// Branch inline: si < 640 tratamos como móvil, 640-960 tablet, ≥ 960 desktop.
+function useViewport() {
+  const get = () => {
+    if (typeof window === 'undefined') return { w: 1280, isMobile: false, isTablet: false }
+    const w = window.innerWidth
+    return { w, isMobile: w < 640, isTablet: w >= 640 && w < 960 }
+  }
+  const [vp, setVp] = useState(get)
+  useEffect(() => {
+    const onResize = () => setVp(get())
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return vp
+}
+
 const HERO_IMG    = 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1920&q=80'
 const CALLOUT_IMG = 'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=1920&q=80'
 
@@ -242,39 +259,50 @@ function LangToggle({ lang, setLang }) {
   )
 }
 
-function Nav({ t, onLogin, onRegister, lang, setLang }) {
+function Nav({ t, onLogin, onRegister, lang, setLang, vp }) {
+  const pad = vp.isMobile ? 16 : vp.isTablet ? 28 : 56
   return (
     <nav style={{
       position:'fixed', top:0, left:0, right:0, zIndex:100,
       display:'flex', alignItems:'center', justifyContent:'space-between',
-      padding:'0 56px', height:60,
+      padding:`0 ${pad}px`, height:60, gap:12,
       background:'rgba(2,6,14,0.88)', backdropFilter:'blur(16px)',
       borderBottom:`1px solid ${C.border}`,
     }}>
-      <div style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:16, fontWeight:700,
+      <div style={{ fontFamily:"'IBM Plex Mono',monospace",
+        fontSize: vp.isMobile ? 14 : 16, fontWeight:700,
         letterSpacing:'.25em', color:C.gold, textTransform:'uppercase',
         display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}
         onClick={() => window.scrollTo({top:0,behavior:'smooth'})}>
         ◈ QILIN
       </div>
-      <div style={{ display:'flex', gap:32, alignItems:'center' }}>
-        {[[t.nav.platform,'#features'],[t.nav.pricing,'#plans'],[t.nav.contact,'mailto:']].map(([l,h]) => (
-          <a key={l} href={h}
-            style={{ fontSize:13, color:C.txt2, textDecoration:'none', letterSpacing:'.03em' }}
-            onMouseEnter={e=>e.target.style.color=C.goldLight}
-            onMouseLeave={e=>e.target.style.color=C.txt2}>{l}</a>
-        ))}
-        <LangToggle lang={lang} setLang={setLang} />
-      </div>
-      <div style={{ display:'flex', gap:10 }}>
-        <button onClick={onLogin} style={{ padding:'8px 20px', border:`1px solid ${C.goldBorder}`,
-          borderRadius:6, background:'transparent', color:C.goldDim,
-          fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+      {!vp.isMobile && (
+        <div style={{ display:'flex', gap: vp.isTablet ? 20 : 32, alignItems:'center' }}>
+          {[[t.nav.platform,'#features'],[t.nav.pricing,'#plans'],[t.nav.contact,'mailto:hola@qilin.app']].map(([l,h]) => (
+            <a key={l} href={h}
+              style={{ fontSize:13, color:C.txt2, textDecoration:'none', letterSpacing:'.03em' }}
+              onMouseEnter={e=>e.target.style.color=C.goldLight}
+              onMouseLeave={e=>e.target.style.color=C.txt2}>{l}</a>
+          ))}
+          <LangToggle lang={lang} setLang={setLang} />
+        </div>
+      )}
+      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+        {vp.isMobile && <LangToggle lang={lang} setLang={setLang} />}
+        <button onClick={onLogin}
+          aria-label={t.nav.login}
+          style={{ padding: vp.isMobile ? '6px 12px' : '8px 20px',
+            border:`1px solid ${C.goldBorder}`, borderRadius:6,
+            background:'transparent', color:C.goldDim,
+            fontSize: vp.isMobile ? 12 : 13, cursor:'pointer', fontFamily:'inherit',
+            whiteSpace:'nowrap' }}>
           {t.nav.login}
         </button>
-        <button onClick={onRegister} style={{ padding:'8px 20px', border:`1px solid ${C.gold}`,
-          borderRadius:6, background:C.goldFill, color:C.goldLight,
-          fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+        <button onClick={onRegister}
+          style={{ padding: vp.isMobile ? '7px 12px' : '8px 20px',
+            border:`1px solid ${C.gold}`, borderRadius:6, background:C.goldFill, color:C.goldLight,
+            fontSize: vp.isMobile ? 12 : 13, cursor:'pointer', fontFamily:'inherit', fontWeight:600,
+            whiteSpace:'nowrap' }}>
           {t.nav.cta}
         </button>
       </div>
@@ -282,11 +310,12 @@ function Nav({ t, onLogin, onRegister, lang, setLang }) {
   )
 }
 
-function Hero({ t, aircraftCount, onRegister }) {
+function Hero({ t, aircraftCount, onRegister, vp }) {
+  const pad = vp.isMobile ? '96px 20px 60px' : vp.isTablet ? '110px 32px 70px' : '120px 48px 80px'
   return (
-    <section style={{ minHeight:'100vh', position:'relative', overflow:'hidden',
+    <section style={{ minHeight: vp.isMobile ? 'auto' : '100vh', position:'relative', overflow:'hidden',
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-      textAlign:'center', padding:'120px 48px 80px' }}>
+      textAlign:'center', padding: pad }}>
       <div style={{ position:'absolute', inset:0,
         backgroundImage:`url('${HERO_IMG}')`,
         backgroundSize:'cover', backgroundPosition:'center 30%',
@@ -296,81 +325,103 @@ function Hero({ t, aircraftCount, onRegister }) {
       <div style={{ position:'absolute', inset:0,
         background:'radial-gradient(ellipse 80% 60% at 50% 40%,rgba(200,160,60,0.06) 0%,transparent 70%)' }} />
       <div style={{ position:'relative', zIndex:2, maxWidth:760 }}>
-        <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 16px',
-          border:`1px solid ${C.goldBorder}`, borderRadius:20, marginBottom:32,
-          fontSize:12, letterSpacing:'.12em', textTransform:'uppercase',
+        <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px',
+          border:`1px solid ${C.goldBorder}`, borderRadius:20, marginBottom: vp.isMobile ? 20 : 32,
+          fontSize:11, letterSpacing:'.12em', textTransform:'uppercase',
           color:C.goldDim, background:'rgba(200,160,60,0.07)',
           fontFamily:"'IBM Plex Mono',monospace" }}>
           <span style={{ width:7, height:7, borderRadius:'50%', background:C.gold,
             display:'inline-block', animation:'blink 2s infinite' }} />
           {t.hero.badge(aircraftCount)}
         </div>
-        <h1 style={{ fontSize:'clamp(38px,6vw,72px)', fontWeight:800, lineHeight:1.08,
-          letterSpacing:'-.03em', color:'#fff', marginBottom:24 }}>
+        <h1 style={{
+          fontSize: vp.isMobile ? 36 : 'clamp(38px,6vw,72px)',
+          fontWeight:800, lineHeight:1.08,
+          letterSpacing:'-.03em', color:'#fff',
+          marginBottom: vp.isMobile ? 18 : 24 }}>
           {t.hero.h1a}<br />
           <em style={{ fontStyle:'normal', color:C.goldLight }}>{t.hero.h1b}</em>
         </h1>
-        <p style={{ fontSize:17, color:C.txt2, maxWidth:560, margin:'0 auto 44px', lineHeight:1.75 }}>
+        <p style={{
+          fontSize: vp.isMobile ? 15 : 17,
+          color:C.txt2, maxWidth:560,
+          margin: vp.isMobile ? '0 auto 28px' : '0 auto 44px',
+          lineHeight:1.7 }}>
           {t.hero.sub}
         </p>
-        <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
+        <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap',
+          flexDirection: vp.isMobile ? 'column' : 'row',
+          alignItems: vp.isMobile ? 'stretch' : 'center' }}>
           <button onClick={onRegister}
-            style={{ padding:'15px 36px', borderRadius:8, fontSize:14, fontWeight:600,
+            style={{ padding:'14px 28px', borderRadius:8, fontSize:14, fontWeight:600,
               background:'rgba(200,160,60,0.15)', border:`1px solid ${C.gold}`, color:C.goldLight,
               cursor:'pointer', fontFamily:'inherit' }}>
             {t.hero.cta1}
           </button>
           <button onClick={() => document.getElementById('features')?.scrollIntoView({behavior:'smooth'})}
-            style={{ padding:'15px 36px', borderRadius:8, fontSize:14, fontWeight:600,
+            style={{ padding:'14px 28px', borderRadius:8, fontSize:14, fontWeight:600,
               background:'transparent', border:'1px solid rgba(255,255,255,0.15)',
               color:'rgba(255,255,255,0.6)', cursor:'pointer', fontFamily:'inherit' }}>
             {t.hero.cta2}
           </button>
         </div>
       </div>
-      <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
+      <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+        @media (prefers-reduced-motion: reduce){*{animation-duration:.01s!important}}`}</style>
     </section>
   )
 }
 
-function StatsBar({ t, aircraftCount }) {
+function StatsBar({ t, aircraftCount, vp }) {
   const nums = [aircraftCount > 0 ? `${aircraftCount}+` : '300+', '70+', '500+', '300+', '24/7']
   return (
     <div style={{ background:C.bg1, borderTop:`1px solid ${C.border}`,
-      borderBottom:`1px solid ${C.border}`, padding:'28px 56px',
-      display:'flex', justifyContent:'center', flexWrap:'wrap' }}>
+      borderBottom:`1px solid ${C.border}`,
+      padding: vp.isMobile ? '20px 12px' : '28px 56px',
+      display:'grid',
+      gridTemplateColumns: vp.isMobile ? 'repeat(2, 1fr)' : vp.isTablet ? 'repeat(3, 1fr)' : `repeat(${t.stats.length}, 1fr)`,
+      gap: vp.isMobile ? 16 : 0,
+      justifyItems:'center' }}>
       {t.stats.map((s, i) => (
-        <div key={i} style={{ textAlign:'center', padding:'0 40px',
-          borderRight: i < t.stats.length-1 ? `1px solid ${C.border}` : 'none' }}>
-          <div style={{ fontSize:34, fontWeight:800, color:C.goldLight, letterSpacing:'-.03em', lineHeight:1 }}>{nums[i]}</div>
-          <div style={{ fontSize:11, letterSpacing:'.15em', textTransform:'uppercase',
+        <div key={i} style={{ textAlign:'center',
+          padding: vp.isMobile ? '0 4px' : '0 32px',
+          borderRight: vp.isMobile ? 'none' : (i < t.stats.length-1 ? `1px solid ${C.border}` : 'none'),
+          width:'100%' }}>
+          <div style={{ fontSize: vp.isMobile ? 24 : 32, fontWeight:800, color:C.goldLight,
+            letterSpacing:'-.03em', lineHeight:1 }}>{nums[i]}</div>
+          <div style={{ fontSize:10, letterSpacing:'.12em', textTransform:'uppercase',
             color:C.txt3, marginTop:5, fontFamily:"'IBM Plex Mono',monospace" }}>{s.l}</div>
-          <div style={{ fontSize:10, color:C.goldDim, marginTop:3 }}>{s.s}</div>
+          <div style={{ fontSize:9, color:C.goldDim, marginTop:3 }}>{s.s}</div>
         </div>
       ))}
     </div>
   )
 }
 
-function Features({ t }) {
+function Features({ t, vp }) {
+  const hPad = vp.isMobile ? 20 : vp.isTablet ? 32 : 56
+  const vPad = vp.isMobile ? 64 : 96
+  const cols = vp.isMobile ? 1 : vp.isTablet ? 2 : 3
   return (
-    <section id="features" style={{ padding:'96px 0' }}>
-      <div style={{ maxWidth:1120, margin:'0 auto', padding:'0 56px' }}>
+    <section id="features" style={{ padding: `${vPad}px 0` }}>
+      <div style={{ maxWidth:1120, margin:'0 auto', padding: `0 ${hPad}px` }}>
         <div style={{ fontSize:11, letterSpacing:'.22em', textTransform:'uppercase',
           color:C.goldDim, marginBottom:14, fontFamily:"'IBM Plex Mono',monospace" }}>{t.features.eyebrow}</div>
-        <h2 style={{ fontSize:'clamp(28px,4vw,46px)', fontWeight:800, color:'#fff',
+        <h2 style={{ fontSize: vp.isMobile ? 28 : 'clamp(28px,4vw,46px)', fontWeight:800, color:'#fff',
           lineHeight:1.15, marginBottom:18, letterSpacing:'-.02em' }}>
           {t.features.h2a}<br />
           <em style={{ fontStyle:'normal', color:C.goldLight }}>{t.features.h2b}</em>
         </h2>
-        <p style={{ fontSize:16, color:C.txt2, maxWidth:520, lineHeight:1.75 }}>
+        <p style={{ fontSize: vp.isMobile ? 15 : 16, color:C.txt2, maxWidth:520, lineHeight:1.7 }}>
           {t.features.sub}
         </p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)',
-          gap:1, marginTop:56, border:`1px solid ${C.border}`, background:C.border }}>
+        <div style={{ display:'grid', gridTemplateColumns: `repeat(${cols},1fr)`,
+          gap:1, marginTop: vp.isMobile ? 36 : 56,
+          border:`1px solid ${C.border}`, background:C.border }}>
           {t.features.cards.map((f, i) => (
-            <div key={i} style={{ background:C.bg1, padding:'36px 32px', transition:'background .25s',
-              cursor:'default' }}
+            <div key={i} style={{ background:C.bg1,
+              padding: vp.isMobile ? '28px 22px' : '36px 32px',
+              transition:'background .25s', cursor:'default' }}
               onMouseEnter={e=>e.currentTarget.style.background=C.bg2}
               onMouseLeave={e=>e.currentTarget.style.background=C.bg1}>
               <div style={{ width:42, height:42, borderRadius:10, background:C.goldFill,
@@ -386,7 +437,9 @@ function Features({ t }) {
   )
 }
 
-function SatelliteCallout({ t }) {
+function SatelliteCallout({ t, vp }) {
+  const hPad = vp.isMobile ? 20 : vp.isTablet ? 32 : 56
+  const vPad = vp.isMobile ? 56 : 80
   return (
     <div style={{ position:'relative', overflow:'hidden',
       borderTop:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}` }}>
@@ -395,18 +448,23 @@ function SatelliteCallout({ t }) {
         backgroundSize:'cover', backgroundPosition:'center',
         filter:'brightness(0.25) saturate(0.6)' }} />
       <div style={{ position:'absolute', inset:0,
-        background:'linear-gradient(90deg,rgba(2,6,14,0.97) 40%,rgba(2,6,14,0.5) 100%)' }} />
-      <div style={{ position:'relative', zIndex:1, padding:'80px 56px', maxWidth:580 }}>
+        background: vp.isMobile
+          ? 'linear-gradient(180deg,rgba(2,6,14,0.5) 0%,rgba(2,6,14,0.95) 100%)'
+          : 'linear-gradient(90deg,rgba(2,6,14,0.97) 40%,rgba(2,6,14,0.5) 100%)' }} />
+      <div style={{ position:'relative', zIndex:1,
+        padding: `${vPad}px ${hPad}px`,
+        maxWidth:580 }}>
         <div style={{ fontSize:11, letterSpacing:'.22em', textTransform:'uppercase',
           color:C.goldDim, marginBottom:14, fontFamily:"'IBM Plex Mono',monospace" }}>
           {t.callout.eyebrow}
         </div>
-        <h2 style={{ fontSize:'clamp(24px,3.5vw,40px)', fontWeight:800, color:'#fff',
+        <h2 style={{ fontSize: vp.isMobile ? 26 : 'clamp(24px,3.5vw,40px)',
+          fontWeight:800, color:'#fff',
           lineHeight:1.15, marginBottom:18, letterSpacing:'-.02em' }}>
           {t.callout.h2a}<br />
           <em style={{ fontStyle:'normal', color:C.goldLight }}>{t.callout.h2b}</em>
         </h2>
-        <p style={{ fontSize:15, color:C.txt2, lineHeight:1.75, marginBottom:12 }}>
+        <p style={{ fontSize: vp.isMobile ? 14 : 15, color:C.txt2, lineHeight:1.7, marginBottom:12 }}>
           {t.callout.p}
         </p>
         <p style={{ fontSize:13, color:C.txt3 }}>{t.callout.note}</p>
@@ -415,21 +473,25 @@ function SatelliteCallout({ t }) {
   )
 }
 
-function Plans({ t, onRegister }) {
+function Plans({ t, onRegister, vp }) {
+  const hPad = vp.isMobile ? 20 : vp.isTablet ? 32 : 56
+  const vPad = vp.isMobile ? 64 : 96
+  const cols = vp.isMobile ? 1 : vp.isTablet ? 1 : 3
   return (
-    <section id="plans" style={{ padding:'96px 0' }}>
-      <div style={{ maxWidth:1120, margin:'0 auto', padding:'0 56px' }}>
+    <section id="plans" style={{ padding: `${vPad}px 0` }}>
+      <div style={{ maxWidth:1120, margin:'0 auto', padding: `0 ${hPad}px` }}>
         <div style={{ fontSize:11, letterSpacing:'.22em', textTransform:'uppercase',
           color:C.goldDim, marginBottom:14, fontFamily:"'IBM Plex Mono',monospace" }}>{t.plans.eyebrow}</div>
-        <h2 style={{ fontSize:'clamp(28px,4vw,46px)', fontWeight:800, color:'#fff',
+        <h2 style={{ fontSize: vp.isMobile ? 28 : 'clamp(28px,4vw,46px)', fontWeight:800, color:'#fff',
           lineHeight:1.15, marginBottom:18, letterSpacing:'-.02em' }}>
           {t.plans.h2a}<br />
           <em style={{ fontStyle:'normal', color:C.goldLight }}>{t.plans.h2b}</em>
         </h2>
-        <p style={{ fontSize:16, color:C.txt2, maxWidth:520, lineHeight:1.75 }}>
+        <p style={{ fontSize: vp.isMobile ? 15 : 16, color:C.txt2, maxWidth:520, lineHeight:1.7 }}>
           {t.plans.sub}
         </p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginTop:56 }}>
+        <div style={{ display:'grid', gridTemplateColumns: `repeat(${cols},1fr)`, gap:16,
+          marginTop: vp.isMobile ? 40 : 56 }}>
           {t.plans.items.map(p => (
             <div key={p.name} style={{ background: p.featured ? C.bg2 : C.bg1,
               border:`1px solid ${p.featured ? 'rgba(200,160,60,0.45)' : C.border}`,
@@ -480,11 +542,15 @@ function Plans({ t, onRegister }) {
   )
 }
 
-function Footer({ t }) {
+function Footer({ t, vp }) {
   return (
     <footer style={{ background:C.bg1, borderTop:`1px solid ${C.border}`,
-      padding:'40px 56px', display:'flex', justifyContent:'space-between',
-      alignItems:'center', flexWrap:'wrap', gap:20 }}>
+      padding: vp.isMobile ? '28px 20px' : '40px 56px',
+      display:'flex',
+      flexDirection: vp.isMobile ? 'column' : 'row',
+      justifyContent:'space-between',
+      alignItems: vp.isMobile ? 'flex-start' : 'center',
+      flexWrap:'wrap', gap:20 }}>
       <div style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:14, fontWeight:700,
         letterSpacing:'.25em', color:C.goldDim }}>◈ QILIN</div>
       <div style={{ display:'flex', gap:28 }}>
@@ -501,18 +567,28 @@ function Footer({ t }) {
 
 export default function LandingPage() {
   const [aircraftCount, setAircraftCount] = useState(0)
-  const [lang, setLang] = useState('es')
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem('qilin_lang') || 'es' } catch { return 'es' }
+  })
   const navigate = useNavigate()
+  const vp = useViewport()
   const t = T[lang]
+
+  // Reflejar idioma en <html lang=> para screen readers + persistir elección.
+  useEffect(() => {
+    try { document.documentElement.lang = lang } catch {}
+    try { localStorage.setItem('qilin_lang', lang) } catch {}
+  }, [lang])
 
   useEffect(() => {
     document.documentElement.style.overflow = 'auto'
     document.body.style.overflow = 'auto'
-    document.getElementById('root').style.overflow = 'auto'
+    const root = document.getElementById('root')
+    if (root) root.style.overflow = 'auto'
     return () => {
       document.documentElement.style.overflow = ''
       document.body.style.overflow = ''
-      document.getElementById('root').style.overflow = ''
+      if (root) root.style.overflow = ''
     }
   }, [])
 
@@ -533,16 +609,16 @@ export default function LandingPage() {
 
   return (
     <>
-      <Nav t={t} lang={lang} setLang={setLang}
+      <Nav t={t} lang={lang} setLang={setLang} vp={vp}
         onLogin={() => navigate('/login')}
         onRegister={() => navigate('/register')}
       />
-      <Hero t={t} aircraftCount={aircraftCount} onRegister={() => navigate('/register')} />
-      <StatsBar t={t} aircraftCount={aircraftCount} />
-      <Features t={t} />
-      <SatelliteCallout t={t} />
-      <Plans t={t} onRegister={plan => navigate(`/register?plan=${plan}`)} />
-      <Footer t={t} />
+      <Hero t={t} vp={vp} aircraftCount={aircraftCount} onRegister={() => navigate('/register')} />
+      <StatsBar t={t} vp={vp} aircraftCount={aircraftCount} />
+      <Features t={t} vp={vp} />
+      <SatelliteCallout t={t} vp={vp} />
+      <Plans t={t} vp={vp} onRegister={plan => navigate(`/register?plan=${plan}`)} />
+      <Footer t={t} vp={vp} />
       <ChatBotPublic />
     </>
   )
