@@ -1,183 +1,226 @@
 import asyncio
+import json
 import logging
 import os
+import time
+import uuid
+from datetime import datetime, timezone
 
 import asyncpg
 
-from rate_limiter import RateLimiter
-from tools import geo_tools
+from cost_tracker import is_over_cap, get_today_spend, DAILY_SPEND_CAP
+from tools import db_tools
 from agents.adsb_agent import AdsbAgent
 from agents.maritime_agent import MaritimeAgent
 from agents.news_agent import NewsAgent
 from agents.social_agent import SocialAgent
-from agents.market_agent import MarketAgent
-from agents.polymarket_agent import PolymarketAgent
-from agents.sentinel_agent import SentinelAgent
 
 log = logging.getLogger(__name__)
 
-_AGENT_TIMEOUT = int(os.getenv("AGENT_TIMEOUT_SECONDS", "45"))
+_AGENT_TIMEOUT = int(os.getenv("AGENT_TIMEOUT_SECONDS", "120"))
+_CYCLE_TIMEOUT = int(os.getenv("CYCLE_TIMEOUT_SECONDS", "300"))
+_HOURS_LOOKBACK = int(os.getenv("CYCLE_HOURS_LOOKBACK", "8"))
+_MEMORY_FINDINGS_LIMIT = 3  # previous findings per agent
+
+_AGENT_CLASSES = {
+    "adsb": AdsbAgent,
+    "maritime": MaritimeAgent,
+    "news": NewsAgent,
+    "social": SocialAgent,
+}
+
+
+def _parse_enabled_agents() -> list[str]:
+    raw = os.getenv("ENABLED_AGENTS", "adsb,maritime,news,social")
+    return [a.strip() for a in raw.split(",") if a.strip() in _AGENT_CLASSES]
 
 
 class Orchestrator:
     def __init__(
         self,
         pool: asyncpg.Pool | None,
-        rate_limiter: RateLimiter,
+        redis,
         analyst,
-        zones: dict,
-        watchlist: dict,
+        reporter,
     ) -> None:
         self.pool = pool
-        self.rate_limiter = rate_limiter
+        self.redis = redis
         self.analyst = analyst
-        self.zones = zones
+        self.reporter = reporter
 
-        self.adsb = AdsbAgent(pool, zones)
-        self.maritime = MaritimeAgent(pool, zones)
-        self.news = NewsAgent(pool, zones)
-        self.social = SocialAgent(pool, zones)
-        self.market = MarketAgent(pool, zones, watchlist)
-        self.polymarket = PolymarketAgent(pool, zones)
-        self.sentinel = SentinelAgent(pool, zones)
+        enabled = _parse_enabled_agents()
+        log.info("[ORCHESTRATOR] Agentes habilitados: %s", enabled)
 
-        log.info("[ORCHESTRATOR] Todos los agentes instanciados")
+        self.agents = []
+        for key in enabled:
+            agent = _AGENT_CLASSES[key](pool)
+            agent.redis = redis
+            self.agents.append(agent)
 
-    # ── Agent selection ───────────────────────────────────────────────────────
+        # Inject redis into analyst for spend tracking
+        if self.analyst:
+            self.analyst.redis = redis
 
-    def _event_type_from_alert(self, event: dict) -> str:
-        rule = (event.get("rule") or "").lower()
-        if any(kw in rule for kw in ("aircraft", "asw", "military", "surge")):
-            return "MILITARY"
-        if any(kw in rule for kw in ("ais", "naval", "maritime", "vessel")):
-            return "MARITIME"
-        if "market" in rule:
-            return "MARKET"
-        return "ALL"
+    async def run_scheduled_cycle(self) -> dict | None:
+        cycle_id = str(uuid.uuid4())
+        cycle_start = time.monotonic()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        log.info("[CYCLE] %s start — cycle_id=%s", now_iso, cycle_id)
 
-    def _select_agents(
-        self, event: dict, zone: str
-    ) -> tuple[list, list]:
-        """Return (mandatory_agents, optional_agents) based on event source."""
-        stream = event.get("_stream", "")
-
-        if stream == "stream:alerts":
-            event_type = self._event_type_from_alert(event)
-            mandatory = [self.news, self.social]
-            if event_type == "MILITARY":
-                mandatory += [self.adsb, self.maritime]
-            elif event_type == "MARITIME":
-                mandatory += [self.maritime, self.adsb]
-            elif event_type == "MARKET":
-                mandatory += [self.market]
-            else:  # ALL
-                mandatory += [self.adsb, self.maritime, self.market, self.polymarket, self.sentinel]
-            optional: list = []
-
-        elif stream == "stream:market":
-            mandatory = [self.market, self.news, self.social]
-            optional = [self.adsb, self.maritime, self.polymarket] if zone else []
-
-        elif stream == "stream:polymarket":
-            mandatory = [self.polymarket, self.news]
-            optional = [self.market, self.social]
-
-        elif stream == "stream:sentinel":
-            mandatory = [self.sentinel, self.news]
-            optional = [self.adsb, self.maritime, self.market]
-
-        elif stream == "stream:adsb":
-            mandatory = [self.adsb, self.news]
-            optional = [self.maritime, self.social]
-
-        elif stream == "stream:ais":
-            mandatory = [self.maritime, self.news]
-            optional = [self.adsb, self.social]
-
-        else:
-            mandatory = [self.news]
-            optional = []
-
-        return mandatory, optional
-
-    # ── Main entry point ──────────────────────────────────────────────────────
-
-    async def process(self, event: dict) -> dict | None:
-        try:
-            return await self._process(event)
-        except Exception as exc:
-            log.error("[ORCHESTRATOR] Error inesperado: %s", exc)
+        # Budget gate
+        if self.redis and await is_over_cap(self.redis):
+            spend = await get_today_spend(self.redis)
+            log.warning("[BUDGET] Ciclo saltado — spend=%.4f ≥ cap=%.2f", spend, DAILY_SPEND_CAP)
             return None
 
-    async def _process(self, event: dict) -> dict | None:
-        zone = (
-            event.get("zone")
-            or event.get("zone_id")
-            or ""
-        )
-        stream = event.get("_stream", "unknown")
-        log.info("[ORCHESTRATOR] Procesando evento stream=%s zone=%s", stream, zone or "—")
-
-        mandatory, optional = self._select_agents(event, zone)
-
-        bbox = geo_tools.get_zone_bbox(zone, self.zones) if zone else {}
-        context: dict = {
-            "zone": zone,
-            "zone_bbox": bbox,
-            "event": event,
-            "hours_lookback": 24,
-        }
-
-        all_agents = mandatory + optional
-        if not all_agents:
-            log.warning("[ORCHESTRATOR] Sin agentes seleccionados para stream=%s", stream)
+        if not self.agents:
+            log.warning("[CYCLE] Sin agentes habilitados, saltando")
             return None
 
-        log.info(
-            "[ORCHESTRATOR] Lanzando %d agentes (%d oblig + %d opcionales): %s",
-            len(all_agents),
-            len(mandatory),
-            len(optional),
-            [a.name for a in all_agents],
-        )
+        # Build context per agent (includes previous_findings)
+        contexts: dict[str, dict] = {}
+        for agent in self.agents:
+            prev: list[dict] = []
+            if self.pool:
+                try:
+                    prev = await db_tools.fetch_previous_findings(
+                        self.pool, agent.name, hours=24, limit=_MEMORY_FINDINGS_LIMIT,
+                    )
+                except Exception as exc:
+                    log.warning("[CYCLE] fetch previous findings para %s falló: %s", agent.name, exc)
+            contexts[agent.name] = {
+                "cycle_id": cycle_id,
+                "hours_lookback": _HOURS_LOOKBACK,
+                "previous_findings": prev,
+            }
 
-        tasks = [asyncio.create_task(a.run(context)) for a in all_agents]
-
+        # Run agents in parallel
+        tasks = [asyncio.create_task(a.run(contexts[a.name])) for a in self.agents]
         try:
             raw_results = await asyncio.wait_for(
                 asyncio.gather(*tasks, return_exceptions=True),
-                timeout=_AGENT_TIMEOUT,
+                timeout=_CYCLE_TIMEOUT,
             )
         except asyncio.TimeoutError:
-            log.warning("[ORCHESTRATOR] Timeout global (%ds), cancelando tareas", _AGENT_TIMEOUT)
+            log.warning("[CYCLE] Timeout global (%ds)", _CYCLE_TIMEOUT)
             for t in tasks:
                 t.cancel()
             raw_results = []
 
-        # Filter: keep only successful agent results
-        good_results: list[dict] = []
+        # Process successful findings
+        findings: list[dict] = []
         for i, result in enumerate(raw_results):
-            agent_name = all_agents[i].name if i < len(all_agents) else f"agent_{i}"
+            agent_name = self.agents[i].name
             if isinstance(result, Exception):
-                log.warning("[ORCHESTRATOR] %s lanzó excepción: %s", agent_name, result)
-            elif isinstance(result, dict) and result.get("success"):
-                good_results.append(result)
-            else:
+                log.warning("[CYCLE] %s exception: %s", agent_name, result)
+                continue
+            if not (isinstance(result, dict) and result.get("success")):
                 err = result.get("error") if isinstance(result, dict) else repr(result)
-                log.warning("[ORCHESTRATOR] %s sin éxito: %s", agent_name, err)
+                log.warning("[CYCLE] %s sin éxito: %s", agent_name, err)
+                continue
+            findings.append(result)
 
-        log.info(
-            "[ORCHESTRATOR] %d/%d agentes respondieron con éxito: %s",
-            len(good_results),
-            len(all_agents),
-            [r["agent_name"] for r in good_results],
-        )
+        log.info("[CYCLE] %d/%d agentes con éxito", len(findings), len(self.agents))
 
-        if len(good_results) < 2:
-            log.warning(
-                "[ORCHESTRATOR] Solo %d agente(s) con éxito — análisis insuficiente, descartando",
-                len(good_results),
-            )
+        # Persist findings and send Telegram for score >= 7
+        for f in findings:
+            payload = f.get("result") or {}
+            score = int(payload.get("anomaly_score") or 0)
+            telegram_sent = False
+            if score >= 7:
+                try:
+                    telegram_sent = await self.reporter.send_finding_telegram(
+                        cycle_id=cycle_id, agent_name=f["agent_name"], payload=payload,
+                    )
+                except Exception as exc:
+                    log.warning("[CYCLE] finding telegram error: %s", exc)
+
+            if self.pool:
+                try:
+                    await db_tools.save_agent_finding(self.pool, {
+                        "time": datetime.now(timezone.utc),
+                        "cycle_id": cycle_id,
+                        "agent_name": f["agent_name"],
+                        "anomaly_score": score,
+                        "summary": payload.get("summary") or "",
+                        "raw_output": payload,
+                        "tools_called": f.get("tools_called") or [],
+                        "duration_ms": f.get("duration_ms"),
+                        "telegram_sent": telegram_sent,
+                    })
+                except Exception as exc:
+                    log.warning("[CYCLE] save_agent_finding error: %s", exc)
+
+            # Publish on stream:intel for WebSocket consumers
+            if self.redis:
+                try:
+                    await self.redis.xadd(
+                        "stream:intel",
+                        {
+                            "type": "finding",
+                            "cycle_id": cycle_id,
+                            "agent_name": f["agent_name"],
+                            "anomaly_score": str(score),
+                            "payload": json.dumps(payload, default=str),
+                        },
+                        maxlen=500,
+                    )
+                except Exception as exc:
+                    log.warning("[CYCLE] xadd finding error: %s", exc)
+
+        # Master only runs if at least 2 agents succeeded
+        if len(findings) < 2:
+            log.warning("[CYCLE] Solo %d agentes → master no corre", len(findings))
             return None
 
-        return await self.analyst.analyze(event, good_results)
+        analysis = await self.analyst.analyze(cycle_id, findings)
+        if not analysis:
+            log.warning("[CYCLE] Master no produjo análisis")
+            return None
+
+        # Master Telegram (always; silent if severity < 6)
+        try:
+            await self.reporter.send_master_telegram(analysis)
+        except Exception as exc:
+            log.warning("[CYCLE] master telegram error: %s", exc)
+
+        # Publish master on stream:intel
+        if self.redis:
+            try:
+                await self.redis.xadd(
+                    "stream:intel",
+                    {
+                        "type": "master",
+                        "cycle_id": cycle_id,
+                        "severity": str(analysis.get("severity") or 0),
+                        "payload": json.dumps(analysis, default=str),
+                    },
+                    maxlen=500,
+                )
+            except Exception as exc:
+                log.warning("[CYCLE] xadd master error: %s", exc)
+
+        # Budget warning check
+        if self.redis:
+            try:
+                await self._maybe_warn_budget()
+            except Exception as exc:
+                log.warning("[BUDGET] warning check error: %s", exc)
+
+        elapsed = time.monotonic() - cycle_start
+        log.info("[CYCLE] cycle_id=%s done in %.1fs", cycle_id, elapsed)
+        return analysis
+
+    async def _maybe_warn_budget(self) -> None:
+        from cost_tracker import SPEND_WARN_THRESHOLD, mark_warned, get_today_spend as _get
+        spend = await _get(self.redis)
+        if spend >= DAILY_SPEND_CAP * SPEND_WARN_THRESHOLD and spend < DAILY_SPEND_CAP:
+            first = await mark_warned(self.redis)
+            if first:
+                text = (
+                    f"⚠️ <b>Qilin AI spend warning</b>\n\n"
+                    f"Gasto hoy: <b>${spend:.2f}</b> / ${DAILY_SPEND_CAP:.2f} "
+                    f"({int(spend / DAILY_SPEND_CAP * 100)}%)\n"
+                    f"Los próximos ciclos se abortarán al alcanzar el cap."
+                )
+                await self.reporter._send_telegram(text)
