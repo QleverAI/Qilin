@@ -180,22 +180,6 @@ services:
       - redis
       - timescaledb
 
-  alert-engine:
-    build: ./services/alert_engine
-    container_name: qilin_alert_engine
-    restart: unless-stopped
-    environment:
-      REDIS_URL: redis://redis:6379
-      DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
-      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
-      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-    volumes:
-      - ./config:/app/config
-    depends_on:
-      - redis
-      - timescaledb
-
   agent-engine:
     build: ./services/agent_engine
     container_name: qilin_agent_engine
@@ -204,9 +188,16 @@ services:
       REDIS_URL: redis://redis:6379
       DB_URL: postgresql://${DB_USER:-qilin}:${DB_PASSWORD:-changeme}@timescaledb:5432/qilin
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-45}
-      MAX_ANALYSES_PER_HOUR: ${MAX_ANALYSES_PER_HOUR:-10}
-      MAX_PARALLEL_ANALYSES: ${MAX_PARALLEL_ANALYSES:-3}
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      CYCLE_SCHEDULE: ${CYCLE_SCHEDULE:-6,14,22}
+      CYCLE_HOURS_LOOKBACK: ${CYCLE_HOURS_LOOKBACK:-8}
+      ENABLED_AGENTS: ${ENABLED_AGENTS:-adsb,maritime,news,social}
+      DAILY_SPEND_CAP: ${DAILY_SPEND_CAP:-5.00}
+      SPEND_WARN_THRESHOLD: ${SPEND_WARN_THRESHOLD:-0.80}
+      FORCE_RUN_CYCLE: ${FORCE_RUN_CYCLE:-false}
+      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-120}
+      CYCLE_TIMEOUT_SECONDS: ${CYCLE_TIMEOUT_SECONDS:-300}
     volumes:
       - ./config:/app/config
     depends_on:
