@@ -7,13 +7,14 @@ Plataforma de inteligencia geopolítica en tiempo real. Agrega y correlaciona da
 ## Arquitectura
 
 ```
-ingestor-adsb     ──┐
-ingestor-ais      ──┤
-ingestor-news     ──┤
-ingestor-social   ──┼──► Redis Streams ──► alert-engine (LLM) ──► Telegram / TimescaleDB
-ingestor-docs     ──┤
-ingestor-sec      ──┤
-ingestor-sentinel ──┘
+ingestor-adsb     ──┐                                      ┌── stream:intel ──┐
+ingestor-ais      ──┤                                      │                  │
+ingestor-news     ──┼──► Redis + TimescaleDB ──► APScheduler (06/14/22 UTC) ──► Frontend INTEL
+ingestor-social   ──┤        (8h lookback)        │                  │
+ingestor-docs     ──┤                              ├─ 4 agents ──► agent_findings
+ingestor-sec      ──┤                              └─ master ────► analyzed_events (cycle_id)
+ingestor-sentinel ──┘                                              │
+                                                                    └─► Telegram
 ```
 
 ## Stack
@@ -75,6 +76,14 @@ npm run build
 | `GET /api/vessels/{mmsi}/ports` | Puertos visitados por buque |
 | `GET /api/vessels/{mmsi}/routes` | Rutas detectadas por buque |
 
+## API — Endpoints INTEL
+
+| Endpoint | Descripción |
+|----------|-------------|
+| `GET /api/intel/timeline?hours=N&min_score=N&domain=all` | Timeline unificado master+findings |
+| `GET /api/intel/cycle/{cycle_id}` | Master + findings del ciclo |
+| `GET /api/intel/spend` | Gasto AI del día (USD) |
+
 ## Servicios
 
 | Servicio | Puerto | Descripción |
@@ -91,10 +100,10 @@ npm run build
 | `ingestor-bases` | — | Detecta aterrizajes en `aircraft_positions`; aprende bases y rutas por aeronave |
 | `ingestor-docs` | — | Documentos de defensa/geopolítica |
 | `ingestor-sec` | — | Filings SEC relevantes |
-| `ingestor-polymarket` | — | Mercados de predicción Polymarket |
-| `ingestor-sentinel` | — | Copernicus CDSE OAuth2; monitoriza NO₂/SO₂ por zona; detecta anomalías ≥1.5x baseline |
+| `ingestor-polymarket` | — | Mercados de predicción Polymarket (agente de análisis desactivado, ingestor activo) |
+| `ingestor-sentinel` | — | Copernicus CDSE OAuth2; monitoriza NO₂/SO₂ por zona; detecta anomalías ≥1.5x baseline (agente de análisis desactivado, ingestor activo) |
 | `rsshub` | 1200 | RSSHub self-hosted para fuentes sin RSS directo (Reuters, AP, X/Twitter) |
-| `alert-engine` | — | Motor de reglas + enriquecimiento LLM (claude-haiku-4-5); triage automático; notifica Telegram |
+| `agent-engine` | — | APScheduler (06/14/22 UTC): 4 agentes especialistas (adsb/maritime/news/social) + master (Haiku 4.5) con memoria 24h. Budget cap $5/día. |
 
 ## Variables de entorno clave (ver .env.example)
 
@@ -107,6 +116,12 @@ npm run build
 - `SENTINEL_POLL_INTERVAL` — intervalo Sentinel-5P en segundos (default 21600 = 6h)
 - `JWT_SECRET` — clave de firma de tokens (cambiar en producción)
 - `AUTH_USER_N` — usuarios con formato `username:$2b$12$bcrypt_hash`
+- `CYCLE_SCHEDULE` — horas UTC de ciclos (default `6,14,22`)
+- `CYCLE_HOURS_LOOKBACK` — ventana de análisis (default 8)
+- `ENABLED_AGENTS` — lista de agentes activos (default `adsb,maritime,news,social`)
+- `DAILY_SPEND_CAP` — cap diario en USD (default 5.00)
+- `SPEND_WARN_THRESHOLD` — fracción de cap que dispara warning (default 0.80)
+- `FORCE_RUN_CYCLE` — `true` dispara un ciclo al arrancar el container (dev)
 
 ## Base de datos
 
@@ -119,11 +134,15 @@ npm run build
 - `airfields` — catálogo OurAirports (~70k aeródromos con lat/lon e indicador militar)
 - `vessel_ports` — puertos visitados por buque (mmsi + port_id + visit_count)
 - `vessel_routes` — rutas origen→destino detectadas por buque
+- `agent_findings` — hypertable con outputs de agentes por ciclo (cycle_id, agent_name, anomaly_score, raw_output)
+- `analyzed_events` — master analyses del ciclo (+ columna `cycle_id` desde 2026-04-23)
 
 Redis keys:
 - `stream:adsb` — stream de posiciones de aeronaves
 - `stream:ais` — stream de posiciones de buques
 - `stream:alerts` — stream de alertas (WebSocket lo consume)
+- `stream:intel` — stream de findings+master por ciclo (maxlen=500)
+- `daily_spend:YYYY-MM-DD` — contador USD gastado por día (TTL 36h)
 - `current:aircraft:{icao24}` — posición actual, TTL 120s
 - `current:vessel:{mmsi}` — posición actual
 
@@ -135,15 +154,19 @@ Redis keys:
 
 JWT con bcrypt. En modo dev (sin `JWT_SECRET` configurado), la API acepta `carlos/12345`. En producción, configurar `AUTH_USER_N=username:bcrypt_hash` y un `JWT_SECRET` robusto.
 
-## Reglas del motor de alertas
+## Flujo de inteligencia (agent_engine scheduled)
 
-`services/alert_engine/main.py`:
-- `rule_military_aircraft_surge` — ≥5 aeronaves militares en zona
-- `rule_asw_patrol` — ≥2 aviones patrulla ASW por callsign
-- `rule_ais_dark` — buque tanker/desconocido sin AIS
-- `rule_naval_group` — ≥3 buques militares en zona
+Cada 8h (06/14/22 UTC) el `agent_engine` dispara un ciclo:
 
-Anti-spam: cooldown de 1h por regla+zona. Ventana de correlación: 6h.
+1. Los 4 agentes (adsb/maritime/news/social, Haiku 4.5) hacen barrido GLOBAL de las últimas 8h.
+2. Cada agente recibe sus `previous_findings` de los 3 últimos ciclos para detectar continuidad.
+3. Findings con `anomaly_score ≥ 7` se notifican a Telegram.
+4. Master (Haiku 4.5) sintetiza los findings + memoria de 24h de `analyzed_events`.
+5. Master persiste en `analyzed_events` (con `cycle_id`) y siempre manda Telegram (silent si severity<6).
+
+Budget cap `$5/día` con Redis `daily_spend:YYYY-MM-DD`. Al 80% → Telegram warning, al 100% → los ciclos siguientes saltan.
+
+El viejo `alert-engine` (reglas heurísticas reactivas) ha sido retirado. El directorio `services/alert_engine/` se conserva como referencia.
 
 ## Convenciones de código
 
