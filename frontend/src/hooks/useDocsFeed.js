@@ -1,11 +1,17 @@
 import { useState, useEffect, useMemo } from 'react'
-import { apiFetch } from './apiClient'
+import { fetchWithCache, getCached, prefetch } from './feedCache'
+
+const FEED_URL    = '/api/docs/feed?limit=100'
+const SOURCES_URL = '/api/docs/sources'
 
 export function useDocsFeed() {
-  const [docs,       setDocs]       = useState([])
-  const [sources,    setSources]    = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [lastUpdate, setLastUpdate] = useState(null)
+  const cachedDocs    = getCached(FEED_URL)
+  const cachedSources = getCached(SOURCES_URL)
+
+  const [docs,       setDocs]       = useState(cachedDocs    || [])
+  const [sources,    setSources]    = useState(cachedSources || [])
+  const [loading,    setLoading]    = useState(!(cachedDocs && cachedSources))
+  const [lastUpdate, setLastUpdate] = useState(cachedDocs ? new Date() : null)
 
   useEffect(() => {
     let cancelled = false
@@ -13,11 +19,11 @@ export function useDocsFeed() {
     async function fetchAll() {
       try {
         const [rawDocs, rawSources] = await Promise.all([
-          apiFetch('/api/docs/feed?limit=100'),
-          apiFetch('/api/docs/sources'),
+          fetchWithCache(FEED_URL),
+          fetchWithCache(SOURCES_URL),
         ])
         if (cancelled) return
-        setDocs(rawDocs      || [])
+        setDocs(rawDocs     || [])
         setSources(rawSources || [])
         setLastUpdate(new Date())
       } catch (err) {
@@ -32,19 +38,22 @@ export function useDocsFeed() {
     return () => { cancelled = true; clearInterval(interval) }
   }, [])
 
-  // Valores derivados para filtros
-  const orgTypes  = useMemo(() => [...new Set(sources.map(s => s.org_type))].sort(),    [sources])
-  const countries = useMemo(() => [...new Set(sources.map(s => s.country))].sort(),     [sources])
+  const orgTypes  = useMemo(() => [...new Set(sources.map(s => s.org_type))].sort(), [sources])
+  const countries = useMemo(() => [...new Set(sources.map(s => s.country))].sort(),  [sources])
   const sectors   = useMemo(() => {
     const all = sources.flatMap(s => s.sectors || [])
     return [...new Set(all)].sort()
   }, [sources])
 
-  // Fuentes con fallos consecutivos >= 3
   const failingSources = useMemo(
     () => sources.filter(s => (s.consecutive_failures || 0) >= 3),
     [sources]
   )
 
   return { docs, sources, orgTypes, countries, sectors, failingSources, loading, lastUpdate }
+}
+
+export function prefetchDocsFeed() {
+  prefetch(FEED_URL)
+  prefetch(SOURCES_URL)
 }

@@ -1,40 +1,45 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { fetchWithCache, getCached, prefetch } from './feedCache'
 
-const AUTH_HEADER = () => {
-  const tok = sessionStorage.getItem('qilin_token') || ''
-  return tok ? { Authorization: `Bearer ${tok}` } : {}
+const SPEND_URL = '/api/intel/spend'
+
+function buildTimelineUrl({ hours, minScore, domain }) {
+  return `/api/intel/timeline?hours=${hours}&min_score=${minScore}&domain=${domain}`
 }
 
 export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = {}) {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [spend, setSpend] = useState({ spent_usd: 0, cap_usd: 5 })
+  const timelineUrl = useMemo(
+    () => buildTimelineUrl({ hours, minScore, domain }),
+    [hours, minScore, domain]
+  )
+
+  const cachedTimeline = getCached(timelineUrl)
+  const cachedSpend    = getCached(SPEND_URL)
+
+  const [items,   setItems]   = useState(() => cachedTimeline?.items || [])
+  const [loading, setLoading] = useState(!cachedTimeline)
+  const [error,   setError]   = useState(null)
+  const [spend,   setSpend]   = useState(() => cachedSpend || { spent_usd: 0, cap_usd: 5 })
 
   const fetchAll = useCallback(async () => {
-    setLoading(true)
-    setError(null)
     try {
-      const url = `/api/intel/timeline?hours=${hours}&min_score=${minScore}&domain=${domain}`
-      const [tlResp, spResp] = await Promise.all([
-        fetch(url, { headers: AUTH_HEADER() }),
-        fetch('/api/intel/spend', { headers: AUTH_HEADER() }),
+      const [tl, sp] = await Promise.all([
+        fetchWithCache(timelineUrl),
+        fetchWithCache(SPEND_URL).catch(() => ({ spent_usd: 0, cap_usd: 5 })),
       ])
-      if (!tlResp.ok) throw new Error(`HTTP ${tlResp.status}`)
-      const tl = await tlResp.json()
-      const sp = spResp.ok ? await spResp.json() : { spent_usd: 0, cap_usd: 5 }
-      setItems(tl.items || [])
-      setSpend(sp)
+      setItems(tl?.items || [])
+      setSpend(sp || { spent_usd: 0, cap_usd: 5 })
+      setError(null)
     } catch (e) {
       setError(String(e))
     } finally {
       setLoading(false)
     }
-  }, [hours, minScore, domain])
+  }, [timelineUrl])
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // Optional WS prepend: caller passes ws messages via addLiveItem
+  // WebSocket live prepend (lo invoca el consumidor al recibir mensajes)
   const addLiveItem = useCallback((msg) => {
     if (!msg || msg.kind !== 'intel') return
     try {
@@ -60,4 +65,9 @@ export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = 
   }, [])
 
   return { items, loading, error, spend, refresh: fetchAll, addLiveItem }
+}
+
+export function prefetchIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = {}) {
+  prefetch(buildTimelineUrl({ hours, minScore, domain }))
+  prefetch(SPEND_URL)
 }

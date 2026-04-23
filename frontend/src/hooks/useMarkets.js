@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { apiFetch } from './apiClient'
+import { fetchWithCache, getCached, prefetch } from './feedCache'
+
+const QUOTES_URL = '/api/markets/quotes'
 
 export function useMarkets() {
-  const [quotes,  setQuotes]  = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedQuotes = getCached(QUOTES_URL)
+
+  const [quotes,  setQuotes]  = useState(cachedQuotes || [])
+  const [loading, setLoading] = useState(!cachedQuotes)
   const [error,   setError]   = useState(null)
 
   useEffect(() => {
@@ -11,7 +16,7 @@ export function useMarkets() {
 
     async function fetchQuotes() {
       try {
-        const data = await apiFetch('/api/markets/quotes')
+        const data = await fetchWithCache(QUOTES_URL)
         if (!cancelled) {
           setQuotes(data || [])
           setError(null)
@@ -34,4 +39,8 @@ export function useMarkets() {
   }, [])
 
   return { quotes, loading, error, fetchHistory }
+}
+
+export function prefetchMarkets() {
+  prefetch(QUOTES_URL)
 }

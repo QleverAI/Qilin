@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import ProtectedRoute    from './components/ProtectedRoute'
 import TopBar            from './components/TopBar'
@@ -23,6 +23,13 @@ import { useQilinData }  from './hooks/useQilinData'
 import { clearProfileCache } from './hooks/useProfile'
 import { useAircraftTrail } from './hooks/useAircraftTrail'
 import { useVesselTrail }   from './hooks/useVesselTrail'
+import { clearFeedCache }   from './hooks/feedCache'
+import { prefetchNewsFeed }      from './hooks/useNewsFeed'
+import { prefetchSocialFeed }    from './hooks/useSocialFeed'
+import { prefetchDocsFeed }      from './hooks/useDocsFeed'
+import { prefetchMarkets }       from './hooks/useMarkets'
+import { prefetchPolymarket }    from './hooks/usePolymarketFeed'
+import { prefetchIntelTimeline } from './hooks/useIntelTimeline'
 
 const MapView = lazy(() => import('./components/MapView'))
 
@@ -36,10 +43,21 @@ function AppShell() {
 
   function handleLogout() {
     clearProfileCache()
+    clearFeedCache()
     sessionStorage.removeItem('qilin_token')
     sessionStorage.removeItem('qilin_user')
     navigate('/login')
   }
+
+  // Prefetch de feeds al montar AppShell (tras login). En paralelo, sin await.
+  useEffect(() => {
+    prefetchNewsFeed()
+    prefetchSocialFeed()
+    prefetchDocsFeed()
+    prefetchMarkets()
+    prefetchPolymarket()
+    prefetchIntelTimeline()
+  }, [])
 
   function handleSelectVessel(raw) {
     if (!raw) { setSelectedVessel(null); return }

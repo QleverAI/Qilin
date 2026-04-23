@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react'
-import { apiFetch } from './apiClient'
+import { fetchWithCache, getCached, prefetch } from './feedCache'
+
+const FEED_URL     = '/api/social/feed?limit=1000'
+const ACCOUNTS_URL = '/api/social/accounts'
 
 export function useSocialFeed() {
-  const [posts,      setPosts]      = useState([])
-  const [accounts,   setAccounts]   = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [lastUpdate, setLastUpdate] = useState(null)
+  const cachedPosts    = getCached(FEED_URL)
+  const cachedAccounts = getCached(ACCOUNTS_URL)
+
+  const [posts,      setPosts]      = useState(cachedPosts    || [])
+  const [accounts,   setAccounts]   = useState(cachedAccounts || [])
+  const [loading,    setLoading]    = useState(!(cachedPosts && cachedAccounts))
+  const [lastUpdate, setLastUpdate] = useState(cachedPosts ? new Date() : null)
 
   useEffect(() => {
     let cancelled = false
@@ -13,11 +19,11 @@ export function useSocialFeed() {
     async function fetchAll() {
       try {
         const [rawPosts, rawAccounts] = await Promise.all([
-          apiFetch('/api/social/feed?limit=1000'),
-          apiFetch('/api/social/accounts'),
+          fetchWithCache(FEED_URL),
+          fetchWithCache(ACCOUNTS_URL),
         ])
         if (cancelled) return
-        setPosts(rawPosts   || [])
+        setPosts(rawPosts || [])
         setAccounts(rawAccounts || [])
         setLastUpdate(new Date())
       } catch (err) {
@@ -36,4 +42,9 @@ export function useSocialFeed() {
   const zones      = [...new Set(accounts.map(a => a.zone))].sort()
 
   return { posts, accounts, categories, zones, loading, lastUpdate }
+}
+
+export function prefetchSocialFeed() {
+  prefetch(FEED_URL)
+  prefetch(ACCOUNTS_URL)
 }
