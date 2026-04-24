@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 
 function binarySearchIdx(points, targetMs) {
   let lo = 0, hi = points.length - 1, result = -1
@@ -120,12 +120,14 @@ export function usePlayback(trails) {
 
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }, [])
 
-  // Interpolated position per trail (computed each render — O(log N) per trail)
-  const positions = {}
-  for (const [icao24, trail] of Object.entries(trails)) {
-    const pos = interpolatePosition(trail.points || [], currentTime)
-    positions[icao24] = pos ? { ...pos, color: trail.color } : null
-  }
+  const positions = useMemo(() => {
+    const result = {}
+    for (const [icao24, trail] of Object.entries(trails)) {
+      const pos = interpolatePosition(trail.points || [], currentTime)
+      result[icao24] = pos ? { ...pos, color: trail.color } : null
+    }
+    return result
+  }, [trails, currentTime])
 
   return { isPlaying, speed, currentTime, globalStart, globalEnd, positions, play, pause, seek, setSpeed }
 }
