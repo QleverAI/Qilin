@@ -56,6 +56,13 @@ def _load_users() -> dict[str, str]:
 
 USERS = _load_users()
 
+PLAN_LIMITS: dict[str, int | None] = {
+    "free":     2,
+    "scout":    5,
+    "analyst":  20,
+    "pro":      None,  # unlimited
+}
+
 # ── Market assets ─────────────────────────────────────────────────────────────
 MARKET_ASSETS = [
     {"symbol": "CL=F",  "name": "WTI Crude Oil",         "group": "Materias primas"},
@@ -175,6 +182,7 @@ CACHEABLE_PATHS: dict[str, int] = {
     "/intel/spend":      10,
     "/stats":            60,
     "/aircraft/history": 60,
+    "/topics":           3600,
 }
 
 
@@ -241,6 +249,24 @@ async def invalidate_cache(prefix: str) -> int:
     except Exception as e:
         log.warning(f"[cache] invalidate error {prefix}: {e}")
     return deleted
+
+
+async def _get_user_topic_ids(username: str) -> list[str]:
+    """Return topic IDs subscribed by a user. Returns [] if DB unavailable."""
+    db = app.state.db
+    if not db:
+        return []
+    try:
+        row = await db.fetchrow("SELECT id FROM users WHERE username=$1", username)
+        if not row:
+            return []
+        rows = await db.fetch(
+            "SELECT topic_id FROM user_topics WHERE user_id=$1", row["id"]
+        )
+        return [r["topic_id"] for r in rows]
+    except Exception as exc:
+        log.warning("[topics] _get_user_topic_ids error: %s", exc)
+        return []
 
 
 @app.middleware("http")
@@ -454,6 +480,21 @@ async def public_stats():
         return {"aircraft_active": 0}
 
 
+# ── TOPIC CATALOG ─────────────────────────────────────────────────────────────
+
+@app.get("/topics")
+@cached("topics.catalog", ttl=3600)
+async def get_topics_catalog(request: Request):
+    """Public topic catalog from config/topics.yaml."""
+    from topic_utils import load_catalog
+    catalog = load_catalog(os.getenv("TOPICS_CONFIG_PATH", "/app/config/topics.yaml"))
+    return {"topics": [
+        {"id": t["id"], "label_es": t.get("label_es", t["id"]),
+         "label_en": t.get("label_en", t["id"]), "type": t.get("type", "sector")}
+        for t in catalog
+    ]}
+
+
 class ChatMessage(BaseModel):
     role: str
     content: str
@@ -478,6 +519,13 @@ class VesselFavoriteRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class TopicsUpdateRequest(BaseModel):
+    topics: list[str]
+
+class TelegramUpdateRequest(BaseModel):
+    chat_id: str
 
 
 _LANDING_CHAT_SYSTEM = """Eres Qilin, el asistente de la plataforma de inteligencia geopolítica Qilin.
@@ -1962,23 +2010,161 @@ async def remove_source_favorite(
 @app.get("/me")
 async def get_me(user: str = Depends(get_current_user)):
     if not app.state.db:
-        return {"username": user, "email": None, "plan": "scout", "created_at": None}
+        return {"username": user, "email": None, "plan": "free", "created_at": None,
+                "topics": [], "telegram_configured": False}
     try:
         row = await app.state.db.fetchrow(
-            "SELECT username, email, plan, created_at FROM users WHERE username=$1",
+            "SELECT id, username, email, plan, created_at, telegram_chat_id FROM users WHERE username=$1",
             user,
         )
         if not row:
-            return {"username": user, "email": None, "plan": "scout", "created_at": None}
+            return {"username": user, "email": None, "plan": "free", "created_at": None,
+                    "topics": [], "telegram_configured": False}
+        topic_rows = await app.state.db.fetch(
+            "SELECT topic_id FROM user_topics WHERE user_id=$1", row["id"]
+        )
         return {
             "username": row["username"],
             "email": row["email"],
-            "plan": row["plan"],
+            "plan": row["plan"] or "free",
             "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+            "topics": [r["topic_id"] for r in topic_rows],
+            "telegram_configured": bool(row["telegram_chat_id"]),
         }
     except Exception as e:
-        log.error(f"get_me error: {e}")
-        return {"username": user, "email": None, "plan": "scout", "created_at": None}
+        log.error("[me] get error: %s", e)
+        return {"username": user, "email": None, "plan": "free", "created_at": None,
+                "topics": [], "telegram_configured": False}
+
+
+@app.get("/me/topics")
+async def get_my_topics(user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return {"topics": [], "limit": 2, "plan": "free"}
+    try:
+        row = await app.state.db.fetchrow(
+            "SELECT id, plan FROM users WHERE username=$1", user
+        )
+        if not row:
+            return {"topics": [], "limit": 2, "plan": "free"}
+        rows = await app.state.db.fetch(
+            "SELECT topic_id FROM user_topics WHERE user_id=$1 ORDER BY created_at ASC",
+            row["id"],
+        )
+        plan = row["plan"] or "free"
+        limit = PLAN_LIMITS.get(plan, 2)
+        return {"topics": [r["topic_id"] for r in rows], "limit": limit, "plan": plan}
+    except Exception as exc:
+        log.error("[me/topics] get error: %s", exc)
+        raise HTTPException(status_code=503, detail="Error obteniendo topics")
+
+
+@app.put("/me/topics")
+async def put_my_topics(req: TopicsUpdateRequest, user: str = Depends(get_current_user)):
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    row = await app.state.db.fetchrow(
+        "SELECT id, plan FROM users WHERE username=$1", user
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    plan = row["plan"] or "free"
+    limit = PLAN_LIMITS.get(plan, 2)
+    if limit is not None and len(req.topics) > limit:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "exceeds_plan_limit", "limit": limit},
+        )
+    from topic_utils import load_catalog
+    catalog = load_catalog(os.getenv("TOPICS_CONFIG_PATH", "/app/config/topics.yaml"))
+    if catalog:  # skip validation if catalog unavailable
+        valid_ids = {t["id"] for t in catalog}
+        invalid = [tid for tid in req.topics if tid not in valid_ids]
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "invalid_topic_ids", "ids": invalid},
+            )
+    user_id = row["id"]
+    try:
+        async with app.state.db.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM user_topics WHERE user_id=$1", user_id
+                )
+                for topic_id in req.topics:
+                    await conn.execute(
+                        "INSERT INTO user_topics (user_id, topic_id) VALUES ($1, $2) "
+                        "ON CONFLICT DO NOTHING",
+                        user_id, topic_id,
+                    )
+    except Exception as exc:
+        log.error("[me/topics] put error: %s", exc)
+        raise HTTPException(status_code=500, detail="Error guardando topics")
+    return {"ok": True}
+
+
+@app.get("/me/telegram")
+async def get_my_telegram(user: str = Depends(get_current_user)):
+    if not app.state.db:
+        return {"chat_id": None, "configured": False}
+    try:
+        row = await app.state.db.fetchrow(
+            "SELECT telegram_chat_id FROM users WHERE username=$1", user
+        )
+        chat_id = row["telegram_chat_id"] if row else None
+        return {"chat_id": chat_id, "configured": bool(chat_id)}
+    except Exception as exc:
+        log.error("[me/telegram] get error: %s", exc)
+        return {"chat_id": None, "configured": False}
+
+
+@app.put("/me/telegram")
+async def put_my_telegram(req: TelegramUpdateRequest, user: str = Depends(get_current_user)):
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    try:
+        await app.state.db.execute(
+            "UPDATE users SET telegram_chat_id=$1 WHERE username=$2",
+            req.chat_id.strip() or None, user,
+        )
+    except Exception as exc:
+        log.error("[me/telegram] put error: %s", exc)
+        raise HTTPException(status_code=500, detail="Error guardando Telegram")
+    return {"ok": True}
+
+
+@app.post("/me/telegram/test")
+async def test_my_telegram(user: str = Depends(get_current_user)):
+    if not app.state.db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    try:
+        row = await app.state.db.fetchrow(
+            "SELECT telegram_chat_id FROM users WHERE username=$1", user
+        )
+        chat_id = row["telegram_chat_id"] if row else None
+    except Exception as exc:
+        log.error("[me/telegram/test] db error: %s", exc)
+        raise HTTPException(status_code=503, detail="Error accediendo a la base de datos")
+    if not chat_id:
+        raise HTTPException(status_code=400, detail={"error": "no_chat_id"})
+
+    token = os.getenv("TELEGRAM_TOKEN", "")
+    if not token:
+        raise HTTPException(status_code=503, detail="Telegram no configurado en el servidor")
+
+    try:
+        async with httpx.AsyncClient() as http:
+            resp = await http.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": "✅ Qilin alert test — your notifications are working."},
+                timeout=10,
+            )
+            resp.raise_for_status()
+    except Exception as exc:
+        log.warning("[me/telegram/test] error: %s", exc)
+        raise HTTPException(status_code=502, detail="No se pudo enviar el mensaje")
+    return {"ok": True}
 
 
 @app.post("/me/password")

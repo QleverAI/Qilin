@@ -32,4 +32,8 @@ ALTER TABLE analyzed_events
     ADD COLUMN IF NOT EXISTS topics TEXT[] DEFAULT '{}';
 CREATE INDEX IF NOT EXISTS analyzed_events_topics_gin ON analyzed_events USING GIN (topics);
 
+ALTER TABLE social_posts
+    ADD COLUMN IF NOT EXISTS topics TEXT[] DEFAULT '{}';
+CREATE INDEX IF NOT EXISTS social_posts_topics_gin ON social_posts USING GIN (topics);
+
 COMMIT;
