@@ -13,19 +13,6 @@ const NAV_ITEMS = [
   { id: 'polymarket', key: 'nav.polymarket'},
 ]
 
-function LogoIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
-      <circle cx="13" cy="13" r="11" stroke="var(--accent)" strokeWidth="1.2" opacity=".4"/>
-      <circle cx="13" cy="13" r="7"  stroke="var(--accent)" strokeWidth="1.2" opacity=".6"/>
-      <circle cx="13" cy="13" r="3"  fill="var(--accent)" opacity=".9"/>
-      <line x1="13" y1="2"  x2="13" y2="6"  stroke="var(--accent)" strokeWidth="1" opacity=".5"/>
-      <line x1="13" y1="20" x2="13" y2="24" stroke="var(--accent)" strokeWidth="1" opacity=".5"/>
-      <line x1="2"  y1="13" x2="6"  y2="13" stroke="var(--accent)" strokeWidth="1" opacity=".5"/>
-      <line x1="20" y1="13" x2="24" y2="13" stroke="var(--accent)" strokeWidth="1" opacity=".5"/>
-    </svg>
-  )
-}
 
 export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, onLogout,
                                   topicsOnly, onToggleTopics, hasTopics }) {
@@ -72,7 +59,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
     }}>
       {/* Logo */}
       <div style={{ display:'flex', alignItems:'center', gap:'8px', marginRight:'16px', flexShrink:0 }}>
-        <LogoIcon />
+        <img src="/brand/qilin-logo-clean.svg" alt="" style={{ width:22, height:24 }} />
         <span style={{
           fontSize:'18px', fontWeight:'700', letterSpacing:'.22em',
           color:'var(--cyan)', textTransform:'uppercase', fontFamily:'var(--mono)',
