@@ -113,3 +113,39 @@ def test_telegram_test_no_chat_id(client):
     mock_db.fetchrow = AsyncMock(return_value={"telegram_chat_id": None})
     resp = tc.post("/me/telegram/test")
     assert resp.status_code == 400
+
+
+def test_news_feed_topics_only_returns_filtered(client):
+    tc, mock_db = client
+    mock_db.fetchrow = AsyncMock(return_value={"id": 1})
+    mock_db.fetch = AsyncMock(side_effect=[
+        [{"topic_id": "petroleo"}],
+        [{"id": 1, "title": "WTI falls", "topics": ["petroleo"], "time": "2026-01-01T00:00:00"}],
+    ])
+    resp = tc.get("/news/feed?topics_only=true")
+    assert resp.status_code == 200
+    items = resp.json()
+    assert len(items) == 1
+    assert items[0]["title"] == "WTI falls"
+
+
+def test_news_feed_topics_only_empty_when_no_topics(client):
+    tc, mock_db = client
+    mock_db.fetchrow = AsyncMock(return_value={"id": 1})
+    mock_db.fetch = AsyncMock(return_value=[])
+    resp = tc.get("/news/feed?topics_only=true")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_intel_timeline_topics_only(client):
+    tc, mock_db = client
+    mock_db.fetchrow = AsyncMock(return_value={"id": 1})
+    mock_db.fetch = AsyncMock(side_effect=[
+        [{"topic_id": "nvidia"}],
+        [],
+        [],
+    ])
+    resp = tc.get("/intel/timeline?topics_only=true")
+    assert resp.status_code == 200
+    assert "items" in resp.json()

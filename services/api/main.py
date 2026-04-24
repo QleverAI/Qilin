@@ -1129,13 +1129,24 @@ async def get_social_feed(
     handle: str | None = None,
     q: str | None = None,
     since: datetime | None = None,
-    _user: str = Depends(get_current_user),
+    topics_only: bool = False,
+    user: str = Depends(get_current_user),
 ):
     """
     Feed de tweets de cuentas monitorizadas.
     Lee de TimescaleDB ordenado por tiempo DESC.
     Fallback a Redis stream:social si DB no disponible.
     """
+    if topics_only:
+        topic_ids = await _get_user_topic_ids(user)
+        if not topic_ids or not app.state.db:
+            return []
+        rows = await app.state.db.fetch(
+            "SELECT * FROM social_posts WHERE topics && $1::text[] ORDER BY time DESC LIMIT $2",
+            topic_ids, min(limit, 1000),
+        )
+        return [dict(r) for r in rows]
+
     if app.state.db:
         conditions: list[str] = []
         params: list = []
@@ -1197,13 +1208,24 @@ async def get_news_feed(
     severity: str | None = None,
     q: str | None = None,
     since: datetime | None = None,
-    _user: str = Depends(get_current_user),
+    topics_only: bool = False,
+    user: str = Depends(get_current_user),
 ):
     """
     Feed de noticias RSS clasificadas.
     Lee de TimescaleDB con filtros dinámicos, ORDER BY time DESC.
     Fallback a stream:news en Redis si DB no disponible.
     """
+    if topics_only:
+        topic_ids = await _get_user_topic_ids(user)
+        if not topic_ids or not app.state.db:
+            return []
+        rows = await app.state.db.fetch(
+            "SELECT * FROM news_events WHERE topics && $1::text[] ORDER BY time DESC LIMIT $2",
+            topic_ids, min(limit, 1000),
+        )
+        return [dict(r) for r in rows]
+
     if app.state.db:
         conditions: list[str] = []
         params: list = []
@@ -2374,13 +2396,47 @@ async def intel_timeline(
     hours: int = 48,
     min_score: int = 0,
     domain: str = "all",
-    _user: str = Depends(get_current_user),
+    topics_only: bool = False,
+    user: str = Depends(get_current_user),
 ):
     """Unified timeline: master analyses + agent findings, DESC."""
+    hours = max(1, min(hours, 168))
+    if topics_only:
+        topic_ids = await _get_user_topic_ids(user)
+        if not topic_ids or not app.state.db:
+            return {"items": [], "count": 0}
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        items = []
+        if domain in ("all", "findings"):
+            rows = await app.state.db.fetch(
+                """SELECT time, cycle_id, agent_name, anomaly_score, summary, topics
+                   FROM agent_findings
+                   WHERE topics && $1::text[] AND time >= $2 AND anomaly_score >= $3
+                   ORDER BY time DESC LIMIT 200""",
+                topic_ids, cutoff, min_score,
+            )
+            for r in rows:
+                item = {"type": "finding"}
+                item.update({k: (v.isoformat() if hasattr(v, "isoformat") else (str(v) if hasattr(v, "hex") else v)) for k, v in dict(r).items()})
+                items.append(item)
+        if domain in ("all", "master"):
+            rows = await app.state.db.fetch(
+                """SELECT time, cycle_id, severity, headline, summary, zone, topics
+                   FROM analyzed_events
+                   WHERE topics && $1::text[] AND time >= $2 AND severity >= $3
+                   ORDER BY time DESC LIMIT 100""",
+                topic_ids, cutoff, min_score,
+            )
+            for r in rows:
+                item = {"type": "master"}
+                item.update({k: (v.isoformat() if hasattr(v, "isoformat") else (str(v) if hasattr(v, "hex") else v)) for k, v in dict(r).items()})
+                items.append(item)
+        items.sort(key=lambda x: x.get("time") or "", reverse=True)
+        return {"items": items[:300], "count": len(items[:300])}
+
     db = app.state.db
     if not db:
         return {"items": [], "count": 0}
-    hours = max(1, min(hours, 168))
 
     masters = await db.fetch(
         """
