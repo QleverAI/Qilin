@@ -27,7 +27,8 @@ function LogoIcon() {
   )
 }
 
-export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, onLogout }) {
+export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate, onLogout,
+                                  topicsOnly, onToggleTopics, hasTopics }) {
   const [time, setTime] = useState('')
   const [username] = useState(() => sessionStorage.getItem('qilin_user') || '')
   const [ddOpen, setDdOpen] = useState(false)
@@ -116,6 +117,34 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
 
       {/* Right side */}
       <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px' }}>
+
+        {/* My feed toggle — only shown when user has topics */}
+        {hasTopics && (
+          <button
+            onClick={onToggleTopics}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              background: topicsOnly ? 'rgba(0,200,255,0.12)' : 'transparent',
+              border: topicsOnly
+                ? '1px solid rgba(0,200,255,0.35)'
+                : '1px solid var(--border-md)',
+              borderRadius: '3px',
+              color: topicsOnly ? 'var(--cyan)' : 'var(--txt-3)',
+              fontFamily: 'var(--mono)',
+              fontSize: 'var(--label-sm)',
+              fontWeight: '600',
+              letterSpacing: '.08em',
+              padding: '4px 10px',
+              cursor: 'pointer',
+              transition: 'all .15s',
+            }}
+            onMouseEnter={e => { if (!topicsOnly) e.currentTarget.style.color = 'var(--txt-1)' }}
+            onMouseLeave={e => { if (!topicsOnly) e.currentTarget.style.color = 'var(--txt-3)' }}
+            title={topicsOnly ? 'Showing your topics — click for all' : 'Click to filter by your topics'}
+          >
+            {topicsOnly ? '◉' : '○'} MY FEED
+          </button>
+        )}
 
         {/* ES | EN language toggle */}
         <div style={{
