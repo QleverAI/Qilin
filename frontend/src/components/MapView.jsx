@@ -210,6 +210,30 @@ function getAircraftIcon(ac) {
   return 'plane-military'
 }
 
+function makePlaneMarkerEl(color, size = 28) {
+  const canvas = document.createElement('canvas')
+  canvas.width = size; canvas.height = size
+  const ctx = canvas.getContext('2d')
+  const cx  = size / 2
+  ctx.fillStyle = color; ctx.globalAlpha = 0.95
+  ctx.beginPath()
+  ctx.moveTo(cx, 1)
+  ctx.lineTo(cx + 7, size - 4)
+  ctx.lineTo(cx, size - 8)
+  ctx.lineTo(cx - 7, size - 4)
+  ctx.closePath()
+  ctx.fill()
+  // Subtle glow ring
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.35
+  ctx.beginPath()
+  ctx.arc(cx, cx, cx - 2, 0, Math.PI * 2)
+  ctx.stroke()
+  const wrapper = document.createElement('div')
+  wrapper.style.cssText = `width:${size}px;height:${size}px;pointer-events:none`
+  wrapper.appendChild(canvas)
+  return wrapper
+}
+
 // ── GeoJSON helpers ────────────────────────────────────────────────────────────
 
 function zonesToGeoJSON() {
@@ -311,10 +335,12 @@ export default function MapView({
   trails = {}, onAddTrail, onRemoveTrail, onClearTrails,
   vesselTrails = {},
   onSelectAircraft, onSelectVessel,
+  playback,
 }) {
   const containerRef = useRef(null)
   const mapRef       = useRef(null)
   const [ready, setReady] = useState(false)
+  const playbackMarkersRef = useRef({})
 
   // Init map
   useEffect(() => {
@@ -577,6 +603,45 @@ export default function MapView({
       })
     } catch (_) {}
   }, [vesselTrails, ready])
+
+  // Animated playback markers
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map || !playback) return
+    const { positions } = playback
+
+    for (const [icao24, pos] of Object.entries(positions)) {
+      const existing = playbackMarkersRef.current[icao24]
+      if (pos == null) {
+        if (existing) { existing.remove(); delete playbackMarkersRef.current[icao24] }
+        continue
+      }
+      if (existing) {
+        existing.setLngLat([pos.lon, pos.lat])
+        existing.setRotation(pos.heading ?? 0)
+      } else {
+        const el = makePlaneMarkerEl(pos.color || '#4f9cf9', 28)
+        playbackMarkersRef.current[icao24] = new maplibregl.Marker({
+          element: el, rotation: pos.heading ?? 0, rotationAlignment: 'map',
+        }).setLngLat([pos.lon, pos.lat]).addTo(map)
+      }
+    }
+
+    // Remove markers for trails that were removed
+    for (const icao24 of Object.keys(playbackMarkersRef.current)) {
+      if (!(icao24 in positions)) {
+        playbackMarkersRef.current[icao24].remove()
+        delete playbackMarkersRef.current[icao24]
+      }
+    }
+  }, [playback?.positions, ready])
+
+  useEffect(() => {
+    return () => {
+      for (const m of Object.values(playbackMarkersRef.current)) m.remove()
+      playbackMarkersRef.current = {}
+    }
+  }, [])
 
   // Fly to target
   useEffect(() => {
