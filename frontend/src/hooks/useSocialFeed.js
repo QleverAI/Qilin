@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react'
 import { fetchWithCache, getCached, prefetch } from './feedCache'
 
-const FEED_URL     = '/api/social/feed?limit=1000'
 const ACCOUNTS_URL = '/api/social/accounts'
 
-export function useSocialFeed() {
-  const cachedPosts    = getCached(FEED_URL)
+function buildFeedUrl(topicsOnly) {
+  return topicsOnly
+    ? '/api/social/feed?limit=1000&topics_only=true'
+    : '/api/social/feed?limit=1000'
+}
+
+export function useSocialFeed({ topicsOnly = false } = {}) {
+  const feedUrl     = buildFeedUrl(topicsOnly)
+  const cachedPosts    = getCached(feedUrl)
   const cachedAccounts = getCached(ACCOUNTS_URL)
 
   const [posts,      setPosts]      = useState(cachedPosts    || [])
@@ -15,11 +21,10 @@ export function useSocialFeed() {
 
   useEffect(() => {
     let cancelled = false
-
     async function fetchAll() {
       try {
         const [rawPosts, rawAccounts] = await Promise.all([
-          fetchWithCache(FEED_URL),
+          fetchWithCache(feedUrl),
           fetchWithCache(ACCOUNTS_URL),
         ])
         if (cancelled) return
@@ -32,11 +37,10 @@ export function useSocialFeed() {
         if (!cancelled) setLoading(false)
       }
     }
-
     fetchAll()
     const interval = setInterval(fetchAll, 60_000)
     return () => { cancelled = true; clearInterval(interval) }
-  }, [])
+  }, [feedUrl])
 
   const categories = [...new Set(accounts.map(a => a.category))].sort()
   const zones      = [...new Set(accounts.map(a => a.zone))].sort()
@@ -45,6 +49,6 @@ export function useSocialFeed() {
 }
 
 export function prefetchSocialFeed() {
-  prefetch(FEED_URL)
+  prefetch(buildFeedUrl(false))
   prefetch(ACCOUNTS_URL)
 }

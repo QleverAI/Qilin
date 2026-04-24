@@ -3,14 +3,15 @@ import { fetchWithCache, getCached, prefetch } from './feedCache'
 
 const SPEND_URL = '/api/intel/spend'
 
-function buildTimelineUrl({ hours, minScore, domain }) {
-  return `/api/intel/timeline?hours=${hours}&min_score=${minScore}&domain=${domain}`
+function buildTimelineUrl({ hours, minScore, domain, topicsOnly }) {
+  const base = `/api/intel/timeline?hours=${hours}&min_score=${minScore}&domain=${domain}`
+  return topicsOnly ? `${base}&topics_only=true` : base
 }
 
-export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = {}) {
+export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all', topicsOnly = false } = {}) {
   const timelineUrl = useMemo(
-    () => buildTimelineUrl({ hours, minScore, domain }),
-    [hours, minScore, domain]
+    () => buildTimelineUrl({ hours, minScore, domain, topicsOnly }),
+    [hours, minScore, domain, topicsOnly]
   )
 
   const cachedTimeline = getCached(timelineUrl)
@@ -39,7 +40,6 @@ export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = 
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // WebSocket live prepend (lo invoca el consumidor al recibir mensajes)
   const addLiveItem = useCallback((msg) => {
     if (!msg || msg.kind !== 'intel') return
     try {
@@ -68,6 +68,6 @@ export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = 
 }
 
 export function prefetchIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = {}) {
-  prefetch(buildTimelineUrl({ hours, minScore, domain }))
+  prefetch(buildTimelineUrl({ hours, minScore, domain, topicsOnly: false }))
   prefetch(SPEND_URL)
 }

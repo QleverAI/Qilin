@@ -1,11 +1,17 @@
 import { useState, useEffect, useMemo } from 'react'
 import { fetchWithCache, getCached, prefetch } from './feedCache'
 
-const FEED_URL    = '/api/news/feed?limit=1000'
 const SOURCES_URL = '/api/news/sources'
 
-export function useNewsFeed() {
-  const cachedArticles = getCached(FEED_URL)
+function buildFeedUrl(topicsOnly) {
+  return topicsOnly
+    ? '/api/news/feed?limit=1000&topics_only=true'
+    : '/api/news/feed?limit=1000'
+}
+
+export function useNewsFeed({ topicsOnly = false } = {}) {
+  const feedUrl    = buildFeedUrl(topicsOnly)
+  const cachedArticles = getCached(feedUrl)
   const cachedSources  = getCached(SOURCES_URL)
 
   const [articles,   setArticles]   = useState(cachedArticles || [])
@@ -15,11 +21,10 @@ export function useNewsFeed() {
 
   useEffect(() => {
     let cancelled = false
-
     async function fetchAll() {
       try {
         const [rawArticles, rawSources] = await Promise.all([
-          fetchWithCache(FEED_URL),
+          fetchWithCache(feedUrl),
           fetchWithCache(SOURCES_URL),
         ])
         if (cancelled) return
@@ -32,11 +37,10 @@ export function useNewsFeed() {
         if (!cancelled) setLoading(false)
       }
     }
-
     fetchAll()
     const interval = setInterval(fetchAll, 60_000)
     return () => { cancelled = true; clearInterval(interval) }
-  }, [])
+  }, [feedUrl])
 
   const countries   = useMemo(() => [...new Set(sources.map(s => s.country))].sort(),   [sources])
   const sourceTypes = useMemo(() => [...new Set(sources.map(s => s.type))].sort(),      [sources])
@@ -50,6 +54,6 @@ export function useNewsFeed() {
 }
 
 export function prefetchNewsFeed() {
-  prefetch(FEED_URL)
+  prefetch(buildFeedUrl(false))
   prefetch(SOURCES_URL)
 }
