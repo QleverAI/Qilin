@@ -1,20 +1,32 @@
 import { useState, useEffect, useMemo } from 'react'
 import { fetchWithCache, getCached, hydrateFromStorage, prefetch } from './feedCache'
 
-const FEED_PATH = '/social/feed?limit=100'
+const BASE_PATH = '/social/feed?limit=100'
 
-export function useSocialFeed() {
-  const cached = getCached(FEED_PATH)
+function buildPath(topicsOnly) {
+  return topicsOnly ? `${BASE_PATH}&topics_only=true` : BASE_PATH
+}
 
-  const [posts,   setPosts]   = useState(cached || [])
-  const [loading, setLoading] = useState(!cached)
+export function useSocialFeed({ topicsOnly = false } = {}) {
+  const feedPath = useMemo(() => buildPath(topicsOnly), [topicsOnly])
+
+  const [posts,   setPosts]   = useState(() => getCached(feedPath) || [])
+  const [loading, setLoading] = useState(() => !getCached(feedPath))
 
   useEffect(() => {
     let cancelled = false
+    const cached = getCached(feedPath)
+    if (cached) {
+      setPosts(cached)
+      setLoading(false)
+    } else {
+      setPosts([])
+      setLoading(true)
+    }
 
     async function fetchAll() {
       try {
-        const raw = await fetchWithCache(FEED_PATH)
+        const raw = await fetchWithCache(feedPath)
         if (!cancelled) setPosts(raw || [])
       } catch (err) {
         console.warn('[useSocialFeed]', err.message)
@@ -24,7 +36,7 @@ export function useSocialFeed() {
     }
 
     if (!cached) {
-      hydrateFromStorage(FEED_PATH).then(data => {
+      hydrateFromStorage(feedPath).then(data => {
         if (data && !cancelled) {
           setPosts(data)
           setLoading(false)
@@ -35,7 +47,7 @@ export function useSocialFeed() {
     fetchAll()
     const interval = setInterval(fetchAll, 60_000)
     return () => { cancelled = true; clearInterval(interval) }
-  }, [])
+  }, [feedPath])
 
   const zones = useMemo(
     () => [...new Set(posts.map(p => p.zone).filter(Boolean))].sort(),
@@ -51,5 +63,5 @@ export function useSocialFeed() {
 }
 
 export function prefetchSocialFeed() {
-  prefetch(FEED_PATH)
+  prefetch(BASE_PATH)
 }

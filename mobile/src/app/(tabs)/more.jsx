@@ -50,6 +50,9 @@ export default function MoreScreen() {
           alignSelf: 'center', width: '100%', maxWidth: maxContentWidth }}
       >
         <Section title="FEEDS">
+          <MenuItem icon="chatbubble-ellipses-outline" color={C.cyan} label={t('chat.title')}
+            onPress={go('/(tabs)/chat')} />
+          <View style={s.sep} />
           <MenuItem icon="people-outline"        color={C.indigo} label={t('social.title')}
             onPress={go('/(tabs)/social')} />
           <View style={s.sep} />

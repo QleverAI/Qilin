@@ -1,20 +1,32 @@
 import { useState, useEffect, useMemo } from 'react'
 import { fetchWithCache, getCached, hydrateFromStorage, prefetch } from './feedCache'
 
-const FEED_PATH = '/news/feed?limit=100'
+const BASE_PATH = '/news/feed?limit=100'
 
-export function useNewsFeed() {
-  const cached = getCached(FEED_PATH)
+function buildPath(topicsOnly) {
+  return topicsOnly ? `${BASE_PATH}&topics_only=true` : BASE_PATH
+}
 
-  const [articles, setArticles] = useState(cached || [])
-  const [loading,  setLoading]  = useState(!cached)
+export function useNewsFeed({ topicsOnly = false } = {}) {
+  const feedPath = useMemo(() => buildPath(topicsOnly), [topicsOnly])
+
+  const [articles, setArticles] = useState(() => getCached(feedPath) || [])
+  const [loading,  setLoading]  = useState(() => !getCached(feedPath))
 
   useEffect(() => {
     let cancelled = false
+    const cached = getCached(feedPath)
+    if (cached) {
+      setArticles(cached)
+      setLoading(false)
+    } else {
+      setArticles([])
+      setLoading(true)
+    }
 
     async function fetchAll() {
       try {
-        const raw = await fetchWithCache(FEED_PATH)
+        const raw = await fetchWithCache(feedPath)
         if (!cancelled) setArticles(raw || [])
       } catch (err) {
         console.warn('[useNewsFeed]', err.message)
@@ -23,13 +35,11 @@ export function useNewsFeed() {
       }
     }
 
-    // Cold start: si memCache estaba vacía, intenta hidratar desde AsyncStorage
-    // para pintar algo antes de que llegue la petición.
     if (!cached) {
-      hydrateFromStorage(FEED_PATH).then(data => {
+      hydrateFromStorage(feedPath).then(data => {
         if (data && !cancelled) {
           setArticles(data)
-          setLoading(false)   // hay algo que pintar; el fetch revalidará
+          setLoading(false)
         }
       })
     }
@@ -37,7 +47,7 @@ export function useNewsFeed() {
     fetchAll()
     const interval = setInterval(fetchAll, 60_000)
     return () => { cancelled = true; clearInterval(interval) }
-  }, [])
+  }, [feedPath])
 
   const zones = useMemo(
     () => [...new Set(articles.flatMap(a => a.zones || []))].sort(),
@@ -48,5 +58,5 @@ export function useNewsFeed() {
 }
 
 export function prefetchNewsFeed() {
-  prefetch(FEED_PATH)
+  prefetch(BASE_PATH)
 }

@@ -54,6 +54,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="more"     options={{ title: t('tabs.more'),     tabBarIcon: icon('ellipsis-horizontal') }} />
 
       {/* ── Secundarias (ocultas del tab bar, accesibles desde "Más") ──── */}
+      <Tabs.Screen name="chat"       options={{ tabBarButton: () => null }} />
       <Tabs.Screen name="social"     options={{ tabBarButton: () => null }} />
       <Tabs.Screen name="documents"  options={{ tabBarButton: () => null }} />
       <Tabs.Screen name="sec"        options={{ tabBarButton: () => null }} />

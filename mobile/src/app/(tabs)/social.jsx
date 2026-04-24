@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback }                      from 'react'
 import { View, Text, Pressable, StyleSheet,
          FlatList, ScrollView, RefreshControl }               from 'react-native'
 import { useSocialFeed }                                      from '../../hooks/useSocialFeed'
+import { useProfile }                                         from '../../hooks/useProfile'
 import { useLang }                                            from '../../hooks/useLanguage'
 import { PageHeader }                                         from '../../components/PageHeader'
 import { FilterPill }                                         from '../../components/FilterPill'
@@ -55,12 +56,18 @@ function PostCard({ post, interactionsLabel }) {
 
 export default function SocialScreen() {
   const { t } = useLang()
-  const { posts, zones, categories, loading } = useSocialFeed()
+  const { profile } = useProfile()
+  const hasTopics = (profile?.topics?.length || 0) > 0
+
+  const [topicsOnly,      setTopicsOnly]      = useState(false)
+  const [zoneFilter,      setZoneFilter]      = useState('all')
+  const [categoryFilter,  setCategoryFilter]  = useState('all')
+  const [refreshing,      setRefreshing]      = useState(false)
+
   const { hPad, columns } = useBreakpoint()
 
-  const [zoneFilter,     setZoneFilter]     = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [refreshing,     setRefreshing]     = useState(false)
+  const activeTopicsOnly = topicsOnly && hasTopics
+  const { posts, zones, categories, loading } = useSocialFeed({ topicsOnly: activeTopicsOnly })
 
   const allZones      = ['all', ...zones]
   const allCategories = ['all', ...categories]
@@ -86,6 +93,19 @@ export default function SocialScreen() {
         style={s.pillRow}
         contentContainerStyle={{ paddingHorizontal: hPad, gap: 8, paddingBottom: 8 }}
       >
+        {hasTopics && (
+          <>
+            <Pressable
+              style={[s.myFeedPill, activeTopicsOnly && s.myFeedActive]}
+              onPress={() => setTopicsOnly(v => !v)}
+            >
+              <Text style={[s.myFeedText, activeTopicsOnly && s.myFeedTextActive]}>
+                {activeTopicsOnly ? '◉' : '○'} {t('social.my_feed')}
+              </Text>
+            </Pressable>
+            <View style={s.pillDivider} />
+          </>
+        )}
         {allZones.map(z => (
           <FilterPill
             key={z}
@@ -123,8 +143,8 @@ export default function SocialScreen() {
         ListEmptyComponent={
           <EmptyState
             icon={loading ? null : '💬'}
-            title={loading ? t('social.loading') : t('social.empty')}
-            subtitle={loading ? null : t('social.suggest')}
+            title={loading ? t('social.loading') : activeTopicsOnly ? t('social.topics_empty') : t('social.empty')}
+            subtitle={loading || activeTopicsOnly ? null : t('social.suggest')}
           />
         }
       />
@@ -133,21 +153,26 @@ export default function SocialScreen() {
 }
 
 const s = StyleSheet.create({
-  root:        { flex: 1, backgroundColor: C.bg0 },
-  pillRow:     { flexGrow: 0, paddingTop: 12 },
-  pillDivider: { width: 1, backgroundColor: C.separator, alignSelf: 'center', height: 20 },
-  sep:         { height: StyleSheet.hairlineWidth, backgroundColor: C.separator, marginLeft: 70 },
-  post:        { paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
-  postHeader:  { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  avatar:      { width: 42, height: 42, borderRadius: 21, backgroundColor: C.bg2,
-                 alignItems: 'center', justifyContent: 'center' },
-  avatarText:  { fontSize: 17, fontWeight: '600', color: '#ffffff' },
-  handle:      { fontSize: 15, fontWeight: '600', color: '#ffffff' },
-  displayName: { fontSize: 13, color: C.txt3, flex: 1 },
-  time:        { fontSize: 13, color: C.txt3 },
-  zone:        { fontSize: 12, color: C.blue, fontWeight: '500' },
-  catPill:     { backgroundColor: C.bg2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  catText:     { fontSize: 12, color: C.txt2, fontWeight: '500' },
-  content:     { fontSize: 16, color: '#ffffff', lineHeight: 23, marginLeft: 52 },
-  engagement:  { fontSize: 13, color: C.txt3, marginLeft: 52 },
+  root:         { flex: 1, backgroundColor: C.bg0 },
+  pillRow:      { flexGrow: 0, paddingTop: 12 },
+  pillDivider:  { width: 1, backgroundColor: C.separator, alignSelf: 'center', height: 20 },
+  myFeedPill:   { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+                  backgroundColor: C.bg2, borderWidth: 1, borderColor: 'transparent' },
+  myFeedActive: { backgroundColor: C.amberFill, borderColor: C.amber },
+  myFeedText:   { fontSize: 13, fontWeight: '600', color: C.txt2, fontFamily: 'SpaceMono' },
+  myFeedTextActive: { color: C.amber },
+  sep:          { height: StyleSheet.hairlineWidth, backgroundColor: C.separator, marginLeft: 70 },
+  post:         { paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
+  postHeader:   { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  avatar:       { width: 42, height: 42, borderRadius: 21, backgroundColor: C.bg2,
+                  alignItems: 'center', justifyContent: 'center' },
+  avatarText:   { fontSize: 17, fontWeight: '600', color: '#ffffff' },
+  handle:       { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+  displayName:  { fontSize: 13, color: C.txt3, flex: 1 },
+  time:         { fontSize: 13, color: C.txt3 },
+  zone:         { fontSize: 12, color: C.blue, fontWeight: '500' },
+  catPill:      { backgroundColor: C.bg2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  catText:      { fontSize: 12, color: C.txt2, fontWeight: '500' },
+  content:      { fontSize: 16, color: '#ffffff', lineHeight: 23, marginLeft: 52 },
+  engagement:   { fontSize: 13, color: C.txt3, marginLeft: 52 },
 })

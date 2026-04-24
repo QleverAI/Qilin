@@ -3,14 +3,16 @@ import { fetchWithCache, getCached, hydrateFromStorage, prefetch } from './feedC
 
 const SPEND_PATH = '/intel/spend'
 
-function buildTimelinePath({ hours, minScore, domain }) {
-  return `/intel/timeline?hours=${hours}&min_score=${minScore}&domain=${domain}`
+function buildTimelinePath({ hours, minScore, domain, topicsOnly }) {
+  let url = `/intel/timeline?hours=${hours}&min_score=${minScore}&domain=${domain}`
+  if (topicsOnly) url += '&topics_only=true'
+  return url
 }
 
-export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = {}) {
+export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all', topicsOnly = false } = {}) {
   const timelinePath = useMemo(
-    () => buildTimelinePath({ hours, minScore, domain }),
-    [hours, minScore, domain]
+    () => buildTimelinePath({ hours, minScore, domain, topicsOnly }),
+    [hours, minScore, domain, topicsOnly]
   )
 
   const cachedTimeline = getCached(timelinePath)
@@ -39,7 +41,10 @@ export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = 
 
   useEffect(() => {
     let cancelled = false
-    if (!cachedTimeline) {
+    const cached = getCached(timelinePath)
+    if (!cached) {
+      setItems([])
+      setLoading(true)
       hydrateFromStorage(timelinePath).then(data => {
         if (!cancelled && data) {
           setItems(data.items || [])
@@ -56,6 +61,6 @@ export function useIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = 
 }
 
 export function prefetchIntelTimeline({ hours = 48, minScore = 0, domain = 'all' } = {}) {
-  prefetch(buildTimelinePath({ hours, minScore, domain }))
+  prefetch(buildTimelinePath({ hours, minScore, domain, topicsOnly: false }))
   prefetch(SPEND_PATH)
 }

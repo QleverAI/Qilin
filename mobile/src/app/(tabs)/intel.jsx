@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, FlatList,
          ScrollView, RefreshControl }                  from 'react-native'
 import * as Haptics                                    from 'expo-haptics'
 import { useIntelTimeline }                            from '../../hooks/useIntelTimeline'
+import { useProfile }                                  from '../../hooks/useProfile'
 import { useLang }                                     from '../../hooks/useLanguage'
 import { PageHeader }                                  from '../../components/PageHeader'
 import { FilterPill }                                  from '../../components/FilterPill'
@@ -108,15 +109,21 @@ function FindingCard({ item }) {
 
 export default function IntelScreen() {
   const { t } = useLang()
-  const [hours, setHours] = useState(48)
-  const [minScore, setMinScore] = useState(0)
-  const [domain, setDomain] = useState('all')
-  const [showMasters, setShowMasters] = useState(true)
-  const [showFindings, setShowFindings] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const { profile } = useProfile()
+  const hasTopics = (profile?.topics?.length || 0) > 0
+
+  const [topicsOnly,    setTopicsOnly]    = useState(false)
+  const [hours,         setHours]         = useState(48)
+  const [minScore,      setMinScore]      = useState(0)
+  const [domain,        setDomain]        = useState('all')
+  const [showMasters,   setShowMasters]   = useState(true)
+  const [showFindings,  setShowFindings]  = useState(true)
+  const [refreshing,    setRefreshing]    = useState(false)
 
   const { hPad } = useBreakpoint()
-  const { items, loading, error, spend, refresh } = useIntelTimeline({ hours, minScore, domain })
+
+  const activeTopicsOnly = topicsOnly && hasTopics
+  const { items, loading, error, spend, refresh } = useIntelTimeline({ hours, minScore, domain, topicsOnly: activeTopicsOnly })
 
   const filtered = useMemo(
     () => items.filter(it => {
@@ -170,6 +177,19 @@ export default function IntelScreen() {
         style={s.pillRow}
         contentContainerStyle={{ paddingHorizontal: hPad, gap: 8, paddingBottom: 6 }}
       >
+        {hasTopics && (
+          <>
+            <Pressable
+              style={[s.myFeedPill, activeTopicsOnly && s.myFeedActive]}
+              onPress={() => setTopicsOnly(v => !v)}
+            >
+              <Text style={[s.myFeedText, activeTopicsOnly && s.myFeedTextActive]}>
+                {activeTopicsOnly ? '◉' : '○'} {t('intel.my_feed')}
+              </Text>
+            </Pressable>
+            <View style={s.pillDivider} />
+          </>
+        )}
         {DOMAIN_KEYS.map(key => (
           <FilterPill
             key={key}
@@ -235,8 +255,8 @@ export default function IntelScreen() {
         ListEmptyComponent={
           <EmptyState
             icon={loading ? null : '◉'}
-            title={loading ? t('intel.loading') : t('intel.empty')}
-            subtitle={loading ? null : t('intel.empty_subtitle')}
+            title={loading ? t('intel.loading') : activeTopicsOnly ? t('intel.topics_empty') : t('intel.empty')}
+            subtitle={loading || activeTopicsOnly ? null : t('intel.empty_subtitle')}
           />
         }
       />
@@ -252,6 +272,11 @@ const s = StyleSheet.create({
   spendText:       { fontSize: 12, fontFamily: 'SpaceMono', marginTop: 2 },
   pillRow:         { flexGrow: 0, paddingTop: 10 },
   pillDivider:     { width: 1, backgroundColor: C.separator, alignSelf: 'center', height: 20 },
+  myFeedPill:      { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+                     backgroundColor: C.bg2, borderWidth: 1, borderColor: 'transparent' },
+  myFeedActive:    { backgroundColor: C.amberFill, borderColor: C.amber },
+  myFeedText:      { fontSize: 13, fontWeight: '600', color: C.txt2, fontFamily: 'SpaceMono' },
+  myFeedTextActive:{ color: C.amber },
   errorBanner:     { backgroundColor: C.redFill, paddingHorizontal: 16, paddingVertical: 10 },
   errorText:       { fontSize: 13, color: C.red },
   card:            { backgroundColor: C.bg1, borderRadius: 12, padding: 14, gap: 8,

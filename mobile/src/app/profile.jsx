@@ -1,13 +1,18 @@
+import { useState, useEffect }                        from 'react'
 import { View, Text, Pressable, StyleSheet, ScrollView,
-         SafeAreaView, Alert }                         from 'react-native'
+         SafeAreaView, Alert, TextInput,
+         ActivityIndicator }                          from 'react-native'
 import { router, Stack }                               from 'expo-router'
 import * as Haptics                                    from 'expo-haptics'
 import { useProfile, clearProfileCache }               from '../hooks/useProfile'
 import { useLang }                                     from '../hooks/useLanguage'
 import { clearFeedCache }                              from '../hooks/feedCache'
-import { setToken }                                    from '../hooks/apiClient'
+import { setToken, getToken }                          from '../hooks/apiClient'
+import TopicSelector                                   from '../components/TopicSelector'
 import { C, T }                                        from '../theme'
 import { useBreakpoint }                               from '../theme/responsive'
+
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'
 
 function Row({ label, value, onPress }) {
   return (
@@ -39,10 +44,131 @@ function LangToggle({ lang, onChange }) {
   )
 }
 
+function SectionLabel({ children }) {
+  return <Text style={s.sectionLabel}>{children}</Text>
+}
+
+function ActionBtn({ label, onPress, disabled, loading: isLoading }) {
+  return (
+    <Pressable
+      style={[s.actionBtn, disabled && { opacity: 0.5 }]}
+      onPress={onPress}
+      disabled={disabled || isLoading}
+    >
+      {isLoading
+        ? <ActivityIndicator size="small" color={C.cyan} />
+        : <Text style={s.actionBtnText}>{label}</Text>
+      }
+    </Pressable>
+  )
+}
+
 export default function ProfileScreen() {
   const { profile, loading } = useProfile()
   const { lang, switchLang, t } = useLang()
   const { maxContentWidth } = useBreakpoint()
+
+  const [catalog,     setCatalog]     = useState([])
+  const [myTopics,    setMyTopics]    = useState([])
+  const [topicLimit,  setTopicLimit]  = useState(2)
+  const [topicSaving, setTopicSaving] = useState(false)
+  const [topicMsg,    setTopicMsg]    = useState('')
+
+  const [chatId,    setChatId]    = useState('')
+  const [tgSaving,  setTgSaving]  = useState(false)
+  const [tgTesting, setTgTesting] = useState(false)
+  const [tgMsg,     setTgMsg]     = useState('')
+  const [tgTestMsg, setTgTestMsg] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function load() {
+      try {
+        const token = getToken()
+        if (!token) return
+        const headers = { Authorization: `Bearer ${token}` }
+
+        const [catRes, topRes, tgRes] = await Promise.all([
+          fetch(`${API_BASE}/api/topics`,    { signal: controller.signal }),
+          fetch(`${API_BASE}/api/me/topics`, { headers, signal: controller.signal }),
+          fetch(`${API_BASE}/api/me/telegram`, { headers, signal: controller.signal }),
+        ])
+        if (!catRes.ok || !topRes.ok || !tgRes.ok) return
+        const cat = await catRes.json()
+        const top = await topRes.json()
+        const tg  = await tgRes.json()
+        setCatalog(cat.topics || [])
+        setMyTopics(top.topics || [])
+        setTopicLimit(top.limit ?? 2)
+        setChatId(tg.chat_id || '')
+      } catch (e) {
+        if (e.name !== 'AbortError') console.warn('[ProfileScreen] load failed:', e.message)
+      }
+    }
+
+    load()
+    return () => controller.abort()
+  }, [])
+
+  async function handleSaveTopics() {
+    setTopicSaving(true); setTopicMsg('')
+    try {
+      const res = await fetch(`${API_BASE}/api/me/topics`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: myTopics }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setTopicMsg(data.detail || t('topics.error')); return }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      clearProfileCache()
+      setTopicMsg(t('topics.saved'))
+    } catch {
+      setTopicMsg(t('topics.error'))
+    } finally {
+      setTopicSaving(false)
+    }
+  }
+
+  async function handleSaveTelegram() {
+    setTgSaving(true); setTgMsg('')
+    try {
+      const res = await fetch(`${API_BASE}/api/me/telegram`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId }),
+      })
+      if (!res.ok) { setTgMsg(t('telegram.error_save')); return }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      setTgMsg(t('telegram.saved'))
+    } catch {
+      setTgMsg(t('telegram.error_save'))
+    } finally {
+      setTgSaving(false)
+    }
+  }
+
+  async function handleTestTelegram() {
+    setTgTesting(true); setTgTestMsg('')
+    try {
+      const res = await fetch(`${API_BASE}/api/me/telegram/test`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setTgTestMsg(data.detail === 'no_chat_id' ? t('telegram.save_first') : t('telegram.error_test'))
+        return
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      setTgTestMsg(t('telegram.test_ok'))
+    } catch {
+      setTgTestMsg(t('telegram.error_test'))
+    } finally {
+      setTgTesting(false)
+    }
+  }
 
   async function handleLogout() {
     const run = async () => {
@@ -67,6 +193,8 @@ export default function ProfileScreen() {
       <Stack.Screen options={{ title: t('profile.title'), headerShown: true,
         headerStyle: { backgroundColor: C.bg0 }, headerTintColor: '#ffffff' }} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 24, alignSelf: 'center', width: '100%', maxWidth: maxContentWidth }}>
+
+        {/* Avatar */}
         <View style={s.avatarBlock}>
           <View style={s.avatar}>
             <Text style={s.avatarText}>
@@ -77,8 +205,9 @@ export default function ProfileScreen() {
           {profile?.email ? <Text style={s.email}>{profile.email}</Text> : null}
         </View>
 
+        {/* Account */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>{t('profile.account').toUpperCase()}</Text>
+          <SectionLabel>{t('profile.account').toUpperCase()}</SectionLabel>
           <View style={s.card}>
             <Row label={t('profile.username')} value={profile?.username || '—'} />
             <View style={s.sep} />
@@ -92,8 +221,9 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Preferences */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>{t('profile.preferences').toUpperCase()}</Text>
+          <SectionLabel>{t('profile.preferences').toUpperCase()}</SectionLabel>
           <View style={s.card}>
             <View style={s.row}>
               <Text style={s.rowLabel}>{t('profile.lang')}</Text>
@@ -103,9 +233,71 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* My Topics */}
+        <View style={s.section}>
+          <SectionLabel>{t('topics.title').toUpperCase()}</SectionLabel>
+          <View style={[s.card, { padding: 14, gap: 14 }]}>
+            <TopicSelector
+              selected={myTopics}
+              limit={topicLimit}
+              onChange={setMyTopics}
+              catalog={catalog}
+            />
+            <View style={s.btnRow}>
+              <ActionBtn
+                label={topicSaving ? t('topics.saving') : t('topics.save')}
+                onPress={handleSaveTopics}
+                disabled={topicSaving}
+                loading={topicSaving}
+              />
+              {topicMsg ? (
+                <Text style={[s.msg, topicMsg.includes('✓') ? s.msgOk : s.msgErr]}>{topicMsg}</Text>
+              ) : null}
+            </View>
+          </View>
+        </View>
+
+        {/* Telegram */}
+        <View style={s.section}>
+          <SectionLabel>{t('telegram.title').toUpperCase()}</SectionLabel>
+          <View style={[s.card, { padding: 14, gap: 12 }]}>
+            <Text style={s.tgInstructions}>{t('telegram.instructions')}</Text>
+            <TextInput
+              style={s.input}
+              placeholder={t('telegram.placeholder')}
+              placeholderTextColor={C.txt3}
+              value={chatId}
+              onChangeText={setChatId}
+              keyboardType="numeric"
+            />
+            <View style={s.btnRow}>
+              <ActionBtn
+                label={tgSaving ? t('telegram.saving') : t('telegram.save')}
+                onPress={handleSaveTelegram}
+                disabled={tgSaving}
+                loading={tgSaving}
+              />
+              <ActionBtn
+                label={tgTesting ? t('telegram.testing') : t('telegram.test')}
+                onPress={handleTestTelegram}
+                disabled={tgTesting}
+                loading={tgTesting}
+              />
+            </View>
+            {tgMsg ? (
+              <Text style={[s.msg, tgMsg.includes('✓') ? s.msgOk : s.msgErr]}>{tgMsg}</Text>
+            ) : null}
+            {tgTestMsg ? (
+              <Text style={[s.msg, tgTestMsg.includes('✓') ? s.msgOk : s.msgErr]}>{tgTestMsg}</Text>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Logout */}
         <Pressable style={s.logoutBtn} onPress={handleLogout}>
           <Text style={s.logoutText}>{t('profile.logout')}</Text>
         </Pressable>
+
       </ScrollView>
     </SafeAreaView>
   )
@@ -134,6 +326,17 @@ const s = StyleSheet.create({
   langBtnActive: { backgroundColor: C.blue },
   langText:      { fontSize: 13, fontWeight: '700', color: C.txt3, fontFamily: 'SpaceMono' },
   langTextActive:{ color: '#ffffff' },
+  input:         { backgroundColor: C.bg2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
+                   fontSize: 15, color: '#ffffff' },
+  tgInstructions:{ fontSize: 13, color: C.txt3, lineHeight: 20 },
+  btnRow:        { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  actionBtn:     { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+                   borderWidth: 1, borderColor: C.cyan, backgroundColor: 'rgba(100,210,255,0.1)',
+                   minWidth: 80, alignItems: 'center' },
+  actionBtnText: { fontSize: 13, fontWeight: '700', color: C.cyan, fontFamily: 'SpaceMono' },
+  msg:           { fontSize: 12, fontFamily: 'SpaceMono' },
+  msgOk:         { color: C.green },
+  msgErr:        { color: C.red },
   logoutBtn:     { backgroundColor: C.redFill, borderRadius: 12, paddingVertical: 16,
                    alignItems: 'center' },
   logoutText:    { fontSize: 16, fontWeight: '600', color: C.red },
