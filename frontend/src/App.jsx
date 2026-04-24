@@ -7,7 +7,7 @@ import BottomBar         from './components/BottomBar'
 import ChatBot           from './components/ChatBot'
 import LoadingState      from './components/LoadingSkeleton'
 import { useQilinData }  from './hooks/useQilinData'
-import { clearProfileCache } from './hooks/useProfile'
+import { useProfile, clearProfileCache } from './hooks/useProfile'
 import { useAircraftTrail } from './hooks/useAircraftTrail'
 import { useVesselTrail }   from './hooks/useVesselTrail'
 import { useAircraftHistory } from './hooks/useAircraftHistory'
@@ -56,6 +56,7 @@ function AppShell() {
   const [flyTarget,        setFlyTarget]        = useState(null)
   const [selectedAircraft, setSelectedAircraft] = useState(null)
   const [selectedVessel,   setSelectedVessel]   = useState(null)
+  const [topicsOnly, setTopicsOnly] = useState(false)
   const navigate = useNavigate()
 
   function handleLogout() {
@@ -89,6 +90,13 @@ function AppShell() {
   const { history, loading: historyLoading } = useAircraftHistory({ enabled: view === 'tactical' })
   const playback = usePlayback(trails)
 
+  const { profile } = useProfile()
+  const hasTopics = (profile?.topics?.length || 0) > 0
+
+  useEffect(() => {
+    if (hasTopics && !topicsOnly) setTopicsOnly(true)
+  }, [hasTopics])   // eslint-disable-line react-hooks/exhaustive-deps
+
   // Only rebuild when aircraft type metadata changes — not on every position update
   const aircraftTypeDigest = aircraft.map(a => `${a.id || a.icao24}:${a.type || ''}:${a.type_code || ''}`).join(',')
   const enrichedHistory = useMemo(() => {
@@ -107,7 +115,11 @@ function AppShell() {
       <div style={{ display:'grid', gridTemplateRows:'52px 1fr 44px',
         gridTemplateColumns:'1fr 340px', height:'100vh', width:'100vw', overflow:'hidden' }}>
         <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
-          onNavigate={setView} onLogout={handleLogout} />
+          onNavigate={setView} onLogout={handleLogout}
+          topicsOnly={topicsOnly}
+          onToggleTopics={() => setTopicsOnly(v => !v)}
+          hasTopics={hasTopics}
+        />
         <Suspense fallback={
           <div style={{ gridColumn:1, gridRow:2, display:'flex', alignItems:'center',
             justifyContent:'center', background:'var(--bg-0)' }}>
@@ -156,14 +168,18 @@ function AppShell() {
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
       <TopBar alertsTotal={stats.alertsTotal} wsStatus={wsStatus} currentView={view}
-        onNavigate={setView} onLogout={handleLogout} />
+        onNavigate={setView} onLogout={handleLogout}
+        topicsOnly={topicsOnly}
+        onToggleTopics={() => setTopicsOnly(v => !v)}
+        hasTopics={hasTopics}
+      />
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
         <Suspense fallback={<PageFallback />}>
           {view === 'home'       && <HomePage aircraft={aircraft} alerts={alerts} onNavigate={setView} />}
-          {view === 'intel'      && <IntelPage />}
-          {view === 'news'       && <NewsPage />}
+          {view === 'intel'      && <IntelPage topicsOnly={topicsOnly} />}
+          {view === 'news'       && <NewsPage  topicsOnly={topicsOnly} />}
           {view === 'documents'  && <DocumentsPage />}
-          {view === 'social'     && <SocialPage />}
+          {view === 'social'     && <SocialPage topicsOnly={topicsOnly} />}
           {view === 'sentinel'   && <SentinelPage />}
           {view === 'markets'    && <MarketsPage />}
           {view === 'polymarket' && <PolymarketPage />}
