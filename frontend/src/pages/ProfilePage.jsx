@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useProfile } from '../hooks/useProfile'
 import { authHeaders, getApiBase } from '../hooks/apiClient'
 import { useLang } from '../hooks/useLanguage'
+import TopicSelector from '../components/TopicSelector'
 
 const FIELD = {
   background: 'rgba(0,200,255,0.04)',
@@ -50,6 +51,82 @@ export default function ProfilePage({ onNavigate }) {
   const [pwLoading,    setPwLoading]    = useState(false)
   const [pwError,      setPwError]      = useState('')
   const [pwSuccess,    setPwSuccess]    = useState('')
+
+  const [catalog,      setCatalog]      = useState([])
+  const [myTopics,     setMyTopics]     = useState([])
+  const [topicLimit,   setTopicLimit]   = useState(2)
+  const [topicPlan,    setTopicPlan]    = useState('free')
+  const [topicSaving,  setTopicSaving]  = useState(false)
+  const [topicMsg,     setTopicMsg]     = useState('')
+
+  const [chatId,       setChatId]       = useState('')
+  const [tgSaving,     setTgSaving]     = useState(false)
+  const [tgMsg,        setTgMsg]        = useState('')
+  const [tgTesting,    setTgTesting]    = useState(false)
+  const [tgTestMsg,    setTgTestMsg]    = useState('')
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [catRes, topRes, tgRes] = await Promise.all([
+          fetch('/api/topics'),
+          fetch('/api/me/topics',   { headers: authHeaders() }),
+          fetch('/api/me/telegram', { headers: authHeaders() }),
+        ])
+        const cat = await catRes.json()
+        const top = await topRes.json()
+        const tg  = await tgRes.json()
+        setCatalog(cat.topics || [])
+        setMyTopics(top.topics || [])
+        setTopicLimit(top.limit ?? 2)
+        setTopicPlan(top.plan || 'free')
+        setChatId(tg.chat_id || '')
+      } catch (_) {}
+    }
+    load()
+  }, [])
+
+  async function handleSaveTopics() {
+    setTopicSaving(true); setTopicMsg('')
+    try {
+      const res = await fetch('/api/me/topics', {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: myTopics }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setTopicMsg(data.detail || 'Error saving topics'); return }
+      setTopicMsg('Topics saved ✓')
+    } catch (_) { setTopicMsg('Connection error') }
+    finally { setTopicSaving(false) }
+  }
+
+  async function handleSaveTelegram() {
+    setTgSaving(true); setTgMsg('')
+    try {
+      const res = await fetch('/api/me/telegram', {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId }),
+      })
+      if (!res.ok) { setTgMsg('Error saving Telegram'); return }
+      setTgMsg('Saved ✓')
+    } catch (_) { setTgMsg('Connection error') }
+    finally { setTgSaving(false) }
+  }
+
+  async function handleTestTelegram() {
+    setTgTesting(true); setTgTestMsg('')
+    try {
+      const res = await fetch('/api/me/telegram/test', {
+        method: 'POST', headers: authHeaders(),
+      })
+      const data = await res.json()
+      if (!res.ok) { setTgTestMsg(data.detail === 'no_chat_id' ? 'Save a chat ID first' : 'Send failed'); return }
+      setTgTestMsg('Test message sent ✓')
+    } catch (_) { setTgTestMsg('Connection error') }
+    finally { setTgTesting(false) }
+  }
 
   async function handlePasswordChange(e) {
     e.preventDefault()
@@ -195,6 +272,72 @@ export default function ProfilePage({ onNavigate }) {
               >
                 {t('profile.plan.change')}
               </button>
+            </div>
+          </Section>
+
+          <Section label="My Topics">
+            <div style={{ marginBottom: '10px', fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)' }}>
+              Plan: <span style={{ color: 'var(--accent)', textTransform: 'uppercase' }}>{topicPlan}</span>
+              {' · '}{topicLimit == null ? '∞' : topicLimit} topics max
+            </div>
+            <TopicSelector
+              selected={myTopics}
+              limit={topicLimit}
+              onChange={setMyTopics}
+              catalog={catalog}
+            />
+            <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                onClick={handleSaveTopics}
+                disabled={topicSaving}
+                style={{
+                  padding: '8px 20px', background: 'rgba(0,200,255,0.1)',
+                  border: '1px solid rgba(0,200,255,0.3)', borderRadius: '3px',
+                  color: 'var(--cyan)', fontFamily: 'var(--mono)',
+                  fontSize: 'var(--label-sm)', cursor: topicSaving ? 'default' : 'pointer',
+                  opacity: topicSaving ? 0.7 : 1,
+                }}
+              >
+                {topicSaving ? 'SAVING…' : 'SAVE TOPICS'}
+              </button>
+              {topicMsg && (
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+                  color: topicMsg.includes('✓') ? 'var(--green)' : 'var(--red)' }}>
+                  {topicMsg}
+                </span>
+              )}
+            </div>
+          </Section>
+
+          <Section label="Telegram Alerts">
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: 'var(--txt-3)', marginBottom: '12px', lineHeight: '1.6' }}>
+              1. Open Telegram · 2. Search <span style={{ color: 'var(--txt-2)' }}>@QilinAlertBot</span> · 3. Send <span style={{ color: 'var(--txt-2)' }}>/start</span> · 4. Copy your chat ID below
+            </div>
+            <input
+              value={chatId}
+              onChange={e => setChatId(e.target.value)}
+              placeholder="Your Telegram chat ID (e.g. 123456789)"
+              style={{ ...FIELD, marginBottom: '10px' }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <button onClick={handleSaveTelegram} disabled={tgSaving} style={{
+                padding: '8px 16px', background: 'rgba(0,200,255,0.1)',
+                border: '1px solid rgba(0,200,255,0.3)', borderRadius: '3px',
+                color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+                cursor: tgSaving ? 'default' : 'pointer', opacity: tgSaving ? 0.7 : 1,
+              }}>
+                {tgSaving ? 'SAVING…' : 'SAVE'}
+              </button>
+              <button onClick={handleTestTelegram} disabled={tgTesting} style={{
+                padding: '8px 16px', background: 'transparent',
+                border: '1px solid var(--border-md)', borderRadius: '3px',
+                color: 'var(--txt-2)', fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)',
+                cursor: tgTesting ? 'default' : 'pointer', opacity: tgTesting ? 0.7 : 1,
+              }}>
+                {tgTesting ? 'SENDING…' : 'SEND TEST'}
+              </button>
+              {tgMsg && <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: tgMsg.includes('✓') ? 'var(--green)' : 'var(--red)' }}>{tgMsg}</span>}
+              {tgTestMsg && <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--label-sm)', color: tgTestMsg.includes('✓') ? 'var(--green)' : 'var(--red)' }}>{tgTestMsg}</span>}
             </div>
           </Section>
         </>
