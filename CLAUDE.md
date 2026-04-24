@@ -67,6 +67,7 @@ npm run build
 | Endpoint | Descripción |
 |----------|-------------|
 | `GET /api/aircraft` | Posiciones actuales de aeronaves (desde Redis) |
+| `GET /api/aircraft/history?hours=N` | Lista aeronaves vistas en las últimas N horas (máx. 72h, desde aircraft_positions) |
 | `GET /api/aircraft/{icao24}/trail?hours=N` | Trayectoria histórica de aeronave (TimescaleDB, max 72h) |
 | `GET /api/aircraft/{icao24}/bases` | Bases detectadas por aeronave |
 | `GET /api/aircraft/{icao24}/routes` | Rutas detectadas por aeronave |
