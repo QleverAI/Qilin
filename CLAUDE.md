@@ -85,6 +85,19 @@ npm run build
 | `GET /api/intel/cycle/{cycle_id}` | Master + findings del ciclo |
 | `GET /api/intel/spend` | Gasto AI del día (USD) |
 
+## API — Endpoints de personalización de topics
+
+| Endpoint | Descripción |
+|----------|-------------|
+| `GET /api/topics` | Catálogo público de topics (~65, desde `config/topics.yaml`). Cache TTL 3600s. |
+| `GET /api/me/topics` | Topics suscritos por el usuario + límite del plan |
+| `PUT /api/me/topics` | Actualiza topics del usuario (respeta límite del plan; 400 si excede) |
+| `GET /api/me/telegram` | Configuración Telegram del usuario |
+| `PUT /api/me/telegram` | Guarda `telegram_chat_id` |
+| `POST /api/me/telegram/test` | Envía mensaje de prueba al `chat_id` configurado |
+
+Los endpoints `/news/feed`, `/social/feed` e `/intel/timeline` aceptan `?topics_only=true` para filtrar por los topics suscritos del usuario autenticado. Cuando `topics_only=true` la respuesta **no** se cachea (es per-usuario).
+
 ## Servicios
 
 | Servicio | Puerto | Descripción |
@@ -136,8 +149,13 @@ npm run build
 - `airfields` — catálogo OurAirports (~70k aeródromos con lat/lon e indicador militar)
 - `vessel_ports` — puertos visitados por buque (mmsi + port_id + visit_count)
 - `vessel_routes` — rutas origen→destino detectadas por buque
-- `agent_findings` — hypertable con outputs de agentes por ciclo (cycle_id, agent_name, anomaly_score, raw_output)
-- `analyzed_events` — master analyses del ciclo (+ columna `cycle_id` desde 2026-04-23)
+- `agent_findings` — hypertable con outputs de agentes por ciclo (cycle_id, agent_name, anomaly_score, raw_output, topics TEXT[])
+- `analyzed_events` — master analyses del ciclo (cycle_id, topics TEXT[])
+- `news_events` — noticias (topics TEXT[] añadida 2026-04-24)
+- `social_posts` — posts sociales (topics TEXT[] añadida 2026-04-24)
+- `user_topics` — subscripciones de topics por usuario (PK: user_id + topic_id)
+- `users.telegram_chat_id` — chat ID de Telegram del usuario (añadida 2026-04-24)
+- `users.plan` — plan del usuario: free | scout | analyst | pro (default 'free')
 
 Redis keys:
 - `stream:adsb` — stream de posiciones de aeronaves
@@ -175,6 +193,7 @@ Tres niveles coordinados para minimizar trabajo repetido y latencia percibida:
 | `/intel/spend`         | `intel.spend`     |  10 |
 | `/api/stats`           | `api.stats`       |  60 |
 | `/aircraft/history`    | `aircraft.history`|  60 |
+| `/topics`              | `topics.catalog`  |3600 |
 
 Los TTLs del middleware `Cache-Control: max-age=N` coinciden con los del decorator por diseño (ambos se leen del mismo `CACHEABLE_PATHS`).
 
@@ -197,6 +216,10 @@ Todo lo que va por usuario o cambia segundo a segundo: `/aircraft`, `/vessels`, 
 ## Zonas configurables
 
 `config/zones.yaml` — añadir, quitar o modificar zonas y chokepoints sin tocar código.
+
+## Topics catalog
+
+`config/topics.yaml` — catálogo de ~65 topics predefinidos (sector/commodity/company/zone) con keywords para keyword matching. Debe estar montado en `/app/config/` en los containers `api`, `agent-engine` e `ingestor-news`. Ruta configurable con la variable de entorno `TOPICS_CONFIG_PATH` (default `/app/config/topics.yaml`).
 
 ## Autenticación
 
