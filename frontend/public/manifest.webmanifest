@@ -12,15 +12,9 @@
   "categories": ["business", "news", "productivity"],
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
+      "src": "/brand/qilin-logo.png",
+      "sizes": "500x500",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

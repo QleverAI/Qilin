@@ -274,7 +274,7 @@ function Nav({ t, onLogin, onRegister, lang, setLang, vp }) {
         letterSpacing:'.25em', color:C.gold, textTransform:'uppercase',
         display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}
         onClick={() => window.scrollTo({top:0,behavior:'smooth'})}>
-        <img src="/brand/qilin-logo-clean.svg" alt="" style={{ height: vp.isMobile ? 22 : 26 }} />
+        <img src="/brand/qilin-logo.png" alt="" style={{ height: vp.isMobile ? 28 : 32, objectFit:'contain' }} />
         QILIN
       </div>
       {!vp.isMobile && (
