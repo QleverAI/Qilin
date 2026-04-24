@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import TopicSelector from '../components/TopicSelector'
-
-const PLAN_LABELS = { scout: 'Scout — Free', analyst: 'Analyst — $49/mo', command: 'Command — $199/mo' }
+import { useLang } from '../hooks/useLanguage'
 
 const inputStyle = {
   background: 'rgba(200,160,60,0.05)', border: '1px solid rgba(200,160,60,0.18)',
@@ -24,8 +23,8 @@ const skipStyle = {
   background: 'none', border: 'none', width: '100%',
 }
 
-function StepIndicator({ step }) {
-  const steps = ['Account', 'Topics', 'Telegram']
+function StepIndicator({ step, t }) {
+  const steps = [t('register.step.account'), t('register.step.topics'), t('register.step.telegram')]
   return (
     <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '28px' }}>
       {steps.map((label, i) => {
@@ -57,6 +56,7 @@ function StepIndicator({ step }) {
 }
 
 export default function RegisterPage() {
+  const { t } = useLang()
   const [step,      setStep]      = useState(1)
   const [username,  setUsername]  = useState('')
   const [email,     setEmail]     = useState('')
@@ -86,8 +86,8 @@ export default function RegisterPage() {
   async function handleStep1(e) {
     e.preventDefault()
     setError('')
-    if (password !== password2) { setError('Passwords do not match'); return }
-    if (password.length < 8) { setError('Password must be at least 8 characters'); return }
+    if (password !== password2) { setError(t('register.err.mismatch')); return }
+    if (password.length < 8) { setError(t('register.err.too_short')); return }
     setLoading(true)
     try {
       const res = await fetch('/auth/register', {
@@ -95,10 +95,10 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.toLowerCase(), email, password }),
       })
-      if (res.status === 409) { setError('Username or email already registered'); return }
+      if (res.status === 409) { setError(t('register.err.conflict')); return }
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
-        setError(d.detail || 'Error creating account'); return
+        setError(d.detail || t('register.err.generic')); return
       }
       const { access_token } = await res.json()
       sessionStorage.setItem('qilin_token', access_token)
@@ -106,7 +106,7 @@ export default function RegisterPage() {
       setToken(access_token)
       setStep(2)
     } catch (_) {
-      setError('Connection error')
+      setError(t('register.err.connection'))
     } finally {
       setLoading(false)
     }
@@ -141,6 +141,12 @@ export default function RegisterPage() {
   const PLAN_TOPIC_LIMIT = { scout: 5, analyst: 20, command: null, free: 2 }
   const topicLimit = PLAN_TOPIC_LIMIT[plan] ?? 2
 
+  const planLabel = {
+    scout:   t('register.plan.scout'),
+    analyst: t('register.plan.analyst'),
+    command: t('register.plan.command'),
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#02060e', display: 'flex',
       alignItems: 'center', justifyContent: 'center', padding: '24px',
@@ -152,43 +158,43 @@ export default function RegisterPage() {
               style={{ width: '100px', height: '100px', objectFit: 'contain', marginBottom: '8px' }} />
           </Link>
           <div style={{ fontSize: '22px', fontWeight: '800', color: '#fff', marginBottom: '6px' }}>
-            Create account
+            {t('register.title')}
           </div>
           {plan !== 'scout' && (
             <div style={{ display: 'inline-block', padding: '4px 14px',
               background: 'rgba(200,160,60,0.1)', border: '1px solid rgba(200,160,60,0.3)',
               borderRadius: '20px', fontSize: '12px', color: '#c8a03c' }}>
-              Plan: {PLAN_LABELS[plan] || plan}
+              {t('register.plan_label', { plan: planLabel[plan] || plan })}
             </div>
           )}
         </div>
 
-        <StepIndicator step={step} />
+        <StepIndicator step={step} t={t} />
 
         {step === 1 && (
           <form onSubmit={handleStep1} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>Username</label>
-              <input value={username} onChange={e => setUsername(e.target.value)} placeholder="username" required autoFocus style={inputStyle} />
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>{t('register.field.username')}</label>
+              <input value={username} onChange={e => setUsername(e.target.value)} placeholder={t('register.placeholder.user')} required autoFocus style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" required style={inputStyle} />
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>{t('register.field.email')}</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('register.placeholder.email')} required style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="min 8 characters" required style={inputStyle} />
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>{t('register.field.password')}</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('register.placeholder.pass')} required style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>Confirm password</label>
-              <input type="password" value={password2} onChange={e => setPassword2(e.target.value)} placeholder="repeat password" required style={inputStyle} />
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>{t('register.field.password2')}</label>
+              <input type="password" value={password2} onChange={e => setPassword2(e.target.value)} placeholder={t('register.placeholder.pass2')} required style={inputStyle} />
             </div>
             {error && (
               <div style={{ fontSize: '13px', color: '#ff453a', background: 'rgba(255,69,58,0.08)',
                 border: '1px solid rgba(255,69,58,0.2)', borderRadius: '6px', padding: '10px 14px', textAlign: 'center' }}>{error}</div>
             )}
             <button type="submit" disabled={loading} style={{ ...stepBtn, opacity: loading ? 0.7 : 1, cursor: loading ? 'default' : 'pointer' }}>
-              {loading ? 'Creating account…' : 'Continue →'}
+              {loading ? t('register.btn.creating') : t('register.btn.continue')}
             </button>
           </form>
         )}
@@ -196,7 +202,9 @@ export default function RegisterPage() {
         {step === 2 && (
           <div>
             <div style={{ marginBottom: '16px', fontSize: '14px', color: 'rgba(220,230,245,0.6)', textAlign: 'center' }}>
-              Choose up to <strong style={{ color: '#c8a03c' }}>{topicLimit === null ? '∞' : topicLimit}</strong> topics to personalize your feed and alerts.
+              {topicLimit === null
+                ? t('register.topics.hint_unlimited')
+                : t('register.topics.hint', { limit: topicLimit })}
             </div>
             <div style={{ maxHeight: '55vh', overflowY: 'auto', padding: '2px 0' }}>
               <TopicSelector
@@ -207,41 +215,43 @@ export default function RegisterPage() {
               />
             </div>
             <button onClick={handleStep2Continue} style={{ ...stepBtn, marginTop: '20px' }}>
-              {myTopics.length > 0 ? `Continue with ${myTopics.length} topic${myTopics.length !== 1 ? 's' : ''} →` : 'Continue →'}
+              {myTopics.length > 0
+                ? t(myTopics.length === 1 ? 'register.btn.continue_topics' : 'register.btn.continue_topics_pl', { n: myTopics.length })
+                : t('register.btn.continue')}
             </button>
-            <button onClick={() => setStep(3)} style={skipStyle}>Skip for now</button>
+            <button onClick={() => setStep(3)} style={skipStyle}>{t('register.btn.skip')}</button>
           </div>
         )}
 
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ fontSize: '13px', color: 'rgba(220,230,245,0.5)', lineHeight: '1.7' }}>
-              Get personalized Telegram alerts for your topics:
+              {t('register.telegram.hint')}
               <ol style={{ margin: '10px 0 0 18px', padding: 0, color: 'rgba(220,230,245,0.6)' }}>
-                <li>Open Telegram</li>
-                <li>Search for <strong style={{ color: '#c8a03c' }}>@QilinAlertBot</strong></li>
-                <li>Send <strong style={{ color: '#c8a03c' }}>/start</strong></li>
-                <li>Copy the chat ID it replies with</li>
+                <li>Telegram</li>
+                <li><strong style={{ color: '#c8a03c' }}>@QilinAlertBot</strong></li>
+                <li><strong style={{ color: '#c8a03c' }}>/start</strong></li>
+                <li>{t('register.telegram.steps').split('·')[3]?.trim()}</li>
               </ol>
             </div>
             <input
               value={chatId}
               onChange={e => setChatId(e.target.value)}
-              placeholder="Your chat ID (e.g. 123456789)"
+              placeholder={t('register.telegram.placeholder')}
               style={inputStyle}
             />
             <button onClick={handleStep3Finish} style={stepBtn}>
-              {chatId.trim() ? 'Finish & go to app →' : 'Go to app →'}
+              {chatId.trim() ? t('register.btn.finish') : t('register.btn.go_app')}
             </button>
-            <button onClick={() => navigate('/app', { replace: true })} style={skipStyle}>Skip for now</button>
+            <button onClick={() => navigate('/app', { replace: true })} style={skipStyle}>{t('register.btn.skip')}</button>
           </div>
         )}
 
         <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'rgba(220,230,245,0.35)' }}>
-          Already have an account?{' '}
-          <Link to="/login" style={{ color: 'rgba(200,160,60,0.7)', textDecoration: 'none' }}>Sign in</Link>
+          {t('register.already')}{' '}
+          <Link to="/login" style={{ color: 'rgba(200,160,60,0.7)', textDecoration: 'none' }}>{t('register.sign_in')}</Link>
           {' '}·{' '}
-          <Link to="/" style={{ color: 'rgba(220,230,245,0.25)', textDecoration: 'none' }}>Back to home</Link>
+          <Link to="/" style={{ color: 'rgba(220,230,245,0.25)', textDecoration: 'none' }}>{t('register.back_home')}</Link>
         </div>
       </div>
     </div>
