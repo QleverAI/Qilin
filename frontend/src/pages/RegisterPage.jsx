@@ -139,7 +139,7 @@ export default function RegisterPage() {
   }
 
   const PLAN_TOPIC_LIMIT = { scout: 5, analyst: 20, command: null, free: 2 }
-  const topicLimit = PLAN_TOPIC_LIMIT[plan] ?? 5
+  const topicLimit = PLAN_TOPIC_LIMIT[plan] ?? 2
 
   return (
     <div style={{ minHeight: '100vh', background: '#02060e', display: 'flex',

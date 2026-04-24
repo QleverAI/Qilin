@@ -66,13 +66,15 @@ export default function ProfilePage({ onNavigate }) {
   const [tgTestMsg,    setTgTestMsg]    = useState('')
 
   useEffect(() => {
+    const controller = new AbortController()
     async function load() {
       try {
         const [catRes, topRes, tgRes] = await Promise.all([
-          fetch('/api/topics'),
-          fetch('/api/me/topics',   { headers: authHeaders() }),
-          fetch('/api/me/telegram', { headers: authHeaders() }),
+          fetch('/api/topics',      { signal: controller.signal }),
+          fetch('/api/me/topics',   { headers: authHeaders(), signal: controller.signal }),
+          fetch('/api/me/telegram', { headers: authHeaders(), signal: controller.signal }),
         ])
+        if (!catRes.ok || !topRes.ok || !tgRes.ok) return
         const cat = await catRes.json()
         const top = await topRes.json()
         const tg  = await tgRes.json()
@@ -81,9 +83,12 @@ export default function ProfilePage({ onNavigate }) {
         setTopicLimit(top.limit ?? 2)
         setTopicPlan(top.plan || 'free')
         setChatId(tg.chat_id || '')
-      } catch (_) {}
+      } catch (e) {
+        if (e.name !== 'AbortError') console.warn('[ProfilePage] load failed:', e.message)
+      }
     }
     load()
+    return () => controller.abort()
   }, [])
 
   async function handleSaveTopics() {
