@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { fetchWithCache, getCached, prefetch } from './feedCache'
 
 const ACCOUNTS_URL = '/api/social/accounts'
@@ -42,8 +42,8 @@ export function useSocialFeed({ topicsOnly = false } = {}) {
     return () => { cancelled = true; clearInterval(interval) }
   }, [feedUrl])
 
-  const categories = [...new Set(accounts.map(a => a.category))].sort()
-  const zones      = [...new Set(accounts.map(a => a.zone))].sort()
+  const categories = useMemo(() => [...new Set(accounts.map(a => a.category))].sort(), [accounts])
+  const zones      = useMemo(() => [...new Set(accounts.map(a => a.zone))].sort(),      [accounts])
 
   return { posts, accounts, categories, zones, loading, lastUpdate }
 }

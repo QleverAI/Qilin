@@ -539,7 +539,7 @@ export default function NewsPage({ topicsOnly = false }) {
             </div>
           )}
           {loading && <LoadingCards count={12} />}
-          {!loading && filtered.length === 0 && (
+          {!loading && filtered.length === 0 && !topicsOnly && (
             <EmptyState
               title={articles.length === 0 ? t('news.no_news') : t('common.no_results')}
               subtitle={articles.length === 0 ? t('news.inactive') : t('common.adjust_filters')}

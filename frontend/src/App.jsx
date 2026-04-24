@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, useMemo } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense, useMemo } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import ProtectedRoute    from './components/ProtectedRoute'
 import TopBar            from './components/TopBar'
@@ -92,10 +92,14 @@ function AppShell() {
 
   const { profile } = useProfile()
   const hasTopics = (profile?.topics?.length || 0) > 0
+  const topicsAutoSet = useRef(false)
 
   useEffect(() => {
-    if (hasTopics && !topicsOnly) setTopicsOnly(true)
-  }, [hasTopics])   // eslint-disable-line react-hooks/exhaustive-deps
+    if (hasTopics && !topicsAutoSet.current) {
+      topicsAutoSet.current = true
+      setTopicsOnly(true)
+    }
+  }, [hasTopics])
 
   // Only rebuild when aircraft type metadata changes — not on every position update
   const aircraftTypeDigest = aircraft.map(a => `${a.id || a.icao24}:${a.type || ''}:${a.type_code || ''}`).join(',')

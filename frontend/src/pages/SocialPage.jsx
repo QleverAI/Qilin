@@ -495,7 +495,7 @@ export default function SocialPage({ topicsOnly = false }) {
             </div>
           )}
           {loading && <LoadingCards count={12} />}
-          {!loading && filtered.length === 0 && (
+          {!loading && filtered.length === 0 && !topicsOnly && (
             <EmptyState
               title={posts.length === 0 ? t('social.no_tweets') : t('common.no_results')}
               subtitle={posts.length === 0 ? t('social.inactive') : t('common.adjust_filters')}
