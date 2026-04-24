@@ -174,6 +174,7 @@ Tres niveles coordinados para minimizar trabajo repetido y latencia percibida:
 | `/intel/timeline`      | `intel.timeline`  |  30 |
 | `/intel/spend`         | `intel.spend`     |  10 |
 | `/api/stats`           | `api.stats`       |  60 |
+| `/aircraft/history`    | `aircraft.history`|  60 |
 
 Los TTLs del middleware `Cache-Control: max-age=N` coinciden con los del decorator por diseño (ambos se leen del mismo `CACHEABLE_PATHS`).
 
