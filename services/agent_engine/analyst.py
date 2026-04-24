@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import time
 from datetime import datetime, timezone
 
@@ -10,6 +11,7 @@ import asyncpg
 from tools import db_tools
 from cost_tracker import track_spend
 from json_utils import clean_json as _clean_json
+from topic_utils import load_catalog, tag_topics
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +64,9 @@ class Analyst:
         self.pool = pool
         self.client = anthropic.AsyncAnthropic()
         self.redis = None  # injected by Orchestrator
+        self._topic_catalog = load_catalog(
+            os.getenv("TOPICS_CONFIG_PATH", "/app/config/topics.yaml")
+        )
 
     async def analyze(
         self,
@@ -141,6 +146,8 @@ class Analyst:
 
         if self.pool:
             try:
+                analysis_text = json.dumps(analysis, default=str)
+                analysis_topics = tag_topics(analysis_text, self._topic_catalog)
                 db_record = {
                     "time": datetime.now(timezone.utc),
                     "cycle_id": cycle_id,
@@ -160,6 +167,7 @@ class Analyst:
                         default=str, ensure_ascii=False,
                     ),
                     "processing_time_ms": processing_ms,
+                    "topics": analysis_topics,
                 }
                 saved_id = await db_tools.save_analyzed_event(self.pool, db_record)
                 analysis["_db_id"] = saved_id

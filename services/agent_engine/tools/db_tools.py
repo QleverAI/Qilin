@@ -227,11 +227,11 @@ async def save_analyzed_event(pool: asyncpg.Pool, event: dict) -> int:
         INSERT INTO analyzed_events (
             time, zone, event_type, severity, confidence, headline, summary,
             signals_used, market_implications, polymarket_implications,
-            recommended_action, tags, raw_input, processing_time_ms, cycle_id
+            recommended_action, tags, raw_input, processing_time_ms, cycle_id, topics
         ) VALUES (
             $1, $2, $3, $4, $5, $6, $7,
             $8, $9, $10,
-            $11, $12, $13, $14, $15
+            $11, $12, $13, $14, $15, $16
         ) RETURNING id
         """,
         ts,
@@ -249,6 +249,7 @@ async def save_analyzed_event(pool: asyncpg.Pool, event: dict) -> int:
         event.get("raw_input"),
         event.get("processing_time_ms"),
         event.get("cycle_id"),
+        event.get("topics") or [],
     )
     return row["id"]
 
@@ -260,8 +261,8 @@ async def save_agent_finding(pool: asyncpg.Pool, finding: dict) -> int:
         """
         INSERT INTO agent_findings (
             time, cycle_id, agent_name, anomaly_score, summary,
-            raw_output, tools_called, duration_ms, telegram_sent
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            raw_output, tools_called, duration_ms, telegram_sent, topics
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING id
         """,
         ts,
@@ -273,6 +274,7 @@ async def save_agent_finding(pool: asyncpg.Pool, finding: dict) -> int:
         finding.get("tools_called") or [],
         finding.get("duration_ms"),
         bool(finding.get("telegram_sent", False)),
+        finding.get("topics") or [],
     )
     return row["id"]
 

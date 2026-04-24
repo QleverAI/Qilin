@@ -10,6 +10,7 @@ import asyncpg
 
 from cost_tracker import is_over_cap, get_today_spend, DAILY_SPEND_CAP
 from tools import db_tools
+from topic_utils import load_catalog, tag_topics
 from agents.adsb_agent import AdsbAgent
 from agents.maritime_agent import MaritimeAgent
 from agents.news_agent import NewsAgent
@@ -60,6 +61,10 @@ class Orchestrator:
         # Inject redis into analyst for spend tracking
         if self.analyst:
             self.analyst.redis = redis
+
+        self._topic_catalog = load_catalog(
+            os.getenv("TOPICS_CONFIG_PATH", "/app/config/topics.yaml")
+        )
 
     async def run_scheduled_cycle(self) -> dict | None:
         cycle_id = str(uuid.uuid4())
@@ -125,6 +130,8 @@ class Orchestrator:
         # Persist findings and send Telegram for score >= 7
         for f in findings:
             payload = f.get("result") or {}
+            raw_text = json.dumps(payload, default=str)
+            topics = tag_topics(raw_text, self._topic_catalog)
             score = int(payload.get("anomaly_score") or 0)
             telegram_sent = False
             if score >= 7:
@@ -147,9 +154,35 @@ class Orchestrator:
                         "tools_called": f.get("tools_called") or [],
                         "duration_ms": f.get("duration_ms"),
                         "telegram_sent": telegram_sent,
+                        "topics": topics,
                     })
                 except Exception as exc:
                     log.warning("[CYCLE] save_agent_finding error: %s", exc)
+
+            # Personalized Telegram to users with matching topics
+            if score >= 7 and topics and self.pool:
+                try:
+                    user_rows = await self.pool.fetch(
+                        """
+                        SELECT u.telegram_chat_id, array_agg(ut.topic_id) AS user_topics
+                        FROM users u
+                        JOIN user_topics ut ON ut.user_id = u.id
+                        WHERE u.telegram_chat_id IS NOT NULL
+                        GROUP BY u.telegram_chat_id
+                        """
+                    )
+                    for row in user_rows:
+                        matched = [t for t in topics if t in (row["user_topics"] or [])]
+                        if matched:
+                            await self.reporter.send_finding_telegram_personal(
+                                cycle_id=cycle_id,
+                                agent_name=f["agent_name"],
+                                payload=payload,
+                                chat_id=row["telegram_chat_id"],
+                                matched_topics=matched,
+                            )
+                except Exception as exc:
+                    log.warning("[CYCLE] personalized Telegram error: %s", exc)
 
             # Publish on stream:intel for WebSocket consumers
             if self.redis:
