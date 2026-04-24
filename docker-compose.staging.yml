@@ -1,0 +1,78 @@
+# Override para staging — usar con:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+#
+# Diferencias vs producción:
+#   - Todos los container_name llevan sufijo _stg (evita conflicto con prod)
+#   - Puertos de host distintos: redis 6380, db 5433, api 8001
+#   - Volúmenes separados: staging_redis_data, staging_timescale_data
+
+services:
+
+  redis:
+    container_name: qilin_stg_redis
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - staging_redis_data:/data
+
+  timescaledb:
+    container_name: qilin_stg_db
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - staging_timescale_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  rsshub:
+    container_name: qilin_stg_rsshub
+
+  ingestor-adsb:
+    container_name: qilin_stg_ingestor_adsb
+
+  ingestor-vip:
+    container_name: qilin_stg_ingestor_vip
+
+  ingestor-social:
+    container_name: qilin_stg_ingestor_social
+
+  ingestor-news:
+    container_name: qilin_stg_ingestor_news
+
+  ingestor-docs:
+    container_name: qilin_stg_ingestor_docs
+
+  ingestor-sec:
+    container_name: qilin_stg_ingestor_sec
+
+  ingestor-ais:
+    container_name: qilin_stg_ingestor_ais
+
+  ingestor-bases:
+    container_name: qilin_stg_ingestor_bases
+
+  ingestor-vessel-ports:
+    container_name: qilin_stg_ingestor_vessel_ports
+
+  ingestor-sentinel:
+    container_name: qilin_stg_ingestor_sentinel
+
+  ingestor-polymarket:
+    container_name: qilin_stg_ingestor_polymarket
+
+  ingestor-market:
+    container_name: qilin_stg_ingestor_market
+
+  agent-engine:
+    container_name: qilin_stg_agent_engine
+
+  report-engine:
+    container_name: qilin_stg_report_engine
+
+  api:
+    container_name: qilin_stg_api
+    ports:
+      - "127.0.0.1:8001:8000"
+
+volumes:
+  staging_redis_data:
+  staging_timescale_data:
