@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, useMemo } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import ProtectedRoute    from './components/ProtectedRoute'
 import TopBar            from './components/TopBar'
@@ -10,6 +10,8 @@ import { useQilinData }  from './hooks/useQilinData'
 import { clearProfileCache } from './hooks/useProfile'
 import { useAircraftTrail } from './hooks/useAircraftTrail'
 import { useVesselTrail }   from './hooks/useVesselTrail'
+import { useAircraftHistory } from './hooks/useAircraftHistory'
+import { usePlayback }        from './hooks/usePlayback'
 import { clearFeedCache }   from './hooks/feedCache'
 import { prefetchNewsFeed }      from './hooks/useNewsFeed'
 import { prefetchSocialFeed }    from './hooks/useSocialFeed'
@@ -84,6 +86,17 @@ function AppShell() {
   const { aircraft, vessels, alerts, stats, wsStatus } = useQilinData()
   const { trails, addTrail, removeTrail, clearAll } = useAircraftTrail()
   const { vesselTrails, addVesselTrail, removeVesselTrail, clearAllVesselTrails } = useVesselTrail()
+  const { history, loading: historyLoading } = useAircraftHistory()
+  const playback = usePlayback(trails)
+
+  const enrichedHistory = useMemo(() => {
+    const liveMap = Object.fromEntries(aircraft.map(a => [(a.id || a.icao24), a]))
+    return history.map(h => ({
+      ...h,
+      type:      liveMap[h.icao24]?.type      ?? null,
+      type_code: liveMap[h.icao24]?.type_code ?? null,
+    }))
+  }, [history, aircraft])
 
   // Tactical grid
   if (view === 'tactical') {
@@ -101,7 +114,8 @@ function AppShell() {
           <MapView aircraft={aircraft} vessels={vessels} alerts={[]} flyTarget={flyTarget}
             trails={trails} onAddTrail={addTrail} onRemoveTrail={removeTrail} onClearTrails={clearAll}
             vesselTrails={vesselTrails}
-            onSelectAircraft={setSelectedAircraft} onSelectVessel={handleSelectVessel} />
+            onSelectAircraft={setSelectedAircraft} onSelectVessel={handleSelectVessel}
+            playback={playback} />
         </Suspense>
         <aside style={{ gridColumn:2, gridRow:2, display:'flex', flexDirection:'column',
           background:'var(--bg-1)', borderLeft:'1px solid var(--border-md)', overflow:'hidden' }}>
@@ -124,6 +138,9 @@ function AppShell() {
               const v = vessels.find(x => (x.mmsi || x.id) === mmsi)
               if (v) setFlyTarget({ lon: v.lon, lat: v.lat })
             }}
+            history={enrichedHistory}
+            historyLoading={historyLoading}
+            playback={playback}
           />
         </aside>
         <BottomBar stats={stats} />
