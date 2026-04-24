@@ -9,18 +9,19 @@ const TYPE_LABELS = {
   zone:      { es: 'Zonas',            en: 'Zones'      },
 }
 
-export default function TopicSelector({ selected = [], limit, onChange, catalog = [] }) {
+export default function TopicSelector({ selected = [], limit, onChange, catalog = [], excludeTypes = [] }) {
   const { lang } = useLang()
 
   const grouped = useMemo(() => {
     const groups = {}
     for (const t of catalog) {
       const type = t.type || 'sector'
+      if (excludeTypes.includes(type)) continue
       if (!groups[type]) groups[type] = []
       groups[type].push(t)
     }
     return groups
-  }, [catalog])
+  }, [catalog, excludeTypes])
 
   function toggle(id) {
     if (selected.includes(id)) {

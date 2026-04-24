@@ -23,34 +23,104 @@ const skipStyle = {
   background: 'none', border: 'none', width: '100%',
 }
 
+const PLAN_TOPIC_LIMIT = { free: 2, scout: 5, analyst: 20, command: null }
+
 function StepIndicator({ step, t }) {
-  const steps = [t('register.step.account'), t('register.step.topics'), t('register.step.telegram')]
+  const steps = [
+    t('register.step.plan'),
+    t('register.step.account'),
+    t('register.step.topics'),
+    t('register.step.telegram'),
+  ]
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '28px' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '28px' }}>
       {steps.map((label, i) => {
         const idx = i + 1
         const done = step > idx
         const active = step === idx
         return (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <div style={{
-              width: '22px', height: '22px', borderRadius: '50%',
+              width: '20px', height: '20px', borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: done ? '#c8a03c' : active ? 'rgba(200,160,60,0.2)' : 'transparent',
               border: `1px solid ${done || active ? '#c8a03c' : 'rgba(200,160,60,0.2)'}`,
-              fontSize: '11px', color: done ? '#02060e' : '#c8a03c', fontWeight: '700',
+              fontSize: '10px', color: done ? '#02060e' : '#c8a03c', fontWeight: '700',
+              flexShrink: 0,
             }}>
               {done ? '✓' : idx}
             </div>
-            <span style={{ fontSize: '12px', color: active ? '#c8a03c' : 'rgba(220,230,245,0.35)' }}>
+            <span style={{ fontSize: '11px', color: active ? '#c8a03c' : 'rgba(220,230,245,0.35)', whiteSpace: 'nowrap' }}>
               {label}
             </span>
             {i < steps.length - 1 && (
-              <div style={{ width: '20px', height: '1px', background: 'rgba(200,160,60,0.2)' }} />
+              <div style={{ width: '14px', height: '1px', background: 'rgba(200,160,60,0.2)', flexShrink: 0 }} />
             )}
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function PlanCard({ planId, name, tier, price, priceNote, topics, paid, features, selected, onSelect, t }) {
+  return (
+    <div
+      onClick={() => onSelect(planId)}
+      style={{
+        border: `1px solid ${selected ? '#c8a03c' : 'rgba(200,160,60,0.15)'}`,
+        borderRadius: '10px', padding: '16px', cursor: 'pointer',
+        background: selected ? 'rgba(200,160,60,0.07)' : 'rgba(255,255,255,0.02)',
+        transition: 'all .15s', position: 'relative', userSelect: 'none',
+      }}
+    >
+      {paid && (
+        <div style={{
+          position: 'absolute', top: '10px', right: '10px',
+          background: 'rgba(79,156,249,0.12)', border: '1px solid rgba(79,156,249,0.3)',
+          borderRadius: '4px', padding: '2px 7px',
+          fontSize: '9px', color: 'rgba(79,156,249,0.8)',
+          fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '.06em',
+        }}>
+          {t('register.plan_select.paid_badge')}
+        </div>
+      )}
+
+      <div style={{ fontSize: '9px', letterSpacing: '.18em', color: 'rgba(200,160,60,0.5)', fontFamily: "'IBM Plex Mono',monospace", marginBottom: '4px' }}>
+        {tier}
+      </div>
+      <div style={{ fontSize: '16px', fontWeight: '700', color: selected ? '#e8c060' : '#f0f4f8', marginBottom: '8px' }}>
+        {name}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '20px', fontWeight: '800', color: '#c8a03c' }}>{price}</span>
+        {priceNote && <span style={{ fontSize: '11px', color: 'rgba(200,160,60,0.6)' }}>{priceNote}</span>}
+      </div>
+
+      <div style={{
+        fontSize: '11px', color: selected ? 'rgba(232,192,96,0.9)' : 'rgba(200,160,60,0.6)',
+        fontFamily: "'IBM Plex Mono',monospace", marginBottom: '10px',
+        background: 'rgba(200,160,60,0.06)', borderRadius: '4px', padding: '3px 7px',
+        display: 'inline-block',
+      }}>
+        {topics === null ? t('register.plan_select.topics_unlimited') : t('register.plan_select.topics', { n: topics })}
+      </div>
+
+      <ul style={{ margin: 0, padding: '0 0 0 14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {features.map((f, i) => (
+          <li key={i} style={{ fontSize: '12px', color: 'rgba(220,230,245,0.55)', lineHeight: '1.4' }}>{f}</li>
+        ))}
+      </ul>
+
+      {selected && (
+        <div style={{
+          marginTop: '12px', textAlign: 'center',
+          fontSize: '11px', color: '#c8a03c', fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '.08em',
+        }}>
+          ✓ {t('register.plan_select.selected')}
+        </div>
+      )}
     </div>
   )
 }
@@ -64,17 +134,16 @@ export default function RegisterPage() {
   const [password2, setPassword2] = useState('')
   const [error,     setError]     = useState('')
   const [loading,   setLoading]   = useState(false)
-
   const [catalog,   setCatalog]   = useState([])
   const [myTopics,  setMyTopics]  = useState([])
-
   const [chatId,    setChatId]    = useState('')
-
   const [token,     setToken]     = useState('')
 
   const navigate = useNavigate()
   const [params]  = useSearchParams()
-  const plan      = params.get('plan') || 'free'
+  const [selectedPlan, setSelectedPlan] = useState(params.get('plan') || 'free')
+
+  const topicLimit = PLAN_TOPIC_LIMIT[selectedPlan] ?? 2
 
   useEffect(() => {
     fetch('/api/topics')
@@ -83,7 +152,7 @@ export default function RegisterPage() {
       .catch(() => {})
   }, [])
 
-  async function handleStep1(e) {
+  async function handleStep2(e) {
     e.preventDefault()
     setError('')
     if (password !== password2) { setError(t('register.err.mismatch')); return }
@@ -104,7 +173,7 @@ export default function RegisterPage() {
       sessionStorage.setItem('qilin_token', access_token)
       sessionStorage.setItem('qilin_user', username.toLowerCase())
       setToken(access_token)
-      setStep(2)
+      setStep(3)
     } catch (_) {
       setError(t('register.err.connection'))
     } finally {
@@ -112,7 +181,7 @@ export default function RegisterPage() {
     }
   }
 
-  async function handleStep2Continue() {
+  async function handleStep3Continue() {
     if (myTopics.length > 0) {
       try {
         await fetch('/api/me/topics', {
@@ -122,10 +191,10 @@ export default function RegisterPage() {
         })
       } catch (_) {}
     }
-    setStep(3)
+    setStep(4)
   }
 
-  async function handleStep3Finish() {
+  async function handleStep4Finish() {
     if (chatId.trim()) {
       try {
         await fetch('/api/me/telegram', {
@@ -138,41 +207,73 @@ export default function RegisterPage() {
     navigate('/app', { replace: true })
   }
 
-  const PLAN_TOPIC_LIMIT = { scout: 5, analyst: 20, command: null, free: 2 }
-  const topicLimit = PLAN_TOPIC_LIMIT[plan] ?? 2
+  const plans = [
+    {
+      id: 'free', tier: 'TIER 00', name: 'Free',
+      price: t('register.plan_select.free_badge'), priceNote: '', topics: 2, paid: false,
+      features: [t('register.plan.free.f1'), t('register.plan.free.f2'), t('register.plan.free.f3')],
+    },
+    {
+      id: 'scout', tier: 'TIER 01', name: 'Scout',
+      price: t('register.plan_select.free_badge'), priceNote: '', topics: 5, paid: false,
+      features: [t('register.plan.scout.f1'), t('register.plan.scout.f2'), t('register.plan.scout.f3')],
+    },
+    {
+      id: 'analyst', tier: 'TIER 02', name: 'Analyst',
+      price: '$49', priceNote: '/mo', topics: 20, paid: true,
+      features: [t('register.plan.analyst.f1'), t('register.plan.analyst.f2'), t('register.plan.analyst.f3')],
+    },
+    {
+      id: 'command', tier: 'TIER 03', name: 'Command',
+      price: '$199', priceNote: '/mo', topics: null, paid: true,
+      features: [t('register.plan.command.f1'), t('register.plan.command.f2'), t('register.plan.command.f3')],
+    },
+  ]
 
-  const planLabel = {
-    scout:   t('register.plan.scout'),
-    analyst: t('register.plan.analyst'),
-    command: t('register.plan.command'),
-  }
+  const maxWidth = step === 1 ? '580px' : step === 3 ? '640px' : '420px'
 
   return (
     <div style={{ minHeight: '100vh', background: '#02060e', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', padding: '24px',
+      alignItems: 'flex-start', justifyContent: 'center', padding: '32px 24px',
       fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-      <div style={{ width: '100%', maxWidth: step === 2 ? '640px' : '420px' }}>
+      <div style={{ width: '100%', maxWidth }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <Link to="/" style={{ textDecoration: 'none' }}>
             <img src="/brand/qilin-logo-nobg.png" alt="Qilin"
-              style={{ width: '100px', height: '100px', objectFit: 'contain', marginBottom: '8px' }} />
+              style={{ width: '80px', height: '80px', objectFit: 'contain', marginBottom: '8px' }} />
           </Link>
           <div style={{ fontSize: '22px', fontWeight: '800', color: '#fff', marginBottom: '6px' }}>
             {t('register.title')}
           </div>
-          {plan !== 'scout' && (
-            <div style={{ display: 'inline-block', padding: '4px 14px',
-              background: 'rgba(200,160,60,0.1)', border: '1px solid rgba(200,160,60,0.3)',
-              borderRadius: '20px', fontSize: '12px', color: '#c8a03c' }}>
-              {t('register.plan_label', { plan: planLabel[plan] || plan })}
-            </div>
-          )}
         </div>
 
         <StepIndicator step={step} t={t} />
 
+        {/* Step 1 — Plan selection */}
         {step === 1 && (
-          <form onSubmit={handleStep1} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '15px', color: 'rgba(220,230,245,0.7)', marginBottom: '4px' }}>
+                {t('register.plan_select.title')}
+              </div>
+              <div style={{ fontSize: '12px', color: 'rgba(220,230,245,0.35)' }}>
+                {t('register.plan_select.subtitle')}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              {plans.map(p => (
+                <PlanCard key={p.id} {...p} planId={p.id} selected={selectedPlan === p.id} onSelect={setSelectedPlan} t={t} />
+              ))}
+            </div>
+            <button onClick={() => setStep(2)} style={stepBtn}>
+              {t('register.plan_select.btn_continue', { plan: plans.find(p => p.id === selectedPlan)?.name || '' })}
+            </button>
+          </div>
+        )}
+
+        {/* Step 2 — Account */}
+        {step === 2 && (
+          <form onSubmit={handleStep2} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>{t('register.field.username')}</label>
               <input value={username} onChange={e => setUsername(e.target.value)} placeholder={t('register.placeholder.user')} required autoFocus style={inputStyle} />
@@ -196,10 +297,12 @@ export default function RegisterPage() {
             <button type="submit" disabled={loading} style={{ ...stepBtn, opacity: loading ? 0.7 : 1, cursor: loading ? 'default' : 'pointer' }}>
               {loading ? t('register.btn.creating') : t('register.btn.continue')}
             </button>
+            <button type="button" onClick={() => setStep(1)} style={skipStyle}>← {t('register.btn.back')}</button>
           </form>
         )}
 
-        {step === 2 && (
+        {/* Step 3 — Topics */}
+        {step === 3 && (
           <div>
             <div style={{ marginBottom: '16px', fontSize: '14px', color: 'rgba(220,230,245,0.6)', textAlign: 'center' }}>
               {topicLimit === null
@@ -212,18 +315,20 @@ export default function RegisterPage() {
                 limit={topicLimit}
                 onChange={setMyTopics}
                 catalog={catalog}
+                excludeTypes={['zone']}
               />
             </div>
-            <button onClick={handleStep2Continue} style={{ ...stepBtn, marginTop: '20px' }}>
+            <button onClick={handleStep3Continue} style={{ ...stepBtn, marginTop: '20px' }}>
               {myTopics.length > 0
                 ? t(myTopics.length === 1 ? 'register.btn.continue_topics' : 'register.btn.continue_topics_pl', { n: myTopics.length })
                 : t('register.btn.continue')}
             </button>
-            <button onClick={() => setStep(3)} style={skipStyle}>{t('register.btn.skip')}</button>
+            <button onClick={() => setStep(4)} style={skipStyle}>{t('register.btn.skip')}</button>
           </div>
         )}
 
-        {step === 3 && (
+        {/* Step 4 — Telegram */}
+        {step === 4 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ fontSize: '13px', color: 'rgba(220,230,245,0.5)', lineHeight: '1.7' }}>
               {t('register.telegram.hint')}
@@ -240,7 +345,7 @@ export default function RegisterPage() {
               placeholder={t('register.telegram.placeholder')}
               style={inputStyle}
             />
-            <button onClick={handleStep3Finish} style={stepBtn}>
+            <button onClick={handleStep4Finish} style={stepBtn}>
               {chatId.trim() ? t('register.btn.finish') : t('register.btn.go_app')}
             </button>
             <button onClick={() => navigate('/app', { replace: true })} style={skipStyle}>{t('register.btn.skip')}</button>
