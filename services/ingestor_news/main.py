@@ -14,6 +14,7 @@ Estrategia:
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -28,6 +29,9 @@ import redis.asyncio as aioredis
 import yaml
 
 from classifier import classify_sectors, classify_severity, compute_relevance
+from topic_utils import load_catalog, tag_topics
+
+_TOPIC_CATALOG: list[dict] = []
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [NEWS] %(message)s")
 log = logging.getLogger(__name__)
@@ -185,7 +189,6 @@ async def publish(redis, db, article: dict) -> bool:
     Publica artículo nuevo en Redis stream y TimescaleDB.
     Retorna True si era nuevo, False si ya existía.
     """
-    import hashlib
     url_hash = hashlib.md5(article["url"].encode()).hexdigest()
     key = f"current:news:{url_hash}"
 
@@ -193,6 +196,9 @@ async def publish(redis, db, article: dict) -> bool:
         return False
 
     await redis.setex(key, 86400, "1")
+
+    _text = f"{article.get('title') or ''} {article.get('summary') or ''}"
+    article["topics"] = tag_topics(_text, _TOPIC_CATALOG)
 
     payload = {
         **article,
@@ -209,9 +215,9 @@ async def publish(redis, db, article: dict) -> bool:
                 """
                 INSERT INTO news_events
                     (time, source, title, url, summary, image_url, zones, keywords,
-                     severity, relevance, source_country, source_type, sectors)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-                ON CONFLICT (url) DO NOTHING
+                     severity, relevance, source_country, source_type, sectors, topics)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                ON CONFLICT (url) DO UPDATE SET topics = EXCLUDED.topics
                 """,
                 article["time"], article["source"], article["title"],
                 article["url"], article["summary"], article["image_url"],
@@ -219,6 +225,7 @@ async def publish(redis, db, article: dict) -> bool:
                 article["severity"], article["relevance"],
                 article["source_country"], article["source_type"],
                 article["sectors"],
+                article["topics"],
             )
         except Exception as e:
             log.error(f"Error guardando artículo en DB: {e}")
@@ -233,6 +240,10 @@ async def main():
 
     sources = load_sources()
     log.info(f"Cargadas {len(sources)} fuentes RSS")
+
+    global _TOPIC_CATALOG
+    _TOPIC_CATALOG = load_catalog(os.getenv("TOPICS_CONFIG_PATH", "/app/config/topics.yaml"))
+    log.info("Loaded %d topics for tagging", len(_TOPIC_CATALOG))
 
     redis = aioredis.from_url(REDIS_URL, decode_responses=True)
 
