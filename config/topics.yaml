@@ -69,7 +69,7 @@ topics:
     label_es: Ciberseguridad
     label_en: Cyber
     type: sector
-    keywords: [ciberseguridad, cyber, hackeo, hacking, ciberataque, cyberattack, red, network, infosec, opsec]
+    keywords: [ciberseguridad, cyber, hackeo, hacking, ciberataque, cyberattack, network, infosec, opsec]
 
   - id: mining
     label_es: Minería
@@ -81,7 +81,7 @@ topics:
     label_es: Telecomunicaciones
     label_en: Telecom
     type: sector
-    keywords: [telecomunicaciones, telecom, telefonía, 5g, 6g, red, network, infraestructura, infrastructure]
+    keywords: [telecomunicaciones, telecom, telefonía, 5g, 6g, network, infraestructura, infrastructure]
 
   - id: water
     label_es: Agua
@@ -100,7 +100,7 @@ topics:
     label_es: Petróleo
     label_en: Oil
     type: commodity
-    keywords: [petróleo, oil, crudo, crude, barril, barrel, brent, wti, refinería, refinery]
+    keywords: [petróleo, oil, crudo, crude, barril, barrel, brent, wti, refinería, refinery, OPEC, crude oil, oil price]
 
   - id: natural_gas
     label_es: Gas Natural
@@ -142,7 +142,7 @@ topics:
     label_es: Uranio
     label_en: Uranium
     type: commodity
-    keywords: [uranio, uranium, nuclear fuel, combustible nuclear, enriquecimiento, enrichment]
+    keywords: [uranio, uranium, nuclear fuel, combustible nuclear, enriquecimiento, enrichment, Kazatomprom, Cameco, U3O8]
 
   - id: nickel
     label_es: Níquel
@@ -154,7 +154,7 @@ topics:
     label_es: Cobalto
     label_en: Cobalt
     type: commodity
-    keywords: [cobalto, cobalt, batería, battery, arma química, chemical weapon]
+    keywords: [cobalto, cobalt, batería, battery, drc, congo, glencore]
 
   - id: coal
     label_es: Carbón
@@ -166,7 +166,7 @@ topics:
     label_es: Soja
     label_en: Soybean
     type: commodity
-    keywords: [soja, soybean, soja, soy, oleaginosa, oilseed, cosecha, harvest]
+    keywords: [soja, soybean, soy, oleaginosa, oilseed, cosecha, harvest]
 
   - id: corn
     label_es: Maíz
@@ -184,7 +184,7 @@ topics:
     label_es: Tierras Raras
     label_en: Rare Earths
     type: commodity
-    keywords: [tierras raras, rare earths, elementos, elements, neodimio, neodymium]
+    keywords: [tierras raras, rare earths, elementos, elements, neodimio, neodymium, REE, China rare earth]
 
   - id: iron_ore
     label_es: Minerales de Hierro
@@ -221,19 +221,19 @@ topics:
     label_es: NVIDIA
     label_en: NVIDIA
     type: company
-    keywords: [nvidia, gpu, graphics, cuda, inteligencia artificial, ai, chip]
+    keywords: [nvidia, gpu, graphics, cuda, inteligencia artificial, ai, chip, NVDA, H100, Blackwell, Jensen Huang]
 
   - id: tsmc
     label_es: TSMC
     label_en: TSMC
     type: company
-    keywords: [tsmc, taiwan semiconductor, foundry, fab, manufactura, manufacturing]
+    keywords: [tsmc, taiwan semiconductor, foundry, fab, manufactura, manufacturing, Morris Chang, 3nm, 2nm]
 
   - id: lockheed_martin
     label_es: Lockheed Martin
     label_en: Lockheed Martin
     type: company
-    keywords: [lockheed, lockheed martin, defensa, defense, misil, missile, aviación, aviation]
+    keywords: [lockheed, lockheed martin, defensa, defense, misil, missile, aviación, aviation, F-35, F-22, LMT, THAAD]
 
   - id: boeing
     label_es: Boeing
@@ -324,13 +324,13 @@ topics:
     label_es: Ucrania
     label_en: Ukraine
     type: zone
-    keywords: [ucrania, ukraine, guerra, war, rusia, russia, donbas, donbass, crimea]
+    keywords: [ucrania, ukraine, guerra, war, rusia, russia, donbas, donbass, crimea, Zelensky, Putin, Kyiv, Donbas, Kharkiv]
 
   - id: red_sea
     label_es: Mar Rojo
     label_en: Red Sea
     type: zone
-    keywords: [mar rojo, red sea, yemen, houthis, estrecho de bab al-mandeb, bab el-mandeb]
+    keywords: [mar rojo, red sea, yemen, houthis, estrecho de bab al-mandeb, bab el-mandeb, Suez, Bab al-Mandab, shipping attack]
 
   - id: black_sea
     label_es: Mar Negro
@@ -348,7 +348,7 @@ topics:
     label_es: Irán
     label_en: Iran
     type: zone
-    keywords: [irán, iran, nuclear, petróleo, oil, sanciones, sanctions, régimen, regime]
+    keywords: [irán, iran, nuclear, petróleo, oil, sanciones, sanctions, régimen, regime, IRGC, JCPOA, Natanz, Fordow, nuclear deal]
 
   - id: israel_palestine
     label_es: Israel-Palestina
@@ -360,7 +360,7 @@ topics:
     label_es: Corea
     label_en: Korea
     type: zone
-    keywords: [corea, korea, norte, north, sur, south, dprk, kprf, nucleare, nuclear, misil, missile]
+    keywords: [corea, korea, norte, north, sur, south, dprk, nucleare, nuclear, misil, missile, Kim Jong-un, ICBM, missile test]
 
   - id: sahel
     label_es: Sahel
