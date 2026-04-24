@@ -322,7 +322,7 @@ CREATE TABLE IF NOT EXISTS users (
     username      TEXT UNIQUE NOT NULL,
     email         TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    plan          TEXT NOT NULL DEFAULT 'scout',
+    plan          TEXT NOT NULL DEFAULT 'free',
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
