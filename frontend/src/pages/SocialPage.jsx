@@ -385,9 +385,9 @@ function SocialCard({ post, onClick, isFav, onToggleFav }) {
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 
-export default function SocialPage() {
+export default function SocialPage({ topicsOnly = false }) {
   const { t } = useLang()
-  const { posts, categories, zones, loading, lastUpdate } = useSocialFeed()
+  const { posts, categories, zones, loading, lastUpdate } = useSocialFeed({ topicsOnly })
   const { isFavorite, toggleFavorite, canAddMore } = useSourceFavorites()
 
   const [catFilter,  setCatFilter]  = useState('')
@@ -485,6 +485,15 @@ export default function SocialPage() {
         </div>
 
         <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          {topicsOnly && posts.length === 0 && !loading && (
+            <div style={{
+              textAlign: 'center', padding: '48px 24px',
+              fontFamily: 'var(--mono)', color: 'var(--txt-3)', fontSize: '13px',
+            }}>
+              No content matches your topics.{' '}
+              <span style={{ color: 'var(--txt-2)' }}>Toggle off MY FEED to see everything.</span>
+            </div>
+          )}
           {loading && <LoadingCards count={12} />}
           {!loading && filtered.length === 0 && (
             <EmptyState

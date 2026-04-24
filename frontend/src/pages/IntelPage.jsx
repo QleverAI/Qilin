@@ -4,14 +4,14 @@ import IntelMasterCard from '../components/IntelMasterCard'
 import IntelFindingCard from '../components/IntelFindingCard'
 import IntelFilters from '../components/IntelFilters'
 
-export default function IntelPage() {
+export default function IntelPage({ topicsOnly = false }) {
   const [hours, setHours] = useState(48)
   const [minScore, setMinScore] = useState(0)
   const [domain, setDomain] = useState('all')
   const [showMasters, setShowMasters] = useState(true)
   const [showFindings, setShowFindings] = useState(true)
 
-  const { items, loading, error, spend } = useIntelTimeline({ hours, minScore, domain })
+  const { items, loading, error, spend } = useIntelTimeline({ hours, minScore, domain, topicsOnly })
 
   const filtered = items.filter(it => {
     if (it.type === 'master' && !showMasters) return false
@@ -50,7 +50,16 @@ export default function IntelPage() {
 
         {loading && <div style={{ color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>Cargando…</div>}
         {error && <div style={{ color: 'var(--red)', fontFamily: 'var(--mono)' }}>Error: {error}</div>}
-        {!loading && filtered.length === 0 && (
+        {topicsOnly && items.length === 0 && !loading && (
+          <div style={{
+            textAlign: 'center', padding: '48px 24px',
+            fontFamily: 'var(--mono)', color: 'var(--txt-3)', fontSize: '13px',
+          }}>
+            No content matches your topics.{' '}
+            <span style={{ color: 'var(--txt-2)' }}>Toggle off MY FEED to see everything.</span>
+          </div>
+        )}
+        {!loading && filtered.length === 0 && !topicsOnly && (
           <div style={{ color: 'var(--txt-3)', fontFamily: 'var(--mono)', padding: '40px 0', textAlign: 'center' }}>
             Sin items en el rango seleccionado.
           </div>
