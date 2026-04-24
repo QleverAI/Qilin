@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { apiFetch } from '../hooks/apiClient'
 import { useFavorites } from '../hooks/useFavorites'
 import { useVesselFavorites } from '../hooks/useVesselFavorites'
@@ -35,6 +35,16 @@ export default function TacticalPanel({
   const [favTab,       setFavTab]       = useState('aircraft')
   const [histSearch,   setHistSearch]   = useState('')
   const [histFilter,   setHistFilter]   = useState('all')
+
+  const filteredHistory = useMemo(() => {
+    const q = histSearch.toLowerCase()
+    return history.filter(item => {
+      if (q && !(item.callsign || '').toLowerCase().includes(q) && !item.icao24.includes(q)) return false
+      if (histFilter === 'mil' && item.type !== 'military') return false
+      if (histFilter === 'civ' && (item.type === 'military' || item.type == null)) return false
+      return true
+    })
+  }, [history, histSearch, histFilter])
   const [vesselPorts,  setVesselPorts]  = useState([])
   const [vesselRoutes, setVesselRoutes] = useState([])
   const [vesselInfo,   setVesselInfo]   = useState(null)
@@ -444,68 +454,58 @@ export default function TacticalPanel({
                 <div style={{ padding: '16px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', color: 'var(--txt-3)' }}>
                   CARGANDO…
                 </div>
-              ) : (() => {
-                const q = histSearch.toLowerCase()
-                const filtered = history.filter(item => {
-                  if (q && !(item.callsign || '').toLowerCase().includes(q) && !item.icao24.includes(q)) return false
-                  if (histFilter === 'mil' && item.type !== 'military') return false
-                  if (histFilter === 'civ' && item.type === 'military') return false
-                  return true
-                })
-                if (filtered.length === 0) return (
-                  <div style={{ padding: '16px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', color: 'var(--txt-3)' }}>
-                    SIN RESULTADOS
+              ) : filteredHistory.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', color: 'var(--txt-3)' }}>
+                  SIN RESULTADOS
+                </div>
+              ) : filteredHistory.map(item => {
+                const active = !!trails[item.icao24]
+                const color  = trails[item.icao24]?.color
+                const isMil  = item.type === 'military'
+                const hoursAgo = Math.round((Date.now() - new Date(item.last_seen).getTime()) / 3600000)
+                const ago = hoursAgo < 1 ? 'ahora' : hoursAgo < 24 ? `${hoursAgo}h` : `${Math.floor(hoursAgo / 24)}d`
+                return (
+                  <div
+                    key={item.icao24}
+                    onClick={() => active ? onRemoveTrail(item.icao24) : onAddTrail(item, 72)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                      background: active ? `${color}12` : 'transparent',
+                      borderBottom: '1px solid var(--border)',
+                      cursor: 'pointer', transition: 'background .12s',
+                    }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+                  >
+                    <div style={{
+                      width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                      background: active ? color : (isMil ? 'var(--red)' : 'var(--txt-3)'),
+                      opacity: active ? 1 : 0.4,
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 'var(--label-sm)', fontWeight: 600,
+                        color: active ? 'var(--accent)' : 'var(--txt-1)',
+                        fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {item.callsign || item.icao24.toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: 'var(--label-xs)', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>
+                        {item.icao24.toUpperCase()} · hace {ago}
+                      </div>
+                    </div>
+                    {item.type && (
+                      <span style={{
+                        fontSize: 'var(--label-xs)', padding: '1px 5px', borderRadius: 2, flexShrink: 0,
+                        background: isMil ? 'rgba(244,63,94,0.12)' : 'var(--bg-3)',
+                        color: isMil ? 'var(--red)' : 'var(--txt-3)',
+                      }}>
+                        {isMil ? 'MIL' : 'CIV'}
+                      </span>
+                    )}
                   </div>
                 )
-                return filtered.map(item => {
-                  const active = !!trails[item.icao24]
-                  const color  = trails[item.icao24]?.color
-                  const isMil  = item.type === 'military'
-                  const hoursAgo = Math.round((Date.now() - new Date(item.last_seen).getTime()) / 3600000)
-                  const ago = hoursAgo < 1 ? 'ahora' : hoursAgo < 24 ? `${hoursAgo}h` : `${Math.floor(hoursAgo / 24)}d`
-                  return (
-                    <div
-                      key={item.icao24}
-                      onClick={() => active ? onRemoveTrail(item.icao24) : onAddTrail(item, 72)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                        background: active ? `${color}12` : 'transparent',
-                        borderBottom: '1px solid var(--border)',
-                        cursor: 'pointer', transition: 'background .12s',
-                      }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? `${color}12` : 'transparent' }}
-                    >
-                      <div style={{
-                        width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                        background: active ? color : (isMil ? 'var(--red)' : 'var(--txt-3)'),
-                        opacity: active ? 1 : 0.4,
-                      }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: 'var(--label-sm)', fontWeight: 600,
-                          color: active ? 'var(--accent)' : 'var(--txt-1)',
-                          fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                          {item.callsign || item.icao24.toUpperCase()}
-                        </div>
-                        <div style={{ fontSize: 'var(--label-xs)', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>
-                          {item.icao24.toUpperCase()} · hace {ago}
-                        </div>
-                      </div>
-                      {item.type && (
-                        <span style={{
-                          fontSize: 'var(--label-xs)', padding: '1px 5px', borderRadius: 2, flexShrink: 0,
-                          background: isMil ? 'rgba(244,63,94,0.12)' : 'var(--bg-3)',
-                          color: isMil ? 'var(--red)' : 'var(--txt-3)',
-                        }}>
-                          {isMil ? 'MIL' : 'CIV'}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })
-              })()}
+              })}
             </div>
 
             {/* Footer */}

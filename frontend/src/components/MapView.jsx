@@ -607,7 +607,12 @@ export default function MapView({
   // Animated playback markers
   useEffect(() => {
     const map = mapRef.current
-    if (!ready || !map || !playback) return
+    if (!ready || !map) return
+    if (!playback) {
+      for (const m of Object.values(playbackMarkersRef.current)) m.remove()
+      playbackMarkersRef.current = {}
+      return
+    }
     const { positions } = playback
 
     for (const [icao24, pos] of Object.entries(positions)) {

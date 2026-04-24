@@ -85,10 +85,12 @@ function AppShell() {
 
   const { aircraft, vessels, alerts, stats, wsStatus } = useQilinData()
   const { trails, addTrail, removeTrail, clearAll } = useAircraftTrail()
-  const { vesselTrails, addVesselTrail, removeVesselTrail, clearAllVesselTrails } = useVesselTrail()
-  const { history, loading: historyLoading } = useAircraftHistory()
+  const { vesselTrails, addVesselTrail, removeVesselTrail } = useVesselTrail()
+  const { history, loading: historyLoading } = useAircraftHistory({ enabled: view === 'tactical' })
   const playback = usePlayback(trails)
 
+  // Only rebuild when aircraft type metadata changes — not on every position update
+  const aircraftTypeDigest = aircraft.map(a => `${a.id || a.icao24}:${a.type || ''}:${a.type_code || ''}`).join(',')
   const enrichedHistory = useMemo(() => {
     const liveMap = Object.fromEntries(aircraft.map(a => [(a.id || a.icao24), a]))
     return history.map(h => ({
@@ -96,7 +98,8 @@ function AppShell() {
       type:      liveMap[h.icao24]?.type      ?? null,
       type_code: liveMap[h.icao24]?.type_code ?? null,
     }))
-  }, [history, aircraft])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, aircraftTypeDigest])
 
   // Tactical grid
   if (view === 'tactical') {
