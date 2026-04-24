@@ -1,6 +1,14 @@
 """Unit tests for tag_topics() and load_catalog()."""
 import pytest
+import topic_utils
 from topic_utils import tag_topics, load_catalog
+
+
+@pytest.fixture(autouse=True)
+def reset_catalog_cache():
+    topic_utils._reset_cache()
+    yield
+    topic_utils._reset_cache()
 
 
 CATALOG = [
@@ -45,3 +53,22 @@ def test_tag_topics_partial_keyword_match():
     # "petróleo" keyword appears as substring → should match
     tags = tag_topics("El precio del petróleo baja hoy", CATALOG)
     assert "petroleo" in tags
+
+
+def test_load_catalog_reads_yaml(tmp_path):
+    catalog_file = tmp_path / "topics.yaml"
+    catalog_file.write_text(
+        "topics:\n  - id: test\n    keywords: [foo]\n", encoding="utf-8"
+    )
+    result = load_catalog(str(catalog_file))
+    assert result == [{"id": "test", "keywords": ["foo"]}]
+
+
+def test_tag_topics_empty_catalog():
+    assert tag_topics("Nvidia GPU shortage", []) == []
+
+
+def test_tag_topics_missing_keywords_key():
+    bad_catalog = [{"id": "broken"}, {"id": "nvidia", "keywords": ["Nvidia"]}]
+    tags = tag_topics("Nvidia release", bad_catalog)
+    assert tags == ["nvidia"]
