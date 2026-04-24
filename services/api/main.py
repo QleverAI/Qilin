@@ -580,6 +580,44 @@ async def get_aircraft(_user: str = Depends(get_current_user)):
     return [json.loads(v) for v in values if v]
 
 
+@app.get("/aircraft/history")
+async def get_aircraft_history(
+    hours: int = 72,
+    _user: str = Depends(get_current_user),
+):
+    if not app.state.db:
+        return []
+    hours = max(1, min(hours, 72))
+    rows = await app.state.db.fetch(
+        """
+        SELECT icao24,
+               MAX(callsign)  AS callsign,
+               MAX(time)      AS last_seen,
+               MIN(time)      AS first_seen,
+               COUNT(*)       AS point_count,
+               MAX(zone)      AS zone
+        FROM aircraft_positions
+        WHERE time > NOW() - ($1 * INTERVAL '1 hour')
+          AND lat IS NOT NULL
+        GROUP BY icao24
+        ORDER BY last_seen DESC
+        LIMIT 500
+        """,
+        hours,
+    )
+    return [
+        {
+            "icao24":      r["icao24"],
+            "callsign":    r["callsign"],
+            "last_seen":   r["last_seen"].isoformat(),
+            "first_seen":  r["first_seen"].isoformat(),
+            "point_count": r["point_count"],
+            "zone":        r["zone"],
+        }
+        for r in rows
+    ]
+
+
 @app.get("/aircraft/{icao24}/trail")
 async def get_aircraft_trail(
     icao24: str,
