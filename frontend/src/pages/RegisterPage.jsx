@@ -148,9 +148,8 @@ export default function RegisterPage() {
       <div style={{ width: '100%', maxWidth: step === 2 ? '640px' : '420px' }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <Link to="/" style={{ textDecoration: 'none' }}>
-            <div style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '.3em',
-              color: '#c8a03c', textTransform: 'uppercase',
-              fontFamily: "'IBM Plex Mono',monospace", marginBottom: '8px' }}>◈ QILIN</div>
+            <img src="/brand/qilin-logo-nobg.png" alt="Qilin"
+              style={{ width: '100px', height: '100px', objectFit: 'contain', marginBottom: '8px' }} />
           </Link>
           <div style={{ fontSize: '22px', fontWeight: '800', color: '#fff', marginBottom: '6px' }}>
             Create account
