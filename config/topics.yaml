@@ -1,0 +1,399 @@
+# Qilin Topic Catalog
+# Approximately 65 topics for geopolitical intelligence keyword matching
+# Types: sector, commodity, company, zone
+# Each topic has id, labels (es/en), type, and keywords for substring matching
+
+topics:
+  # === SECTORS (15) ===
+  - id: energy
+    label_es: Energía
+    label_en: Energy
+    type: sector
+    keywords: [energia, energetic, energy, petróleo, oil, gas, electricidad, electricity, poder, power, central, station]
+
+  - id: defense
+    label_es: Defensa
+    label_en: Defense
+    type: sector
+    keywords: [defensa, defense, militar, military, armas, weapons, ejército, army, armado, armed, seguridad, security]
+
+  - id: technology
+    label_es: Tecnología
+    label_en: Technology
+    type: sector
+    keywords: [tecnología, technology, tech, semiconductores, semiconductors, chip, ia, ai, software, datos, data]
+
+  - id: finance
+    label_es: Finanzas
+    label_en: Finance
+    type: sector
+    keywords: [finanzas, finance, banco, bank, mercado, market, bolsa, stock, moneda, currency, dólar, dollar]
+
+  - id: food_security
+    label_es: Seguridad Alimentaria
+    label_en: Food Security
+    type: sector
+    keywords: [alimentos, food, seguridad alimentaria, food security, grano, grain, trigo, wheat, cosecha, harvest]
+
+  - id: semiconductors
+    label_es: Semiconductores
+    label_en: Semiconductors
+    type: sector
+    keywords: [semiconductores, semiconductors, chip, wafer, fab, fabricación, litografía, lithography, nodo, node]
+
+  - id: pharma
+    label_es: Farmacéutica
+    label_en: Pharma
+    type: sector
+    keywords: [farmacéutica, pharma, medicamentos, drugs, medicinas, medicines, vacuna, vaccine, salud, health]
+
+  - id: shipping
+    label_es: Transporte Marítimo
+    label_en: Shipping
+    type: sector
+    keywords: [transporte, shipping, marítimo, maritime, buque, vessel, puerto, port, carga, cargo, flota, fleet]
+
+  - id: space
+    label_es: Espacio
+    label_en: Space
+    type: sector
+    keywords: [espacio, space, satélite, satellite, cohete, rocket, lanzamiento, launch, órbita, orbit]
+
+  - id: nuclear
+    label_es: Nuclear
+    label_en: Nuclear
+    type: sector
+    keywords: [nuclear, nucleare, uranio, uranium, reactor, planta, plant, arma, weapon, fisión, fission]
+
+  - id: cyber
+    label_es: Ciberseguridad
+    label_en: Cyber
+    type: sector
+    keywords: [ciberseguridad, cyber, hackeo, hacking, ciberataque, cyberattack, red, network, infosec, opsec]
+
+  - id: mining
+    label_es: Minería
+    label_en: Mining
+    type: sector
+    keywords: [minería, mining, mina, mine, mineral, extracción, extraction, litio, lithium, cobre, copper]
+
+  - id: telecom
+    label_es: Telecomunicaciones
+    label_en: Telecom
+    type: sector
+    keywords: [telecomunicaciones, telecom, telefonía, 5g, 6g, red, network, infraestructura, infrastructure]
+
+  - id: water
+    label_es: Agua
+    label_en: Water
+    type: sector
+    keywords: [agua, water, río, river, presa, dam, cuenca, basin, sequía, drought, abastecimiento, supply]
+
+  - id: aviation
+    label_es: Aviación
+    label_en: Aviation
+    type: sector
+    keywords: [aviación, aviation, avión, aircraft, aeronave, airplane, aerodromo, aerodrome, vuelo, flight]
+
+  # === COMMODITIES (20) ===
+  - id: oil
+    label_es: Petróleo
+    label_en: Oil
+    type: commodity
+    keywords: [petróleo, oil, crudo, crude, barril, barrel, brent, wti, refinería, refinery]
+
+  - id: natural_gas
+    label_es: Gas Natural
+    label_en: Natural Gas
+    type: commodity
+    keywords: [gas natural, natural gas, gas, gnl, lng, gasoducto, pipeline, metano, methane]
+
+  - id: wheat
+    label_es: Trigo
+    label_en: Wheat
+    type: commodity
+    keywords: [trigo, wheat, grano, grain, cosecha, harvest, siembra, planting]
+
+  - id: copper
+    label_es: Cobre
+    label_en: Copper
+    type: commodity
+    keywords: [cobre, copper, metal rojo, red metal, mina, mining]
+
+  - id: lithium
+    label_es: Litio
+    label_en: Lithium
+    type: commodity
+    keywords: [litio, lithium, batería, battery, almacenamiento, storage]
+
+  - id: gold
+    label_es: Oro
+    label_en: Gold
+    type: commodity
+    keywords: [oro, gold, metales preciosos, precious metals, onza, ounce]
+
+  - id: aluminum
+    label_es: Aluminio
+    label_en: Aluminum
+    type: commodity
+    keywords: [aluminio, aluminum, bauxita, bauxite, metal ligero, light metal]
+
+  - id: uranium
+    label_es: Uranio
+    label_en: Uranium
+    type: commodity
+    keywords: [uranio, uranium, nuclear fuel, combustible nuclear, enriquecimiento, enrichment]
+
+  - id: nickel
+    label_es: Níquel
+    label_en: Nickel
+    type: commodity
+    keywords: [níquel, nickel, acero inoxidable, stainless steel, batería, battery]
+
+  - id: cobalt
+    label_es: Cobalto
+    label_en: Cobalt
+    type: commodity
+    keywords: [cobalto, cobalt, batería, battery, arma química, chemical weapon]
+
+  - id: coal
+    label_es: Carbón
+    label_en: Coal
+    type: commodity
+    keywords: [carbón, coal, antracita, anthracite, energía, energy]
+
+  - id: soybean
+    label_es: Soja
+    label_en: Soybean
+    type: commodity
+    keywords: [soja, soybean, soja, soy, oleaginosa, oilseed, cosecha, harvest]
+
+  - id: corn
+    label_es: Maíz
+    label_en: Corn
+    type: commodity
+    keywords: [maíz, corn, grano, grain, cosecha, harvest, etanol, ethanol]
+
+  - id: coffee
+    label_es: Café
+    label_en: Coffee
+    type: commodity
+    keywords: [café, coffee, grano, bean, cosecha, harvest, volatilidad, volatility]
+
+  - id: rare_earths
+    label_es: Tierras Raras
+    label_en: Rare Earths
+    type: commodity
+    keywords: [tierras raras, rare earths, elementos, elements, neodimio, neodymium]
+
+  - id: iron_ore
+    label_es: Minerales de Hierro
+    label_en: Iron Ore
+    type: commodity
+    keywords: [minerales de hierro, iron ore, hierro, iron, acero, steel]
+
+  - id: tin
+    label_es: Estaño
+    label_en: Tin
+    type: commodity
+    keywords: [estaño, tin, metal, electrónica, electronics]
+
+  - id: palm_oil
+    label_es: Aceite de Palma
+    label_en: Palm Oil
+    type: commodity
+    keywords: [aceite de palma, palm oil, aceite, oil, agricultural, agrícola]
+
+  - id: sugar
+    label_es: Azúcar
+    label_en: Sugar
+    type: commodity
+    keywords: [azúcar, sugar, caña, cane, producción, production, precio, price]
+
+  - id: zinc
+    label_es: Zinc
+    label_en: Zinc
+    type: commodity
+    keywords: [zinc, acero galvanizado, galvanized steel, metal, galvanización, galvanizing]
+
+  # === COMPANIES (15) ===
+  - id: nvidia
+    label_es: NVIDIA
+    label_en: NVIDIA
+    type: company
+    keywords: [nvidia, gpu, graphics, cuda, inteligencia artificial, ai, chip]
+
+  - id: tsmc
+    label_es: TSMC
+    label_en: TSMC
+    type: company
+    keywords: [tsmc, taiwan semiconductor, foundry, fab, manufactura, manufacturing]
+
+  - id: lockheed_martin
+    label_es: Lockheed Martin
+    label_en: Lockheed Martin
+    type: company
+    keywords: [lockheed, lockheed martin, defensa, defense, misil, missile, aviación, aviation]
+
+  - id: boeing
+    label_es: Boeing
+    label_en: Boeing
+    type: company
+    keywords: [boeing, aviación, aviation, avión, aircraft, defensa, defense, satélite, satellite]
+
+  - id: aramco
+    label_es: Saudi Aramco
+    label_en: Saudi Aramco
+    type: company
+    keywords: [aramco, saudi aramco, petróleo, oil, energía, energy, saudí, saudi]
+
+  - id: shell
+    label_es: Shell
+    label_en: Shell
+    type: company
+    keywords: [shell, royal dutch, petróleo, oil, gas, energía, energy]
+
+  - id: rheinmetall
+    label_es: Rheinmetall
+    label_en: Rheinmetall
+    type: company
+    keywords: [rheinmetall, defensa, defense, alemania, germany, municiones, ammunition]
+
+  - id: asml
+    label_es: ASML
+    label_en: ASML
+    type: company
+    keywords: [asml, litografía, lithography, equipamiento, equipment, semiconductores, semiconductors]
+
+  - id: bae_systems
+    label_es: BAE Systems
+    label_en: BAE Systems
+    type: company
+    keywords: [bae, bae systems, defensa, defense, reino unido, uk, armas, weapons]
+
+  - id: raytheon
+    label_es: Raytheon
+    label_en: Raytheon
+    type: company
+    keywords: [raytheon, rtx, defensa, defense, misil, missile, aviación, aviation]
+
+  - id: northrop_grumman
+    label_es: Northrop Grumman
+    label_en: Northrop Grumman
+    type: company
+    keywords: [northrop, northrop grumman, defensa, defense, satélite, satellite, espacio, space]
+
+  - id: palantir
+    label_es: Palantir
+    label_en: Palantir
+    type: company
+    keywords: [palantir, análisis, analytics, inteligencia, intelligence, datos, data]
+
+  - id: huawei
+    label_es: Huawei
+    label_en: Huawei
+    type: company
+    keywords: [huawei, china, telecomunicaciones, telecom, 5g, tecnología, technology]
+
+  - id: bp
+    label_es: BP
+    label_en: BP
+    type: company
+    keywords: [bp, british petroleum, petróleo, oil, energía, energy]
+
+  - id: chevron
+    label_es: Chevron
+    label_en: Chevron
+    type: company
+    keywords: [chevron, petróleo, oil, energía, energy, gas]
+
+  # === ZONES (15) ===
+  - id: taiwan_strait
+    label_es: Estrecho de Taiwán
+    label_en: Taiwan Strait
+    type: zone
+    keywords: [taiwán, taiwan, estrecho, strait, cruce, crossing, defensa aérea, air defense]
+
+  - id: persian_gulf
+    label_es: Golfo Pérsico
+    label_en: Persian Gulf
+    type: zone
+    keywords: [golfo pérsico, persian gulf, irán, iran, petróleo, oil, buque, vessel]
+
+  - id: ukraine
+    label_es: Ucrania
+    label_en: Ukraine
+    type: zone
+    keywords: [ucrania, ukraine, guerra, war, rusia, russia, donbas, donbass, crimea]
+
+  - id: red_sea
+    label_es: Mar Rojo
+    label_en: Red Sea
+    type: zone
+    keywords: [mar rojo, red sea, yemen, houthis, estrecho de bab al-mandeb, bab el-mandeb]
+
+  - id: black_sea
+    label_es: Mar Negro
+    label_en: Black Sea
+    type: zone
+    keywords: [mar negro, black sea, crimea, rusia, russia, ucrania, ukraine, grano, grain]
+
+  - id: south_china_sea
+    label_es: Mar de China Meridional
+    label_en: South China Sea
+    type: zone
+    keywords: [mar de china meridional, south china sea, china, filipinas, philippines, vietnam, islas spratly, spratly]
+
+  - id: iran
+    label_es: Irán
+    label_en: Iran
+    type: zone
+    keywords: [irán, iran, nuclear, petróleo, oil, sanciones, sanctions, régimen, regime]
+
+  - id: israel_palestine
+    label_es: Israel-Palestina
+    label_en: Israel-Palestine
+    type: zone
+    keywords: [israel, palestina, palestine, gaza, cisjordania, west bank, conflicto, conflict]
+
+  - id: korea
+    label_es: Corea
+    label_en: Korea
+    type: zone
+    keywords: [corea, korea, norte, north, sur, south, dprk, kprf, nucleare, nuclear, misil, missile]
+
+  - id: sahel
+    label_es: Sahel
+    label_en: Sahel
+    type: zone
+    keywords: [sahel, mali, burkina faso, niger, terrorismo, terrorism, seguridad, security]
+
+  - id: arctic
+    label_es: Ártico
+    label_en: Arctic
+    type: zone
+    keywords: [ártico, arctic, polar, hielo, ice, rusia, russia, gas, petróleo, oil]
+
+  - id: strait_hormuz
+    label_es: Estrecho de Ormuz
+    label_en: Strait of Hormuz
+    type: zone
+    keywords: [estrecho de ormuz, strait of hormuz, irán, iran, petróleo, oil, chokepoint, cuello de botella]
+
+  - id: baltic_sea
+    label_es: Mar Báltico
+    label_en: Baltic Sea
+    type: zone
+    keywords: [báltico, baltic, mar báltico, estonia, letonia, lituania, rusia, russia]
+
+  - id: indo_pacific
+    label_es: Indo-Pacífico
+    label_en: Indo-Pacific
+    type: zone
+    keywords: [indo-pacífico, indo-pacific, pacífico, pacific, asia, china, australia, alianza, alliance]
+
+  - id: panama_canal
+    label_es: Canal de Panamá
+    label_en: Panama Canal
+    type: zone
+    keywords: [canal de panamá, panama canal, panamá, panama, transporte, shipping, chokepoint, cuello de botella]
