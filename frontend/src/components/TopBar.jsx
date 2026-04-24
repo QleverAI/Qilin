@@ -59,7 +59,7 @@ export default function TopBar({ alertsTotal, wsStatus, currentView, onNavigate,
     }}>
       {/* Logo */}
       <div style={{ display:'flex', alignItems:'center', gap:'8px', marginRight:'16px', flexShrink:0 }}>
-        <img src="/brand/qilin-logo-nobg.png" alt="" style={{ width:28, height:28, objectFit:'contain' }} />
+        <img src="/brand/qilin-logo-gold.png" alt="" style={{ width:28, height:28, objectFit:'contain' }} />
         <span style={{
           fontSize:'18px', fontWeight:'700', letterSpacing:'.22em',
           color:'var(--cyan)', textTransform:'uppercase', fontFamily:'var(--mono)',
