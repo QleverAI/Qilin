@@ -74,7 +74,7 @@ export default function RegisterPage() {
 
   const navigate = useNavigate()
   const [params]  = useSearchParams()
-  const plan      = params.get('plan') || 'scout'
+  const plan      = params.get('plan') || 'free'
 
   useEffect(() => {
     fetch('/api/topics')
