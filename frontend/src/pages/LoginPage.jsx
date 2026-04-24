@@ -81,8 +81,10 @@ export default function LoginPage() {
       <BackgroundCanvas />
       <div style={{ position:'relative', zIndex:1, width:'340px' }}>
         <div style={{ textAlign:'center', marginBottom:'32px' }}>
-          <div style={{ fontSize:'22px', fontWeight:'700', letterSpacing:'.3em',
-            color:'#4f9cf9', textTransform:'uppercase', marginBottom:'8px' }}>◈ QILIN</div>
+          <img src="/brand/qilin-logo-nobg.png" alt="Qilin"
+            style={{ width:'120px', height:'120px', objectFit:'contain', marginBottom:'12px' }} />
+          <div style={{ fontSize:'18px', fontWeight:'700', letterSpacing:'.3em',
+            color:'#4f9cf9', textTransform:'uppercase', marginBottom:'8px' }}>QILIN</div>
           <div style={{ fontSize:'10px', letterSpacing:'.2em', color:'rgba(200,216,232,0.4)',
             textTransform:'uppercase' }}>{t('login.subtitle')}</div>
         </div>
