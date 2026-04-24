@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { apiFetch } from './apiClient'
 
-// Colors for up to 6 simultaneous trails
+// Colors for up to 15 simultaneous trails
 const TRAIL_COLORS = [
   '#4f9cf9', // cyan-blue
   '#f97316', // orange
@@ -9,6 +9,15 @@ const TRAIL_COLORS = [
   '#a855f7', // purple
   '#f43f5e', // red
   '#eab308', // yellow
+  '#06b6d4', // teal
+  '#ec4899', // pink
+  '#84cc16', // lime
+  '#f59e0b', // amber
+  '#8b5cf6', // violet
+  '#10b981', // emerald
+  '#ef4444', // red-500
+  '#3b82f6', // blue-500
+  '#14b8a6', // teal-500
 ]
 
 const REFRESH_INTERVAL = 30_000  // refresca puntos cada 30s

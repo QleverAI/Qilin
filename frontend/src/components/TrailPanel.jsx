@@ -192,7 +192,7 @@ export default function TrailPanel({ aircraft, trails, onAdd, onRemove, onClear 
           </div>
 
           <div style={{ padding: '5px 10px', borderTop: '1px solid var(--border)', fontSize: 'var(--label-xs)', color: 'var(--txt-3)' }}>
-            {filtered.length} aeronaves · máx. 6 trails simultáneos
+            {filtered.length} aeronaves · máx. 15 trails simultáneos
           </div>
         </div>
       )}
