@@ -174,6 +174,7 @@ CACHEABLE_PATHS: dict[str, int] = {
     "/intel/timeline":   30,
     "/intel/spend":      10,
     "/stats":            60,
+    "/aircraft/history": 60,
 }
 
 
@@ -581,6 +582,7 @@ async def get_aircraft(_user: str = Depends(get_current_user)):
 
 
 @app.get("/aircraft/history")
+@cached("aircraft.history", ttl=60)
 async def get_aircraft_history(
     hours: int = 72,
     _user: str = Depends(get_current_user),
