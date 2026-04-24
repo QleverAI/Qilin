@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { apiFetch } from '../hooks/apiClient'
 import { useFavorites } from '../hooks/useFavorites'
 import { useVesselFavorites } from '../hooks/useVesselFavorites'
+import PlaybackControls from './PlaybackControls'
 
 const TYPE_META = {
   military: { label: 'MILITARY', color: '#f43f5e' },
@@ -23,6 +24,8 @@ export default function TacticalPanel({
   trails, onAddTrail, onRemoveTrail,
   vesselTrails, onAddVesselTrail, onRemoveVesselTrail,
   onFlyTo, onFlyToVessel,
+  history = [], historyLoading = false,
+  playback,
 }) {
   const { favorites, isFavorite, toggleFavorite } = useFavorites()
   const { favorites: vesselFavs, isFavorite: isVesselFav, toggleFavorite: toggleVesselFav } = useVesselFavorites()
@@ -30,6 +33,8 @@ export default function TacticalPanel({
   const [routes,       setRoutes]       = useState([])
   const [loadingExtra, setLoadingExtra] = useState(false)
   const [favTab,       setFavTab]       = useState('aircraft')
+  const [histSearch,   setHistSearch]   = useState('')
+  const [histFilter,   setHistFilter]   = useState('all')
   const [vesselPorts,  setVesselPorts]  = useState([])
   const [vesselRoutes, setVesselRoutes] = useState([])
   const [vesselInfo,   setVesselInfo]   = useState(null)
@@ -312,8 +317,9 @@ export default function TacticalPanel({
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           {[
-            { id: 'aircraft', label: `AERONAVES · ${favorites.length}` },
-            { id: 'vessels',  label: `BARCOS · ${vesselFavs.length}`  },
+            { id: 'aircraft',  label: `AERONAVES · ${favorites.length}` },
+            { id: 'vessels',   label: `BARCOS · ${vesselFavs.length}`  },
+            { id: 'historial', label: `HISTORIAL · ${Object.keys(trails).length}` },
           ].map(tab => {
             const active = favTab === tab.id
             return (
@@ -398,7 +404,122 @@ export default function TacticalPanel({
             ))}
           </div>
         )}
+
+        {/* ── HISTORIAL tab ── */}
+        {favTab === 'historial' && (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            {/* Search + filter */}
+            <div style={{ padding: '6px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              <input
+                value={histSearch}
+                onChange={e => setHistSearch(e.target.value)}
+                placeholder="Buscar callsign / ICAO…"
+                style={{
+                  width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border)',
+                  borderRadius: 2, color: 'var(--txt-1)', fontFamily: 'var(--mono)',
+                  fontSize: 'var(--label-sm)', padding: '4px 7px', outline: 'none',
+                  marginBottom: 6, boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[['all', 'TODOS'], ['mil', 'MIL'], ['civ', 'CIV']].map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => setHistFilter(val)}
+                    style={{
+                      flex: 1, background: histFilter === val ? 'rgba(79,156,249,0.15)' : 'var(--bg-3)',
+                      border: `1px solid ${histFilter === val ? 'rgba(79,156,249,0.5)' : 'var(--border)'}`,
+                      color: histFilter === val ? 'var(--accent)' : 'var(--txt-3)',
+                      borderRadius: 2, fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)',
+                      padding: '3px 0', cursor: 'pointer', letterSpacing: '.1em',
+                    }}
+                  >{label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* List */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {historyLoading ? (
+                <div style={{ padding: '16px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', color: 'var(--txt-3)' }}>
+                  CARGANDO…
+                </div>
+              ) : (() => {
+                const q = histSearch.toLowerCase()
+                const filtered = history.filter(item => {
+                  if (q && !(item.callsign || '').toLowerCase().includes(q) && !item.icao24.includes(q)) return false
+                  if (histFilter === 'mil' && item.type !== 'military') return false
+                  if (histFilter === 'civ' && item.type === 'military') return false
+                  return true
+                })
+                if (filtered.length === 0) return (
+                  <div style={{ padding: '16px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 'var(--label-xs)', color: 'var(--txt-3)' }}>
+                    SIN RESULTADOS
+                  </div>
+                )
+                return filtered.map(item => {
+                  const active = !!trails[item.icao24]
+                  const color  = trails[item.icao24]?.color
+                  const isMil  = item.type === 'military'
+                  const hoursAgo = Math.round((Date.now() - new Date(item.last_seen).getTime()) / 3600000)
+                  const ago = hoursAgo < 1 ? 'ahora' : hoursAgo < 24 ? `${hoursAgo}h` : `${Math.floor(hoursAgo / 24)}d`
+                  return (
+                    <div
+                      key={item.icao24}
+                      onClick={() => active ? onRemoveTrail(item.icao24) : onAddTrail(item, 72)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                        background: active ? `${color}12` : 'transparent',
+                        borderBottom: '1px solid var(--border)',
+                        cursor: 'pointer', transition: 'background .12s',
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? `${color}12` : 'transparent' }}
+                    >
+                      <div style={{
+                        width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                        background: active ? color : (isMil ? 'var(--red)' : 'var(--txt-3)'),
+                        opacity: active ? 1 : 0.4,
+                      }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: 'var(--label-sm)', fontWeight: 600,
+                          color: active ? 'var(--accent)' : 'var(--txt-1)',
+                          fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {item.callsign || item.icao24.toUpperCase()}
+                        </div>
+                        <div style={{ fontSize: 'var(--label-xs)', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>
+                          {item.icao24.toUpperCase()} · hace {ago}
+                        </div>
+                      </div>
+                      {item.type && (
+                        <span style={{
+                          fontSize: 'var(--label-xs)', padding: '1px 5px', borderRadius: 2, flexShrink: 0,
+                          background: isMil ? 'rgba(244,63,94,0.12)' : 'var(--bg-3)',
+                          color: isMil ? 'var(--red)' : 'var(--txt-3)',
+                        }}>
+                          {isMil ? 'MIL' : 'CIV'}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '5px 10px', borderTop: '1px solid var(--border)', flexShrink: 0, fontSize: 'var(--label-xs)', color: 'var(--txt-3)', fontFamily: 'var(--mono)' }}>
+              {history.length} aeronaves · 72h · {Object.keys(trails).length} activas
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Playback controls — visible when any trail is active */}
+      {Object.keys(trails).length > 0 && playback && (
+        <PlaybackControls playback={playback} />
+      )}
     </div>
   )
 }
