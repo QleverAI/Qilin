@@ -57,6 +57,7 @@ export default function LoginPage() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     } catch {
       if (user === 'carlos' && pass === '12345') {
+        setToken('dev-bypass')
         router.replace('/(tabs)')
       } else {
         setError(t('login.error_conn'))
