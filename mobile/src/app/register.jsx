@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo }                     from 'react'
+import { useState, useEffect }                              from 'react'
 import { View, Text, TextInput, Pressable,
          KeyboardAvoidingView, Platform, StyleSheet,
          ActivityIndicator, SafeAreaView, ScrollView }      from 'react-native'
@@ -7,8 +7,25 @@ import * as Haptics                                         from 'expo-haptics'
 import { useLang }                                          from '../hooks/useLanguage'
 import { setToken, getToken }                               from '../hooks/apiClient'
 import TopicSelector                                        from '../components/TopicSelector'
-import { C, T }                                             from '../theme'
+import { C }                                               from '../theme'
 import { useBreakpoint }                                    from '../theme/responsive'
+
+function LangToggle() {
+  const { lang, switchLang } = useLang()
+  return (
+    <View style={s.langGroup}>
+      {['es', 'en'].map(l => (
+        <Pressable
+          key={l}
+          onPress={() => { Haptics.selectionAsync(); switchLang(l) }}
+          style={[s.langBtn, lang === l && s.langBtnActive]}
+        >
+          <Text style={[s.langText, lang === l && s.langTextActive]}>{l.toUpperCase()}</Text>
+        </Pressable>
+      ))}
+    </View>
+  )
+}
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -156,8 +173,16 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={s.safe}>
-      <Stack.Screen options={{ headerShown: true, title: t('register.title'),
-        headerStyle: { backgroundColor: C.bg0 }, headerTintColor: '#ffffff' }} />
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Top bar */}
+      <View style={s.topBar}>
+        <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={8}>
+          <Text style={s.backText}>← {t('common.back')}</Text>
+        </Pressable>
+        <LangToggle />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={s.root}
@@ -319,6 +344,17 @@ export default function RegisterScreen() {
 
 const s = StyleSheet.create({
   safe:          { flex: 1, backgroundColor: C.bg0 },
+  topBar:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                   paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
+  backBtn:       {},
+  backText:      { fontSize: 15, color: 'rgba(255,255,255,0.6)', fontWeight: '500' },
+  langGroup:     { flexDirection: 'row', backgroundColor: 'rgba(200,160,60,0.07)',
+                   borderWidth: 1, borderColor: 'rgba(200,160,60,0.22)',
+                   borderRadius: 16, padding: 2, gap: 2 },
+  langBtn:       { paddingHorizontal: 11, paddingVertical: 4, borderRadius: 12 },
+  langBtnActive: { backgroundColor: '#c8a03c' },
+  langText:      { fontSize: 11, fontWeight: '700', color: 'rgba(200,160,60,0.55)', fontFamily: 'SpaceMono' },
+  langTextActive:{ color: '#02060e' },
   root:          { flex: 1 },
   planBlock:     { backgroundColor: C.blueFill, borderRadius: 10, padding: 14,
                    flexDirection: 'row', alignItems: 'center', gap: 10 },
