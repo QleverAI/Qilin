@@ -5,8 +5,10 @@ import Ionicons                                        from '@expo/vector-icons/
 import * as Haptics                                    from 'expo-haptics'
 import { PageHeader }                                  from '../../components/PageHeader'
 import { useLang }                                     from '../../hooks/useLanguage'
-import { C, T }                                        from '../../theme'
+import { C }                                           from '../../theme'
 import { useBreakpoint }                               from '../../theme/responsive'
+import { setToken }                                    from '../../hooks/apiClient'
+import * as SecureStore                                from 'expo-secure-store'
 
 function MenuItem({ icon, label, onPress, badge, color = C.blue }) {
   return (
@@ -41,6 +43,13 @@ export default function MoreScreen() {
   const { maxContentWidth } = useBreakpoint()
 
   const go = (path) => () => router.push(path)
+
+  async function handleLogout() {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+    setToken(null)
+    await SecureStore.deleteItemAsync('qilin_token').catch(() => {})
+    router.replace('/landing')
+  }
 
   return (
     <SafeAreaView style={s.safe}>
@@ -82,6 +91,9 @@ export default function MoreScreen() {
           <View style={s.sep} />
           <MenuItem icon="card-outline"          color={C.green}  label={t('plans.title')}
             onPress={go('/plans')} />
+          <View style={s.sep} />
+          <MenuItem icon="log-out-outline"       color={C.red}    label={t('profile.logout')}
+            onPress={handleLogout} />
         </Section>
       </ScrollView>
     </SafeAreaView>
