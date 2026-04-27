@@ -89,7 +89,7 @@ export default function HomeScreen() {
 
   return (
     <ImageBackground
-      source={{ uri: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1200&q=80' }}
+      source={require('../../../assets/earth-bg.jpg')}
       style={s.root}
       imageStyle={s.bgImage}
     >
