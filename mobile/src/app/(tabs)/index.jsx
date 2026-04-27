@@ -1,4 +1,4 @@
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native'
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, ImageBackground } from 'react-native'
 import { useState, useCallback }  from 'react'
 import { router }                 from 'expo-router'
 import { useSafeAreaInsets }      from 'react-native-safe-area-context'
@@ -88,8 +88,14 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView
+    <ImageBackground
+      source={{ uri: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1200&q=80' }}
       style={s.root}
+      imageStyle={s.bgImage}
+    >
+      <View style={s.overlay} />
+    <ScrollView
+      style={s.scrollRoot}
       contentContainerStyle={{ paddingBottom: 32, alignSelf: 'center', width: '100%', maxWidth: maxContentWidth }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.txt3} />}
     >
@@ -153,11 +159,15 @@ export default function HomeScreen() {
         <QuickLink label={t('home.quick_sec')}    count={filings.length || null}   onPress={() => router.push('/(tabs)/sec')} />
       </View>
     </ScrollView>
+    </ImageBackground>
   )
 }
 
 const s = StyleSheet.create({
   root:        { flex: 1, backgroundColor: C.bg0 },
+  bgImage:     { opacity: 0.35 },
+  overlay:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2,6,14,0.55)' },
+  scrollRoot:  { flex: 1 },
   header:      { paddingBottom: 16 },
   title:       { ...T.largeTitle },
   subtitle:    { ...T.footnote, marginTop: 2 },
