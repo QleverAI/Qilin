@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
-import { Tabs }      from 'expo-router'
+import { Tabs, router } from 'expo-router'
 import Ionicons       from '@expo/vector-icons/Ionicons'
 import { C }          from '../../theme'
 import { useLang }    from '../../hooks/useLanguage'
+import { getToken }   from '../../hooks/apiClient'
 import { prefetchNewsFeed }      from '../../hooks/useNewsFeed'
 import { prefetchSocialFeed }    from '../../hooks/useSocialFeed'
 import { prefetchDocsFeed }      from '../../hooks/useDocsFeed'
@@ -19,9 +20,11 @@ function icon(name) {
 export default function TabsLayout() {
   const { t } = useLang()
 
-  // Post-login prefetch: todos los feeds en paralelo. Al tocar una pestaña
-  // la data ya está en memCache → pantalla monta sin spinner.
   useEffect(() => {
+    if (!getToken()) {
+      router.replace('/landing')
+      return
+    }
     prefetchNewsFeed()
     prefetchSocialFeed()
     prefetchDocsFeed()
