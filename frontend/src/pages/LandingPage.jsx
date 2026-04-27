@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChatBotPublic from '../components/ChatBotPublic'
+import { useLang } from '../hooks/useLanguage'
 
 const C = {
   bg0:'#02060e', bg1:'#040c18', bg2:'#071020',
@@ -84,7 +85,7 @@ const T = {
       period: '/ mes',
       items: [
         {
-          tier:'Tier 01', name:'Scout', price:'$0', featured:false,
+          tier:'Tier 01', name:'Scout', price:'0€', featured:false,
           tagline:'Para explorar la plataforma. Datos con retraso y acceso limitado.',
           feats:[
             {on:true,  t:'Mapa militar con retraso'},
@@ -98,7 +99,7 @@ const T = {
           cta:'Crear cuenta gratis', plan:'scout',
         },
         {
-          tier:'Tier 02', name:'Analyst', price:'$49', featured:true, popular:true,
+          tier:'Tier 02', name:'Analyst', price:'49€', featured:true, popular:true,
           tagline:'Acceso completo en tiempo real. Para analistas, periodistas e investigadores.',
           feats:[
             {on:true, t:'Mapa en tiempo real — militares + privados'},
@@ -112,18 +113,54 @@ const T = {
           cta:'Empezar prueba de 7 días →', plan:'analyst',
         },
         {
-          tier:'Tier 03', name:'Command', price:'$199', featured:false,
-          tagline:'Para equipos e instituciones con necesidades avanzadas de inteligencia.',
+          tier:'Tier 03', name:'Command', price:'199€', featured:false,
+          tagline:'Para analistas que necesitan capacidades máximas de inteligencia.',
           feats:[
             {on:true, t:'Todo de Analyst incluido'},
+            {on:true, t:'Topics ilimitados + alertas prioritarias'},
             {on:true, t:'Datos satelitales de observación'},
-            {on:true, t:'Informes semanales con análisis IA'},
-            {on:true, t:'Acceso API REST'},
-            {on:true, t:'Hasta 5 usuarios'},
-            {on:true, t:'Historial ilimitado'},
+            {on:true, t:'Historial 90 días + informes avanzados'},
             {on:true, t:'Soporte prioritario'},
           ],
-          cta:'Contactar ventas', plan:'command',
+          cta:'Empezar prueba de 7 días →', plan:'command',
+        },
+      ],
+    },
+    faq: {
+      eyebrow: 'FAQ',
+      h2a: 'Preguntas', h2b: 'frecuentes.',
+      items: [
+        {
+          q: '¿Qué es Qilin exactamente?',
+          a: 'Qilin es una plataforma de inteligencia geopolítica en tiempo real. Agrega y correlaciona datos de aeronaves militares y privadas, tráfico naval, más de 500 fuentes de noticias y señales satelitales — todo en un único panel analítico.',
+        },
+        {
+          q: '¿Los datos son realmente en tiempo real?',
+          a: 'En los planes Analyst y Command, sí. El plan Scout recibe datos con 30 minutos de retraso. Las posiciones de aeronaves y buques se actualizan cada 15-120 segundos dependiendo de la fuente.',
+        },
+        {
+          q: '¿Cómo funcionan las alertas de Telegram?',
+          a: 'Una vez que configuras tu chat ID en el perfil, el sistema te envía notificaciones automáticas cuando detecta eventos relevantes para los topics que has elegido. Solo necesitas un bot de Telegram — sin apps adicionales.',
+        },
+        {
+          q: '¿Qué diferencia hay entre los planes?',
+          a: 'Scout es gratuito con 5 topics y datos retrasados. Analyst (49€/mes) desbloquea el tiempo real completo, 20 topics e historial de 30 días. Command (199€/mes) añade topics ilimitados, datos Sentinel e historial de 90 días con informes avanzados.',
+        },
+        {
+          q: '¿Puedo cancelar en cualquier momento?',
+          a: 'Sí, sin permanencia ni penalizaciones. Cancelas desde tu perfil y el plan vuelve a Scout al finalizar el periodo de facturación. No hay letra pequeña.',
+        },
+        {
+          q: '¿De dónde vienen los datos?',
+          a: 'Aeronaves: ADS-B vía Airplanes.live. Buques: AIS vía AISHub y aisstream.io. Noticias: 500+ medios geopolíticos vía RSS. Señales satelitales: Copernicus Sentinel-5P (ESA). Todos son datos públicos o licenciados.',
+        },
+        {
+          q: '¿Necesito conocimientos técnicos para usarlo?',
+          a: 'No. El panel está diseñado para analistas, periodistas e investigadores sin perfil técnico. Si sabes leer un mapa y seguir noticias, puedes usar Qilin desde el primer día.',
+        },
+        {
+          q: '¿Cómo se protegen mis datos?',
+          a: 'Las contraseñas se almacenan con bcrypt. Las comunicaciones van cifradas por HTTPS. No vendemos ni compartimos tus datos con terceros. Puedes eliminar tu cuenta en cualquier momento.',
         },
       ],
     },
@@ -184,7 +221,7 @@ const T = {
       period: '/ mo',
       items: [
         {
-          tier:'Tier 01', name:'Scout', price:'$0', featured:false,
+          tier:'Tier 01', name:'Scout', price:'0€', featured:false,
           tagline:'Explore the platform. Delayed data and limited access.',
           feats:[
             {on:true,  t:'Military map with delay'},
@@ -198,7 +235,7 @@ const T = {
           cta:'Create free account', plan:'scout',
         },
         {
-          tier:'Tier 02', name:'Analyst', price:'$49', featured:true, popular:true,
+          tier:'Tier 02', name:'Analyst', price:'49€', featured:true, popular:true,
           tagline:'Full real-time access. For analysts, journalists, and researchers.',
           feats:[
             {on:true, t:'Real-time map — military + private'},
@@ -212,18 +249,54 @@ const T = {
           cta:'Start 7-day trial →', plan:'analyst',
         },
         {
-          tier:'Tier 03', name:'Command', price:'$199', featured:false,
-          tagline:'For teams and institutions with advanced intelligence needs.',
+          tier:'Tier 03', name:'Command', price:'199€', featured:false,
+          tagline:'For analysts who need maximum intelligence capabilities.',
           feats:[
             {on:true, t:'Everything in Analyst'},
+            {on:true, t:'Unlimited topics + priority alerts'},
             {on:true, t:'Satellite observation data'},
-            {on:true, t:'Weekly AI analysis reports'},
-            {on:true, t:'REST API access'},
-            {on:true, t:'Up to 5 users'},
-            {on:true, t:'Unlimited history'},
+            {on:true, t:'90-day history + advanced reports'},
             {on:true, t:'Priority support'},
           ],
-          cta:'Contact sales', plan:'command',
+          cta:'Start 7-day trial →', plan:'command',
+        },
+      ],
+    },
+    faq: {
+      eyebrow: 'FAQ',
+      h2a: 'Frequently asked', h2b: 'questions.',
+      items: [
+        {
+          q: 'What exactly is Qilin?',
+          a: 'Qilin is a real-time geopolitical intelligence platform. It aggregates and correlates data from military and private aircraft, naval traffic, over 500 news sources, and satellite signals — all in a single analytical dashboard.',
+        },
+        {
+          q: 'Is the data really real-time?',
+          a: 'On the Analyst and Command plans, yes. The Scout plan receives data with a 30-minute delay. Aircraft and vessel positions update every 15–120 seconds depending on the source.',
+        },
+        {
+          q: 'How do Telegram alerts work?',
+          a: 'Once you configure your chat ID in your profile, the system automatically sends you notifications when it detects events relevant to your chosen topics. You only need a Telegram bot — no additional apps required.',
+        },
+        {
+          q: "What's the difference between plans?",
+          a: 'Scout is free with 5 topics and delayed data. Analyst (49€/mo) unlocks full real-time access, 20 topics, and 30-day history. Command (199€/mo) adds unlimited topics, Sentinel data, and 90-day history with advanced reports.',
+        },
+        {
+          q: 'Can I cancel at any time?',
+          a: 'Yes, with no lock-in or penalties. Cancel from your profile and the plan reverts to Scout at the end of the billing period. No fine print.',
+        },
+        {
+          q: 'Where does the data come from?',
+          a: 'Aircraft: ADS-B via Airplanes.live. Vessels: AIS via AISHub and aisstream.io. News: 500+ geopolitical outlets via RSS. Satellite signals: Copernicus Sentinel-5P (ESA). All data is public or licensed.',
+        },
+        {
+          q: 'Do I need technical knowledge to use it?',
+          a: "No. The dashboard is designed for analysts, journalists, and researchers without a technical background. If you can read a map and follow the news, you can use Qilin from day one.",
+        },
+        {
+          q: 'How is my data protected?',
+          a: 'Passwords are stored with bcrypt. All communications are encrypted via HTTPS. We do not sell or share your data with third parties. You can delete your account at any time.',
         },
       ],
     },
@@ -543,6 +616,68 @@ function Plans({ t, onRegister, vp }) {
   )
 }
 
+function FAQ({ t, vp }) {
+  const [open, setOpen] = useState(null)
+  const toggle = i => setOpen(prev => prev === i ? null : i)
+
+  return (
+    <section style={{ background: C.bg0, padding: vp.isMobile ? '64px 20px' : '96px 56px' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.18em',
+            color: C.goldDim, textTransform: 'uppercase', marginBottom: 10,
+            fontFamily: "'IBM Plex Mono', monospace" }}>
+            {t.faq.eyebrow}
+          </div>
+          <h2 style={{ margin: 0, fontSize: vp.isMobile ? 28 : 36, fontWeight: 800,
+            color: C.txt1, lineHeight: 1.2 }}>
+            {t.faq.h2a}{' '}
+            <span style={{ color: C.gold }}>{t.faq.h2b}</span>
+          </h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {t.faq.items.map((item, i) => (
+            <div key={i} style={{
+              border: `1px solid ${open === i ? C.goldBorder : 'rgba(200,160,60,0.07)'}`,
+              borderRadius: 8, overflow: 'hidden',
+              background: open === i ? 'rgba(200,160,60,0.04)' : 'transparent',
+              transition: 'all .15s',
+            }}>
+              <button
+                onClick={() => toggle(i)}
+                style={{
+                  width: '100%', display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', gap: 16,
+                  padding: '16px 20px', background: 'none', border: 'none',
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ fontSize: 14, fontWeight: 600, color: open === i ? C.goldLight : C.txt1,
+                  lineHeight: 1.4, transition: 'color .15s' }}>
+                  {item.q}
+                </span>
+                <span style={{ color: C.goldDim, fontSize: 16, flexShrink: 0,
+                  transform: open === i ? 'rotate(45deg)' : 'none',
+                  transition: 'transform .2s', display: 'inline-block' }}>
+                  +
+                </span>
+              </button>
+              {open === i && (
+                <div style={{ padding: '0 20px 18px', fontSize: 13, color: C.txt2,
+                  lineHeight: 1.75, borderTop: `1px solid rgba(200,160,60,0.08)`,
+                  paddingTop: 14 }}>
+                  {item.a}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function Footer({ t, vp }) {
   return (
     <footer style={{ background:C.bg1, borderTop:`1px solid ${C.border}`,
@@ -555,8 +690,9 @@ function Footer({ t, vp }) {
       <div style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:14, fontWeight:700,
         letterSpacing:'.25em', color:C.goldDim }}>◈ QILIN</div>
       <div style={{ display:'flex', gap:28 }}>
-        {t.footer.links.map(l => (
-          <a key={l} href="#" style={{ fontSize:12, color:C.txt3, textDecoration:'none' }}>{l}</a>
+        {t.footer.links.map((l, i) => (
+          <a key={l} href={i === 0 ? '/terms' : '#'}
+            style={{ fontSize:12, color:C.txt3, textDecoration:'none' }}>{l}</a>
         ))}
       </div>
       <div style={{ fontSize:11, color:C.txt3 }}>{t.footer.copy}</div>
@@ -568,17 +704,13 @@ function Footer({ t, vp }) {
 
 export default function LandingPage() {
   const [aircraftCount, setAircraftCount] = useState(0)
-  const [lang, setLang] = useState(() => {
-    try { return localStorage.getItem('qilin_lang') || 'es' } catch { return 'es' }
-  })
+  const { lang, switchLang } = useLang()
   const navigate = useNavigate()
   const vp = useViewport()
   const t = T[lang]
 
-  // Reflejar idioma en <html lang=> para screen readers + persistir elección.
   useEffect(() => {
     try { document.documentElement.lang = lang } catch {}
-    try { localStorage.setItem('qilin_lang', lang) } catch {}
   }, [lang])
 
   useEffect(() => {
@@ -610,7 +742,7 @@ export default function LandingPage() {
 
   return (
     <>
-      <Nav t={t} lang={lang} setLang={setLang} vp={vp}
+      <Nav t={t} lang={lang} setLang={switchLang} vp={vp}
         onLogin={() => navigate('/login')}
         onRegister={() => navigate('/register')}
       />
@@ -619,6 +751,7 @@ export default function LandingPage() {
       <Features t={t} vp={vp} />
       <SatelliteCallout t={t} vp={vp} />
       <Plans t={t} vp={vp} onRegister={plan => navigate(`/register?plan=${plan}`)} />
+      <FAQ t={t} vp={vp} />
       <Footer t={t} vp={vp} />
       <ChatBotPublic />
     </>
