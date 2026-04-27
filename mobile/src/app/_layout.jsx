@@ -14,17 +14,22 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    console.log('[Layout] starting loadToken')
     loadToken()
       .then(() => {
-        // Si no hay token, salto a la landing/login en vez de fallar en fetchs.
-        if (!getToken()) router.replace('/landing')
+        const hasToken = !!getToken()
+        console.log('[Layout] loadToken done, hasToken:', hasToken)
+        if (!hasToken) router.replace('/landing')
       })
+      .catch(err => console.error('[Layout] loadToken error:', err))
       .finally(() => {
-        SplashScreen.hideAsync().catch(() => {})
+        console.log('[Layout] hiding splash, setReady(true)')
+        SplashScreen.hideAsync().catch(e => console.warn('[Layout] hideAsync failed:', e))
         setReady(true)
       })
   }, [])
 
+  console.log('[Layout] render, ready:', ready)
   if (!ready) return null
 
   return (
