@@ -164,9 +164,9 @@ export default function HomeScreen() {
 }
 
 const s = StyleSheet.create({
-  root:        { flex: 1, backgroundColor: C.bg0 },
-  bgImage:     { opacity: 0.35 },
-  overlay:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2,6,14,0.55)' },
+  root:        { flex: 1 },
+  bgImage:     { resizeMode: 'cover' },
+  overlay:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2,6,14,0.72)' },
   scrollRoot:  { flex: 1 },
   header:      { paddingBottom: 16 },
   title:       { ...T.largeTitle },
