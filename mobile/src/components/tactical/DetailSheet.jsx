@@ -1,6 +1,5 @@
 import { useEffect, useRef, useMemo } from 'react'
 import { View, Animated, PanResponder, StyleSheet, Dimensions, Pressable } from 'react-native'
-import { BlurView } from 'expo-blur'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const { height: SCREEN_H } = Dimensions.get('window')
@@ -44,10 +43,10 @@ export function DetailSheet({ visible, onDismiss, children }) {
         style={[ds.sheet, { height: SHEET_H, transform: [{ translateY: slideY }] }]}
         {...panResponder.panHandlers}
       >
-        <BlurView intensity={90} tint="dark" style={[ds.blur, { paddingBottom: insets.bottom + 8 }]}>
+        <View style={[ds.glass, { paddingBottom: insets.bottom + 8 }]}>
           <View style={ds.handle} />
           {children}
-        </BlurView>
+        </View>
       </Animated.View>
     </>
   )
@@ -57,7 +56,12 @@ const ds = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject, zIndex: 19 },
   sheet:    { position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
-  blur:     { flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  glass:    { flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+              backgroundColor: 'rgba(18,18,24,0.96)',
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderLeftWidth: StyleSheet.hairlineWidth,
+              borderRightWidth: StyleSheet.hairlineWidth,
+              borderColor: 'rgba(255,255,255,0.12)' },
   handle:   { width: 36, height: 4, borderRadius: 2,
               backgroundColor: 'rgba(255,255,255,0.25)',
               alignSelf: 'center', marginTop: 10, marginBottom: 6 },

@@ -1,5 +1,4 @@
 import { View, Text, StyleSheet } from 'react-native'
-import { BlurView } from 'expo-blur'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLang } from '../../hooks/useLanguage'
 import { C } from '../../theme'
@@ -15,7 +14,7 @@ export function StatsStrip({ aircraft, vessels, alerts, wsStatus }) {
 
   return (
     <View style={[ss.wrapper, { bottom: insets.bottom + 12 }]}>
-      <BlurView intensity={80} tint="dark" style={ss.blur}>
+      <View style={ss.glass}>
         <View style={ss.row}>
           <Stat value={aircraft.length} label={t('tactical.aircraft')} />
           <Div />
@@ -29,7 +28,7 @@ export function StatsStrip({ aircraft, vessels, alerts, wsStatus }) {
             <View style={[ss.dot, { backgroundColor: wsColor }]} />
           </View>
         </View>
-      </BlurView>
+      </View>
     </View>
   )
 }
@@ -49,7 +48,8 @@ function Div() {
 
 const ss = StyleSheet.create({
   wrapper: { position: 'absolute', alignSelf: 'center', zIndex: 10 },
-  blur:    { borderRadius: 20, overflow: 'hidden' },
+  glass:   { borderRadius: 20, overflow: 'hidden', backgroundColor: 'rgba(10,10,20,0.82)',
+             borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   row:     { flexDirection: 'row', alignItems: 'center',
              paddingHorizontal: 16, paddingVertical: 8, gap: 12 },
   stat:    { alignItems: 'center', gap: 2 },

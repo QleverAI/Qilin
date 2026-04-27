@@ -1,6 +1,5 @@
 import { useRef, useCallback } from 'react'
 import { View, Text, Pressable, ScrollView, StyleSheet, Animated } from 'react-native'
-import { BlurView } from 'expo-blur'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
 import { useLang } from '../../hooks/useLanguage'
@@ -63,7 +62,7 @@ export function FilterBar({ hidden, onToggle }) {
 
   return (
     <View style={[fb.wrapper, { top: insets.top + 8 }]}>
-      <BlurView intensity={70} tint="dark" style={fb.blur}>
+      <View style={fb.glass}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -77,7 +76,7 @@ export function FilterBar({ hidden, onToggle }) {
             <FilterPill key={f.key} filter={f} hidden={hidden} onToggle={onToggle} t={t} />
           ))}
         </ScrollView>
-      </BlurView>
+      </View>
     </View>
   )
 }
@@ -91,7 +90,8 @@ const fp = StyleSheet.create({
 
 const fb = StyleSheet.create({
   wrapper: { position: 'absolute', left: 12, right: 12, zIndex: 10 },
-  blur:    { borderRadius: 12, overflow: 'hidden' },
+  glass:   { borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(10,10,20,0.82)',
+             borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   row:     { flexDirection: 'row', alignItems: 'center',
              paddingHorizontal: 10, paddingVertical: 8, gap: 6 },
   divider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 4 },
