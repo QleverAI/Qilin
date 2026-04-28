@@ -9,7 +9,7 @@ import { PageHeader }                        from '../../components/PageHeader'
 import { FilterPill }                        from '../../components/FilterPill'
 import { SeverityBadge }                     from '../../components/SeverityBadge'
 import { EmptyState }                        from '../../components/EmptyState'
-import { C, T, SEV_COLOR }                   from '../../theme'
+import { C, SEV_COLOR }                      from '../../theme'
 import { useBreakpoint }                     from '../../theme/responsive'
 
 const SEV_FILTERS = ['all', 'high', 'medium', 'low']
@@ -19,42 +19,35 @@ function fmt(iso) {
   return new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function NewsCard({ article, expanded, onPress }) {
-  const zone    = article.zones?.[0] || ''
-  const hasImg  = !!article.image_url
-  const sevColor = SEV_COLOR[article.severity] || C.txt3
-
+function HeroCard({ article, onPress }) {
   return (
-    <Pressable style={[s.card, expanded && s.cardExpanded]} onPress={onPress}>
-      {hasImg && (
-        <Image source={{ uri: article.image_url }} style={s.cardImg} resizeMode="cover" />
-      )}
-      <View style={s.cardBody}>
-        <View style={s.cardTop}>
+    <Pressable style={s.heroCard} onPress={onPress}>
+      <Image source={{ uri: article.image_url }} style={s.heroImg} resizeMode="cover" />
+      <View style={s.heroOverlay} />
+      <View style={s.heroBody}>
+        <View style={s.heroTop}>
           <SeverityBadge severity={article.severity} />
-          {zone ? <Text style={s.zone}>{zone}</Text> : null}
+          <Text style={s.heroPub}>{article.source} · {fmt(article.time)}</Text>
         </View>
-        <Text style={s.cardTitle} numberOfLines={expanded ? undefined : 3}>
-          {article.title}
-        </Text>
+        <Text style={s.heroTitle} numberOfLines={3}>{article.title}</Text>
+      </View>
+    </Pressable>
+  )
+}
+
+function NewsListItem({ article, expanded, onPress }) {
+  const color = SEV_COLOR[article.severity] || C.txt3
+  return (
+    <Pressable
+      style={[s.listItem, { borderLeftColor: color, backgroundColor: expanded ? 'rgba(255,255,255,0.03)' : 'transparent' }]}
+      onPress={onPress}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={s.listTitle} numberOfLines={expanded ? undefined : 2}>{article.title}</Text>
         {expanded && article.summary ? (
-          <Text style={s.cardSummary}>{article.summary}</Text>
+          <Text style={s.listSummary}>{article.summary}</Text>
         ) : null}
-        <View style={s.cardFoot}>
-          <Text style={s.cardSource}>{article.source}</Text>
-          <Text style={s.cardTime}>{fmt(article.time)}</Text>
-        </View>
-        {article.relevance != null && (
-          <View style={s.relRow}>
-            <View style={s.relTrack}>
-              <View style={[s.relFill, {
-                width: `${article.relevance}%`,
-                backgroundColor: article.relevance >= 80 ? C.red : article.relevance >= 60 ? C.amber : C.green,
-              }]} />
-            </View>
-            <Text style={s.relVal}>{article.relevance}</Text>
-          </View>
-        )}
+        <Text style={s.listMeta}>{article.source} · {fmt(article.time)}</Text>
       </View>
     </Pressable>
   )
@@ -73,7 +66,7 @@ export default function NewsScreen() {
   const [refreshing,  setRefreshing]  = useState(false)
 
   const { articles, zones, loading } = useNewsFeed({ topicsOnly: topicsOnly && hasTopics })
-  const { hPad, columns } = useBreakpoint()
+  const { hPad } = useBreakpoint()
 
   const allZones = ['all', ...zones]
   const SEV_LABEL = { all: t('common.all'), high: t('common.high'), medium: t('common.medium'), low: t('common.low') }
@@ -94,7 +87,11 @@ export default function NewsScreen() {
 
   return (
     <View style={s.root}>
-      <PageHeader title={t('news.title')} subtitle={t('news.count', { n: filtered.length })} />
+      <PageHeader
+        category="NOTICIAS"
+        title={t('news.title')}
+        subtitle={t('news.count', { n: filtered.length })}
+      />
 
       <View style={[s.searchWrap, { paddingHorizontal: hPad }]}>
         <TextInput
@@ -127,41 +124,34 @@ export default function NewsScreen() {
           </>
         )}
         {SEV_FILTERS.map(f => (
-          <FilterPill
-            key={f}
-            label={SEV_LABEL[f]}
-            active={sevFilter === f}
-            onPress={() => setSevFilter(f)}
-          />
+          <FilterPill key={f} label={SEV_LABEL[f]} active={sevFilter === f} onPress={() => setSevFilter(f)} />
         ))}
         <View style={s.pillDivider} />
         {allZones.map(z => (
-          <FilterPill
-            key={z}
-            label={z === 'all' ? t('common.allF') : z}
-            active={zoneFilter === z}
-            onPress={() => setZoneFilter(z)}
-          />
+          <FilterPill key={z} label={z === 'all' ? t('common.allF') : z} active={zoneFilter === z} onPress={() => setZoneFilter(z)} />
         ))}
       </ScrollView>
 
       <FlatList
-        key={`news-cols-${columns}`}
-        numColumns={columns}
         data={filtered}
         keyExtractor={a => String(a.id)}
-        contentContainerStyle={{ padding: hPad, gap: 12, paddingBottom: 32 }}
-        columnWrapperStyle={columns > 1 ? { gap: 12 } : undefined}
+        contentContainerStyle={{ paddingHorizontal: hPad, paddingTop: 8, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.txt3} />}
-        renderItem={({ item }) => (
-          <View style={columns > 1 ? { flex: 1 } : undefined}>
-            <NewsCard
-              article={item}
-              expanded={expanded === item.id}
-              onPress={() => setExpanded(expanded === item.id ? null : item.id)}
-            />
-          </View>
-        )}
+        renderItem={({ item, index }) => {
+          if (index === 0 && item.image_url) {
+            return <HeroCard article={item} onPress={() => setExpanded(expanded === item.id ? null : item.id)} />
+          }
+          return (
+            <View>
+              <NewsListItem
+                article={item}
+                expanded={expanded === item.id}
+                onPress={() => setExpanded(expanded === item.id ? null : item.id)}
+              />
+              <View style={s.sep} />
+            </View>
+          )
+        }}
         ListEmptyComponent={
           <EmptyState
             icon={loading ? null : '📰'}
@@ -175,30 +165,27 @@ export default function NewsScreen() {
 }
 
 const s = StyleSheet.create({
-  root:        { flex: 1, backgroundColor: C.bg0 },
-  searchWrap:  { paddingTop: 12, paddingBottom: 4 },
-  search:      { backgroundColor: C.bg2, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11,
-                 fontSize: 15, color: '#ffffff' },
-  pillRow:     { flexGrow: 0, paddingTop: 8 },
-  pillDivider: { width: 1, backgroundColor: C.separator, alignSelf: 'center', height: 20 },
-  myFeedPill:  { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-                 backgroundColor: C.bg2, borderWidth: 1, borderColor: 'transparent' },
-  myFeedActive:{ backgroundColor: C.amberFill, borderColor: C.amber },
-  myFeedText:  { fontSize: 13, fontWeight: '600', color: C.txt2, fontFamily: 'SpaceMono' },
-  myFeedTextActive: { color: C.amber },
-  card:        { backgroundColor: C.bg1, borderRadius: 12, overflow: 'hidden' },
-  cardExpanded: {},
-  cardImg:     { width: '100%', height: 180 },
-  cardBody:    { padding: 14, gap: 8 },
-  cardTop:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  zone:        { fontSize: 13, color: C.txt3, flex: 1 },
-  cardTitle:   { fontSize: 17, fontWeight: '600', color: '#ffffff', lineHeight: 23 },
-  cardSummary: { fontSize: 15, color: C.txt2, lineHeight: 22 },
-  cardFoot:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardSource:  { fontSize: 13, color: C.txt3, fontWeight: '500' },
-  cardTime:    { fontSize: 13, color: C.txt3, flex: 1, textAlign: 'right' },
-  relRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  relTrack:    { flex: 1, height: 3, backgroundColor: C.bg3, borderRadius: 2, overflow: 'hidden' },
-  relFill:     { height: '100%', borderRadius: 2 },
-  relVal:      { fontSize: 12, color: C.txt3, width: 24, textAlign: 'right' },
+  root:         { flex: 1, backgroundColor: C.bg0 },
+  searchWrap:   { paddingTop: 10, paddingBottom: 4 },
+  search:       { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8,
+                  paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, color: '#ffffff' },
+  pillRow:      { flexGrow: 0, paddingTop: 8 },
+  pillDivider:  { width: 1, backgroundColor: 'rgba(255,255,255,0.06)', alignSelf: 'center', height: 18 },
+  myFeedPill:   { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+                  backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  myFeedActive: { backgroundColor: C.goldFill, borderColor: C.goldBorder },
+  myFeedText:   { fontSize: 12, fontWeight: '600', color: C.txt2, fontFamily: 'SpaceMono' },
+  myFeedTextActive: { color: C.gold },
+  heroCard:     { borderRadius: 12, overflow: 'hidden', marginBottom: 4, height: 200, position: 'relative' },
+  heroImg:      { width: '100%', height: '100%', position: 'absolute' },
+  heroOverlay:  { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,9,13,0.65)' },
+  heroBody:     { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 14, gap: 6 },
+  heroTop:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroPub:      { fontSize: 10, color: 'rgba(255,255,255,0.5)', flex: 1 },
+  heroTitle:    { fontSize: 16, fontWeight: '700', color: '#ffffff', lineHeight: 22 },
+  listItem:     { paddingVertical: 11, paddingLeft: 12, paddingRight: 4, borderLeftWidth: 2 },
+  listTitle:    { fontSize: 13, fontWeight: '600', color: '#ffffff', lineHeight: 18, marginBottom: 4 },
+  listSummary:  { fontSize: 12, color: C.txt2, lineHeight: 17, marginBottom: 4 },
+  listMeta:     { fontSize: 10, color: C.txt3 },
+  sep:          { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginLeft: 16 },
 })
