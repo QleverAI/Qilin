@@ -222,7 +222,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={s.safe}>
       <Stack.Screen options={{ title: t('profile.title'), headerShown: true,
         headerStyle: { backgroundColor: C.bg0 }, headerTintColor: '#ffffff',
-        headerBackTitle: '' }} />
+        headerBackTitle: t('common.back') }} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 24, alignSelf: 'center', width: '100%', maxWidth: maxContentWidth }}>
 
         {/* Avatar */}
