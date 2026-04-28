@@ -13,6 +13,7 @@ import { useSecFeed }                          from '../../hooks/useSecFeed'
 import { useIntelTimeline }                    from '../../hooks/useIntelTimeline'
 import { useLang }                             from '../../hooks/useLanguage'
 import { SectionHeader }                       from '../../components/SectionHeader'
+import { LangToggle }                          from '../../components/LangToggle'
 import { C, SEV_COLOR }                        from '../../theme'
 import { useBreakpoint }                       from '../../theme/responsive'
 
@@ -269,8 +270,13 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={[s.header, { paddingTop: insets.top + 12, paddingHorizontal: hPad }]}>
-          <Text style={s.headerLabel}>QILIN INTEL</Text>
-          <Text style={s.headerTitle}>{t('home.title')}</Text>
+          <View style={s.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.headerLabel}>QILIN INTEL</Text>
+              <Text style={s.headerTitle}>{t('home.title')}</Text>
+            </View>
+            <LangToggle />
+          </View>
           <View style={s.wsBadge}>
             <View style={[s.wsDot, { backgroundColor: wsColor }]} />
             <Text style={[s.wsText, { color: wsColor }]}>{wsLabel}</Text>
@@ -378,6 +384,7 @@ const s = StyleSheet.create({
   root:       { flex: 1, backgroundColor: C.bg0 },
   scroll:     { flex: 1 },
   header:     { paddingBottom: 14 },
+  headerRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   headerLabel:{ fontSize: 10, fontWeight: '700', color: C.gold, letterSpacing: 2, marginBottom: 2 },
   headerTitle:{ fontSize: 24, fontWeight: '900', color: '#ffffff', letterSpacing: -0.5, lineHeight: 28 },
   wsBadge:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },

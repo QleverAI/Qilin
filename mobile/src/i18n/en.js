@@ -68,6 +68,16 @@ export default {
     suggest:      'Try adjusting filters',
     topics_empty: 'No news for your topics',
     my_feed:      'MY FEED',
+    filter:       'Filters',
+    filter_sev:   'Severity',
+    filter_zone:  'Zone',
+    filter_apply: 'Apply',
+    sort:         'Sort',
+    sort_newest:  'Newest first',
+    sort_severity:'By severity',
+    sort_oldest:  'Oldest first',
+    open_article: 'Read article',
+    active_filters: ({ n }) => `${n} active`,
   },
 
   social: {

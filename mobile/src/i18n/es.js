@@ -68,6 +68,16 @@ export default {
     suggest:      'Prueba ajustando los filtros',
     topics_empty: 'Sin noticias para tus topics',
     my_feed:      'MI FEED',
+    filter:       'Filtros',
+    filter_sev:   'Severidad',
+    filter_zone:  'Zona',
+    filter_apply: 'Aplicar',
+    sort:         'Ordenar',
+    sort_newest:  'Más recientes',
+    sort_severity:'Por severidad',
+    sort_oldest:  'Más antiguas',
+    open_article: 'Leer artículo',
+    active_filters: ({ n }) => `${n} activos`,
   },
 
   social: {

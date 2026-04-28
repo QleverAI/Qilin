@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native'
 import { useSafeAreaInsets }      from 'react-native-safe-area-context'
 import { C }                      from '../theme'
+import { LangToggle }             from './LangToggle'
 
 export function PageHeader({ category, title, subtitle, right }) {
   const insets = useSafeAreaInsets()
@@ -12,7 +13,7 @@ export function PageHeader({ category, title, subtitle, right }) {
           <Text style={s.title}>{title}</Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
         </View>
-        {right ? <View style={s.right}>{right}</View> : null}
+        <View style={s.right}>{right ?? <LangToggle />}</View>
       </View>
       <View style={s.sep} />
     </View>
