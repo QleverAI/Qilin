@@ -7,8 +7,8 @@ import { PageHeader }                                     from '../../components
 import { useLang }                                        from '../../hooks/useLanguage'
 import { C }                                              from '../../theme'
 import { useBreakpoint }                                  from '../../theme/responsive'
-import { setToken }                                       from '../../hooks/apiClient'
-import * as SecureStore                                   from 'expo-secure-store'
+import { clearToken }                                     from '../../hooks/apiClient'
+import { clearFeedCache }                                 from '../../hooks/feedCache'
 
 function MenuItem({ icon, label, onPress, badge, color, fill, destructive }) {
   const iconColor = destructive ? C.red   : (color || C.blue)
@@ -49,8 +49,8 @@ export default function MoreScreen() {
 
   async function handleLogout() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-    setToken(null)
-    await SecureStore.deleteItemAsync('qilin_token').catch(() => {})
+    await clearToken()
+    await clearFeedCache()
     router.replace('/landing')
   }
 

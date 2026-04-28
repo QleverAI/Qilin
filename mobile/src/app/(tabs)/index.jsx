@@ -362,9 +362,9 @@ export default function HomeScreen() {
         {/* Acceso rápido */}
         <SectionHeader title={t('home.section_quick_access')} />
         <View style={[s.section, { marginHorizontal: hPad }]}>
-          {QUICK_ITEMS.map((item, i) => (
-            <View key={item.key}>
-              <QuickItem {...item} count={counts[item.key]} onPress={() => router.push(item.route)} />
+          {QUICK_ITEMS.map(({ key, route, ...rest }, i) => (
+            <View key={key}>
+              <QuickItem {...rest} count={counts[key]} onPress={() => router.push(route)} />
               {i < QUICK_ITEMS.length - 1 && <View style={s.sep} />}
             </View>
           ))}
