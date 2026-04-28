@@ -32,8 +32,8 @@ function buildTiers(t) {
       key: 'analyst',
       tier: 'TIER 02',
       name: 'ANALYST',
-      price: 'Próximamente',
-      period: '',
+      price: '50€',
+      period: '/mes',
       tagline: t('plans.analyst_tagline'),
       popular: true,
       feats: [
@@ -44,15 +44,15 @@ function buildTiers(t) {
         'Señales convergentes avanzadas',
         'Acceso prioritario a nuevas funciones',
       ],
-      cta: t('plans.cta_trial'),
-      action: () => router.push('/register?plan=analyst'),
+      cta: 'Suscribirse',
+      action: () => Linking.openURL('http://178.104.238.122/register?plan=analyst').catch(() => {}),
     },
     {
-      key: 'pro',
+      key: 'command',
       tier: 'TIER 03',
-      name: 'PRO',
-      price: 'Próximamente',
-      period: '',
+      name: 'COMMAND',
+      price: '200€',
+      period: '/mes',
       tagline: t('plans.command_tagline'),
       popular: false,
       feats: [
@@ -63,8 +63,8 @@ function buildTiers(t) {
         'Sin límite de favoritos',
         'Soporte directo',
       ],
-      cta: t('plans.cta_contact'),
-      action: () => Linking.openURL('mailto:ventas@qilin.app?subject=Plan%20Pro').catch(() => {}),
+      cta: 'Suscribirse',
+      action: () => Linking.openURL('http://178.104.238.122/register?plan=command').catch(() => {}),
     },
   ]
 }
@@ -79,7 +79,10 @@ function PlanCard({ plan, popularLabel }) {
       ) : null}
       <Text style={s.tier}>{plan.tier}</Text>
       <Text style={s.name}>{plan.name}</Text>
-      <Text style={s.price}>{plan.price}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
+        <Text style={s.price}>{plan.price}</Text>
+        {!!plan.period && <Text style={[s.tagline, { fontSize: 13 }]}>{plan.period}</Text>}
+      </View>
       <Text style={s.tagline}>{plan.tagline}</Text>
       <View style={s.divider} />
       <View style={s.featList}>

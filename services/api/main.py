@@ -18,6 +18,7 @@ import asyncpg
 import httpx
 import bcrypt
 import jwt
+import stripe
 import yaml
 import yfinance as yf
 import redis.asyncio as aioredis
@@ -37,6 +38,16 @@ REPORTS_DIR = os.getenv("REPORTS_DIR", "/app/reports")
 JWT_SECRET  = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
 JWT_ALGO    = "HS256"
 JWT_TTL_H   = 24  # horas de validez del token
+
+STRIPE_SECRET_KEY     = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_ANALYST  = os.getenv("STRIPE_PRICE_ANALYST", "")
+STRIPE_PRICE_COMMAND  = os.getenv("STRIPE_PRICE_COMMAND", "")
+STRIPE_SUCCESS_URL    = os.getenv("STRIPE_SUCCESS_URL", "http://178.104.238.122/success?session_id={CHECKOUT_SESSION_ID}")
+STRIPE_CANCEL_URL     = os.getenv("STRIPE_CANCEL_URL", "http://178.104.238.122/register")
+
+if STRIPE_SECRET_KEY:
+    stripe.api_key = STRIPE_SECRET_KEY
 
 # ── Carga usuarios desde env ──────────────────────────────────────────────────
 # Formato: AUTH_USER_1=carlos:$2b$12$hash...
@@ -60,47 +71,75 @@ PLAN_LIMITS: dict[str, int | None] = {
     "free":     2,
     "scout":    5,
     "analyst":  20,
-    "pro":      None,  # unlimited
+    "command":  None,
+    "pro":      None,
 }
 
 # ── Market assets ─────────────────────────────────────────────────────────────
 MARKET_ASSETS = [
+    # Materias primas — energía
     {"symbol": "CL=F",  "name": "WTI Crude Oil",         "group": "Materias primas"},
     {"symbol": "BZ=F",  "name": "Brent Crude",            "group": "Materias primas"},
-    {"symbol": "CC=F",  "name": "Cacao",                  "group": "Materias primas"},
-    {"symbol": "GC=F",  "name": "Oro",                    "group": "Materias primas"},
     {"symbol": "NG=F",  "name": "Gas natural",            "group": "Materias primas"},
-    {"symbol": "ZW=F",  "name": "Trigo",                  "group": "Materias primas"},
+    # Materias primas — metales
+    {"symbol": "GC=F",  "name": "Oro",                    "group": "Materias primas"},
+    {"symbol": "SI=F",  "name": "Plata",                  "group": "Materias primas"},
     {"symbol": "HG=F",  "name": "Cobre",                  "group": "Materias primas"},
     {"symbol": "ALI=F", "name": "Aluminio",               "group": "Materias primas"},
+    # Materias primas — agrícolas
+    {"symbol": "ZW=F",  "name": "Trigo",                  "group": "Materias primas"},
+    {"symbol": "ZC=F",  "name": "Maíz",                   "group": "Materias primas"},
+    {"symbol": "ZS=F",  "name": "Soja",                   "group": "Materias primas"},
+    {"symbol": "KC=F",  "name": "Café",                   "group": "Materias primas"},
+    {"symbol": "SB=F",  "name": "Azúcar",                 "group": "Materias primas"},
+    {"symbol": "CC=F",  "name": "Cacao",                  "group": "Materias primas"},
+    # Defensa EEUU
     {"symbol": "LMT",   "name": "Lockheed Martin",        "group": "Defensa EEUU"},
     {"symbol": "RTX",   "name": "Raytheon",               "group": "Defensa EEUU"},
     {"symbol": "BA",    "name": "Boeing",                 "group": "Defensa EEUU"},
     {"symbol": "NOC",   "name": "Northrop Grumman",       "group": "Defensa EEUU"},
     {"symbol": "GD",    "name": "General Dynamics",       "group": "Defensa EEUU"},
     {"symbol": "LHX",   "name": "L3Harris",               "group": "Defensa EEUU"},
+    # Defensa Europa
     {"symbol": "RHM.DE","name": "Rheinmetall",            "group": "Defensa Europa"},
     {"symbol": "BA.L",  "name": "BAE Systems",            "group": "Defensa Europa"},
     {"symbol": "AIR.PA","name": "Airbus",                 "group": "Defensa Europa"},
     {"symbol": "HO.PA", "name": "Thales",                 "group": "Defensa Europa"},
     {"symbol": "LDO.MI","name": "Leonardo",               "group": "Defensa Europa"},
+    # Energía
     {"symbol": "XOM",   "name": "ExxonMobil",             "group": "Energía"},
     {"symbol": "CVX",   "name": "Chevron",                "group": "Energía"},
     {"symbol": "SHEL",  "name": "Shell",                  "group": "Energía"},
     {"symbol": "BP",    "name": "BP",                     "group": "Energía"},
     {"symbol": "TTE",   "name": "TotalEnergies",          "group": "Energía"},
-    {"symbol": "EQNR",  "name": "Equinor",               "group": "Energía"},
+    {"symbol": "EQNR",  "name": "Equinor",                "group": "Energía"},
+    # Semiconductores
     {"symbol": "NVDA",  "name": "NVIDIA",                 "group": "Semiconductores"},
     {"symbol": "TSM",   "name": "TSMC",                   "group": "Semiconductores"},
     {"symbol": "ASML",  "name": "ASML",                   "group": "Semiconductores"},
     {"symbol": "INTC",  "name": "Intel",                  "group": "Semiconductores"},
+    {"symbol": "AMD",   "name": "AMD",                    "group": "Semiconductores"},
+    # Minería crítica
     {"symbol": "FCX",   "name": "Freeport-McMoRan",       "group": "Minería crítica"},
     {"symbol": "VALE",  "name": "Vale",                   "group": "Minería crítica"},
     {"symbol": "RIO",   "name": "Rio Tinto",              "group": "Minería crítica"},
+    {"symbol": "ALB",   "name": "Albemarle (Litio)",      "group": "Minería crítica"},
+    {"symbol": "MP",    "name": "MP Materials (T. Raras)","group": "Minería crítica"},
+    {"symbol": "CCJ",   "name": "Cameco (Uranio)",        "group": "Minería crítica"},
+    # Transporte marítimo
+    {"symbol": "ZIM",   "name": "ZIM Shipping",           "group": "Transporte marítimo"},
+    {"symbol": "MATX",  "name": "Matson",                 "group": "Transporte marítimo"},
+    {"symbol": "FRO",   "name": "Frontline (Tankers)",    "group": "Transporte marítimo"},
+    # Tecnología
+    {"symbol": "PLTR",  "name": "Palantir",               "group": "Tecnología"},
+    # ETFs
     {"symbol": "USO",   "name": "Oil ETF",                "group": "ETFs"},
     {"symbol": "GLD",   "name": "Gold ETF",               "group": "ETFs"},
     {"symbol": "XLE",   "name": "Energy Select ETF",      "group": "ETFs"},
     {"symbol": "ITA",   "name": "Aerospace & Defense ETF","group": "ETFs"},
+    {"symbol": "LIT",   "name": "Lithium & Battery ETF",  "group": "ETFs"},
+    {"symbol": "REMX",  "name": "Rare Earth Metals ETF",  "group": "ETFs"},
+    {"symbol": "URA",   "name": "Uranium ETF",            "group": "ETFs"},
 ]
 
 _PERIOD_INTERVAL = {"1d": "5m", "5d": "1h", "1mo": "1d", "3mo": "1d", "1y": "1wk"}
@@ -451,6 +490,74 @@ async def register(req: RegisterRequest):
     log.info(f"Nuevo usuario registrado: {req.username.lower()}")
     token = create_token(req.username.lower())
     return {"access_token": token, "token_type": "bearer", "username": req.username.lower()}
+
+
+# ── STRIPE ────────────────────────────────────────────────────────────────────
+
+class CheckoutRequest(BaseModel):
+    plan: str  # "analyst" or "command"
+
+
+@app.post("/stripe/create-checkout-session")
+async def create_checkout_session(req: CheckoutRequest, user: str = Depends(get_current_user)):
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Stripe no configurado")
+    if req.plan not in ("analyst", "command"):
+        raise HTTPException(status_code=400, detail="Plan inválido")
+    price_id = STRIPE_PRICE_ANALYST if req.plan == "analyst" else STRIPE_PRICE_COMMAND
+    if not price_id:
+        raise HTTPException(status_code=503, detail="Price ID no configurado")
+    db = app.state.db
+    if not db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    row = await db.fetchrow("SELECT email FROM users WHERE username=$1", user)
+    if not row:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{"price": price_id, "quantity": 1}],
+            mode="subscription",
+            customer_email=row["email"],
+            success_url=STRIPE_SUCCESS_URL,
+            cancel_url=STRIPE_CANCEL_URL,
+            metadata={"username": user, "plan": req.plan},
+        )
+        return {"url": session.url}
+    except stripe.StripeError as e:
+        log.error(f"[Stripe] create-checkout-session error: {e}")
+        raise HTTPException(status_code=502, detail="Error creando sesión de pago")
+
+
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+    if STRIPE_WEBHOOK_SECRET:
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+        except stripe.errors.SignatureVerificationError:
+            raise HTTPException(status_code=400, detail="Invalid signature")
+    else:
+        try:
+            event = json.loads(payload)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid payload")
+
+    if event.get("type") == "checkout.session.completed":
+        session_obj = event["data"]["object"]
+        username = (session_obj.get("metadata") or {}).get("username")
+        plan     = (session_obj.get("metadata") or {}).get("plan")
+        if username and plan and app.state.db:
+            try:
+                await app.state.db.execute(
+                    "UPDATE users SET plan=$1 WHERE username=$2", plan, username
+                )
+                log.info(f"[Stripe] Plan actualizado a '{plan}' para '{username}'")
+            except Exception as exc:
+                log.error(f"[Stripe] Error actualizando plan: {exc}")
+
+    return {"status": "ok"}
 
 
 # ── REST ENDPOINTS ────────────────────────────────────────────────────────────
@@ -842,7 +949,10 @@ async def get_vessels_api(_user: str = Depends(get_current_user)):
     if not keys:
         return []
     values = await redis.mget(*keys)
-    return [json.loads(v) for v in values if v]
+    return [
+        v for v in (json.loads(raw) for raw in values if raw)
+        if v.get("category") != "unknown"
+    ]
 
 
 @app.get("/vessels/{mmsi}/info")
@@ -865,24 +975,48 @@ async def get_vessel_info(mmsi: str, _user: str = Depends(get_current_user)):
         await redis.setex(cache_key, 86400, json.dumps(result))
         return result
 
+    _SHIP_TERMS = {
+        "ship", "vessel", "tanker", "cargo", "warship", "frigate", "destroyer",
+        "submarine", "ferry", "cruise", "container", "bulk carrier", "naval",
+        "navy", "fleet", "freighter", "trawler", "yacht", "corvette", "carrier",
+    }
+
+    def _is_ship_article(data: dict) -> bool:
+        """Reject Wikipedia articles that are clearly not about a vessel."""
+        desc = (data.get("description") or "").lower()
+        extract = (data.get("extract") or "").lower()
+        combined = desc + " " + extract[:300]
+        return any(term in combined for term in _SHIP_TERMS)
+
     result = {}
+    # Try several name formats — AIS names are uppercase, Wikipedia uses title case
+    name_variants = [name, name.title(), name.capitalize()]
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(
-                f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(name.replace(' ', '_'), safe='')}",
-                headers={"User-Agent": "QilinIntelligence/1.0 carlosqc.work@gmail.com"},
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                result = {
-                    "thumbnail": data.get("thumbnail", {}).get("source"),
-                    "extract":   data.get("extract", ""),
-                    "url":       data.get("content_urls", {}).get("desktop", {}).get("page"),
-                }
+            for variant in name_variants:
+                slug = quote(variant.replace(' ', '_'), safe='')
+                resp = await client.get(
+                    f"https://en.wikipedia.org/api/rest_v1/page/summary/{slug}",
+                    headers={"User-Agent": "QilinIntelligence/1.0 carlosqc.work@gmail.com"},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if not _is_ship_article(data):
+                        continue  # skip islands, cities, people, etc.
+                    thumbnail = (data.get("thumbnail") or {}).get("source")
+                    if thumbnail:
+                        result = {
+                            "thumbnail": thumbnail,
+                            "extract":   data.get("extract", ""),
+                            "url":       (data.get("content_urls") or {}).get("desktop", {}).get("page"),
+                        }
+                        break
     except Exception as e:
         log.warning(f"Wikipedia lookup failed for vessel {mmsi} ({name}): {e}")
 
-    await redis.setex(cache_key, 86400, json.dumps(result))
+    # Only cache positive results for 24h; cache misses for 1h so we retry sooner
+    ttl = 86400 if result.get("thumbnail") else 3600
+    await redis.setex(cache_key, ttl, json.dumps(result))
     return result
 
 
@@ -1109,8 +1243,12 @@ async def get_aircraft_meta(icao24: str, _user: str = Depends(get_current_user))
                 data = resp.json()
                 photos = data.get("photos", [])
                 if photos:
-                    result["photo_url"]    = photos[0].get("thumbnail_large", {}).get("src")
-                    result["photographer"] = photos[0].get("photographer")
+                    p = photos[0]
+                    result["photo_url"] = (
+                        (p.get("thumbnail_large") or {}).get("src")
+                        or (p.get("thumbnail") or {}).get("src")
+                    )
+                    result["photographer"] = p.get("photographer")
         except Exception as e:
             log.warning(f"Planespotters error para {ic}: {e}")
 

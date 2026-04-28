@@ -37,6 +37,9 @@ const MarketsPage   = lazy(() => import('./pages/MarketsPage'))
 const PolymarketPage= lazy(() => import('./pages/PolymarketPage'))
 const ProfilePage   = lazy(() => import('./pages/ProfilePage'))
 const PlansPage     = lazy(() => import('./pages/PlansPage'))
+const TermsPage     = lazy(() => import('./pages/TermsPage'))
+const SuccessPage   = lazy(() => import('./pages/SuccessPage'))
+const CancelPage    = lazy(() => import('./pages/CancelPage'))
 
 const MapView = lazy(() => import('./components/MapView'))
 
@@ -204,6 +207,9 @@ export default function App() {
         <Route path="/"         element={<LandingPage />} />
         <Route path="/login"    element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/terms"    element={<TermsPage />} />
+        <Route path="/success"  element={<SuccessPage />} />
+        <Route path="/cancel"   element={<CancelPage />} />
         <Route path="/app"      element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
         <Route path="/app/*"    element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
       </Routes>

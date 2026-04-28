@@ -23,7 +23,20 @@ const skipStyle = {
   background: 'none', border: 'none', width: '100%',
 }
 
-const PLAN_TOPIC_LIMIT = { free: 2, scout: 5, analyst: 20, command: null }
+const PLAN_TOPIC_LIMIT = { scout: 5, analyst: 20, command: null }
+
+// Topic IDs that have a corresponding market asset (chart available)
+const MARKET_TOPIC_IDS = new Set([
+  // Sectors
+  'energy', 'defense', 'technology', 'semiconductors', 'shipping',
+  'mining', 'nuclear', 'aviation', 'food_security',
+  // Commodities
+  'oil', 'natural_gas', 'wheat', 'copper', 'lithium', 'gold',
+  'aluminum', 'uranium', 'rare_earths', 'corn', 'soybean', 'coffee', 'sugar',
+  // Companies
+  'nvidia', 'tsmc', 'lockheed_martin', 'boeing', 'shell', 'rheinmetall',
+  'asml', 'bae_systems', 'raytheon', 'northrop_grumman', 'palantir', 'bp', 'chevron',
+])
 
 function StepIndicator({ step, t }) {
   const steps = [
@@ -136,14 +149,16 @@ export default function RegisterPage() {
   const [loading,   setLoading]   = useState(false)
   const [catalog,   setCatalog]   = useState([])
   const [myTopics,  setMyTopics]  = useState([])
-  const [chatId,    setChatId]    = useState('')
-  const [token,     setToken]     = useState('')
+  const [chatId,       setChatId]       = useState('')
+  const [token,        setToken]        = useState('')
+  const [acceptTerms,  setAcceptTerms]  = useState(false)
+  const [acceptMkt,    setAcceptMkt]    = useState(false)
 
   const navigate = useNavigate()
   const [params]  = useSearchParams()
-  const [selectedPlan, setSelectedPlan] = useState(params.get('plan') || 'free')
+  const [selectedPlan, setSelectedPlan] = useState(params.get('plan') || 'scout')
 
-  const topicLimit = PLAN_TOPIC_LIMIT[selectedPlan] ?? 2
+  const topicLimit = PLAN_TOPIC_LIMIT[selectedPlan] ?? 5
 
   useEffect(() => {
     fetch('/api/topics')
@@ -157,12 +172,13 @@ export default function RegisterPage() {
     setError('')
     if (password !== password2) { setError(t('register.err.mismatch')); return }
     if (password.length < 8) { setError(t('register.err.too_short')); return }
+    if (!acceptTerms) { setError(t('register.terms.required')); return }
     setLoading(true)
     try {
       const res = await fetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.toLowerCase(), email, password }),
+        body: JSON.stringify({ username: username.toLowerCase(), email, password, marketing: acceptMkt }),
       })
       if (res.status === 409) { setError(t('register.err.conflict')); return }
       if (!res.ok) {
@@ -173,6 +189,22 @@ export default function RegisterPage() {
       sessionStorage.setItem('qilin_token', access_token)
       sessionStorage.setItem('qilin_user', username.toLowerCase())
       setToken(access_token)
+
+      if (selectedPlan === 'analyst' || selectedPlan === 'command') {
+        try {
+          const chkRes = await fetch('/api/stripe/create-checkout-session', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: selectedPlan }),
+          })
+          if (chkRes.ok) {
+            const { url } = await chkRes.json()
+            window.location.href = url
+            return
+          }
+        } catch (_) {}
+      }
+
       setStep(3)
     } catch (_) {
       setError(t('register.err.connection'))
@@ -209,28 +241,23 @@ export default function RegisterPage() {
 
   const plans = [
     {
-      id: 'free', tier: 'TIER 00', name: 'Free',
-      price: t('register.plan_select.free_badge'), priceNote: '', topics: 2, paid: false,
-      features: [t('register.plan.free.f1'), t('register.plan.free.f2'), t('register.plan.free.f3')],
-    },
-    {
       id: 'scout', tier: 'TIER 01', name: 'Scout',
       price: t('register.plan_select.free_badge'), priceNote: '', topics: 5, paid: false,
       features: [t('register.plan.scout.f1'), t('register.plan.scout.f2'), t('register.plan.scout.f3')],
     },
     {
       id: 'analyst', tier: 'TIER 02', name: 'Analyst',
-      price: '$49', priceNote: '/mo', topics: 20, paid: true,
+      price: '50€', priceNote: t('register.plan.price_note'), topics: 20, paid: true,
       features: [t('register.plan.analyst.f1'), t('register.plan.analyst.f2'), t('register.plan.analyst.f3')],
     },
     {
       id: 'command', tier: 'TIER 03', name: 'Command',
-      price: '$199', priceNote: '/mo', topics: null, paid: true,
+      price: '200€', priceNote: t('register.plan.price_note'), topics: null, paid: true,
       features: [t('register.plan.command.f1'), t('register.plan.command.f2'), t('register.plan.command.f3')],
     },
   ]
 
-  const maxWidth = step === 1 ? '580px' : step === 3 ? '640px' : '420px'
+  const maxWidth = step === 1 ? '720px' : step === 3 ? '640px' : '420px'
 
   return (
     <div style={{ minHeight: '100vh', background: '#02060e', display: 'flex',
@@ -260,7 +287,7 @@ export default function RegisterPage() {
                 {t('register.plan_select.subtitle')}
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
               {plans.map(p => (
                 <PlanCard key={p.id} {...p} planId={p.id} selected={selectedPlan === p.id} onSelect={setSelectedPlan} t={t} />
               ))}
@@ -268,6 +295,7 @@ export default function RegisterPage() {
             <button onClick={() => setStep(2)} style={stepBtn}>
               {t('register.plan_select.btn_continue', { plan: plans.find(p => p.id === selectedPlan)?.name || '' })}
             </button>
+            <button onClick={() => navigate('/')} style={skipStyle}>← {t('register.back_home')}</button>
           </div>
         )}
 
@@ -290,14 +318,45 @@ export default function RegisterPage() {
               <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>{t('register.field.password2')}</label>
               <input type="password" value={password2} onChange={e => setPassword2(e.target.value)} placeholder={t('register.placeholder.pass2')} required style={inputStyle} />
             </div>
+            {/* Checkboxes */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={e => setAcceptTerms(e.target.checked)}
+                  style={{ marginTop: '2px', accentColor: '#c8a03c', flexShrink: 0 }}
+                />
+                <span style={{ fontSize: '12px', color: 'rgba(220,230,245,0.55)', lineHeight: 1.5 }}>
+                  {t('register.terms.accept')}{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'rgba(200,160,60,0.8)', textDecoration: 'underline' }}>
+                    {t('register.terms.link')}
+                  </a>
+                  {' *'}
+                </span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={acceptMkt}
+                  onChange={e => setAcceptMkt(e.target.checked)}
+                  style={{ marginTop: '2px', accentColor: '#c8a03c', flexShrink: 0 }}
+                />
+                <span style={{ fontSize: '12px', color: 'rgba(220,230,245,0.55)', lineHeight: 1.5 }}>
+                  {t('register.marketing')}
+                </span>
+              </label>
+            </div>
+
             {error && (
               <div style={{ fontSize: '13px', color: '#ff453a', background: 'rgba(255,69,58,0.08)',
                 border: '1px solid rgba(255,69,58,0.2)', borderRadius: '6px', padding: '10px 14px', textAlign: 'center' }}>{error}</div>
             )}
-            <button type="submit" disabled={loading} style={{ ...stepBtn, opacity: loading ? 0.7 : 1, cursor: loading ? 'default' : 'pointer' }}>
+            <button type="submit" disabled={loading || !acceptTerms} style={{ ...stepBtn, opacity: (loading || !acceptTerms) ? 0.7 : 1, cursor: (loading || !acceptTerms) ? 'default' : 'pointer' }}>
               {loading ? t('register.btn.creating') : t('register.btn.continue')}
             </button>
-            <button type="button" onClick={() => setStep(1)} style={skipStyle}>← {t('register.btn.back')}</button>
+            <button type="button" onClick={() => setStep(1)} style={skipStyle}>{t('register.btn.back')}</button>
           </form>
         )}
 
@@ -314,7 +373,7 @@ export default function RegisterPage() {
                 selected={myTopics}
                 limit={topicLimit}
                 onChange={setMyTopics}
-                catalog={catalog}
+                catalog={catalog.filter(t => MARKET_TOPIC_IDS.has(t.id))}
                 excludeTypes={['zone']}
               />
             </div>
@@ -324,6 +383,7 @@ export default function RegisterPage() {
                 : t('register.btn.continue')}
             </button>
             <button onClick={() => setStep(4)} style={skipStyle}>{t('register.btn.skip')}</button>
+            <button onClick={() => setStep(2)} style={skipStyle}>{t('register.btn.back')}</button>
           </div>
         )}
 
@@ -349,6 +409,7 @@ export default function RegisterPage() {
               {chatId.trim() ? t('register.btn.finish') : t('register.btn.go_app')}
             </button>
             <button onClick={() => navigate('/app', { replace: true })} style={skipStyle}>{t('register.btn.skip')}</button>
+            <button onClick={() => setStep(3)} style={skipStyle}>{t('register.btn.back')}</button>
           </div>
         )}
 

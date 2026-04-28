@@ -8,7 +8,6 @@ const NAV_ITEMS = [
   { id: 'news',       key: 'nav.news'      },
   { id: 'documents',  key: 'nav.documents' },
   { id: 'social',     key: 'nav.social'    },
-  { id: 'sentinel',   key: 'nav.sentinel'  },
   { id: 'markets',    key: 'nav.markets'   },
   { id: 'polymarket', key: 'nav.polymarket'},
 ]
