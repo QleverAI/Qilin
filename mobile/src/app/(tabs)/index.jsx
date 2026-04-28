@@ -1,10 +1,11 @@
 import { ScrollView, View, Text, Pressable, StyleSheet,
-         RefreshControl }                      from 'react-native'
+         RefreshControl, Image }               from 'react-native'
 import { useState, useCallback, useMemo }      from 'react'
 import { router }                              from 'expo-router'
 import { useSafeAreaInsets }                   from 'react-native-safe-area-context'
 import * as Haptics                            from 'expo-haptics'
 import Ionicons                                from '@expo/vector-icons/Ionicons'
+const DRAGON_LOGO = require('../../../assets/qilin-dragon.png')
 import { useQilinData }                        from '../../hooks/useQilinData'
 import { useNewsFeed }                         from '../../hooks/useNewsFeed'
 import { useDocsFeed }                         from '../../hooks/useDocsFeed'
@@ -271,10 +272,18 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={[s.header, { paddingTop: insets.top + 12, paddingHorizontal: hPad }]}>
           <View style={s.headerRow}>
-            <View style={{ flex: 1 }}>
+            <Image source={DRAGON_LOGO} style={s.logo} resizeMode="contain" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={s.headerLabel}>QILIN INTEL</Text>
               <Text style={s.headerTitle}>{t('home.title')}</Text>
             </View>
+            <Pressable
+              onPress={() => router.push('/profile')}
+              hitSlop={8}
+              style={s.userBtn}
+            >
+              <Ionicons name="person-circle-outline" size={26} color={C.txt2} />
+            </Pressable>
             <LangToggle />
           </View>
           <View style={s.wsBadge}>
@@ -384,9 +393,11 @@ const s = StyleSheet.create({
   root:       { flex: 1, backgroundColor: C.bg0 },
   scroll:     { flex: 1 },
   header:     { paddingBottom: 14 },
-  headerRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  headerLabel:{ fontSize: 10, fontWeight: '700', color: C.gold, letterSpacing: 2, marginBottom: 2 },
-  headerTitle:{ fontSize: 24, fontWeight: '900', color: '#ffffff', letterSpacing: -0.5, lineHeight: 28 },
+  headerRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  logo:       { width: 40, height: 40 },
+  headerLabel:{ fontSize: 10, fontWeight: '700', color: C.gold, letterSpacing: 2, marginBottom: 1 },
+  headerTitle:{ fontSize: 22, fontWeight: '900', color: '#ffffff', letterSpacing: -0.5, lineHeight: 26 },
+  userBtn:    { padding: 2 },
   wsBadge:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   wsDot:      { width: 6, height: 6, borderRadius: 3 },
   wsText:     { fontSize: 11, fontWeight: '600' },

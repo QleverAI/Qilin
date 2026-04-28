@@ -167,7 +167,7 @@ export default function IntelScreen() {
   return (
     <View style={s.root}>
       <PageHeader
-        category="INTEL"
+       
         title={t('intel.title')}
         subtitle={`${t('intel.count', { n: filtered.length })} · 24h: ${stats24h.masters}M / ${stats24h.findings7}F≥7`}
         right={liveBadge}

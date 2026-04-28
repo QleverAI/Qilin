@@ -56,7 +56,7 @@ export default function MoreScreen() {
 
   return (
     <View style={[s.root, { paddingBottom: insets.bottom }]}>
-      <PageHeader category="MÁS" title={t('tabs.more')} />
+      <PageHeader title={t('tabs.more')} />
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: hPad,

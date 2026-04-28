@@ -1,8 +1,66 @@
-import { View, Pressable, StyleSheet }     from 'react-native'
-import { useEffect }                       from 'react'
+import { View, Pressable, StyleSheet,
+         Animated, PanResponder, Image }   from 'react-native'
+import { useEffect, useRef }               from 'react'
 import { Tabs, router }                    from 'expo-router'
 import Ionicons                            from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets }               from 'react-native-safe-area-context'
+
+const DRAGON_LOGO = require('../../../assets/qilin-dragon.png')
+
+function FloatingChatButton() {
+  const insets  = useSafeAreaInsets()
+  const pos     = useRef(new Animated.ValueXY()).current
+  const moved   = useRef(false)
+
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder:  (_, g) => Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4,
+
+      onPanResponderGrant: () => {
+        pos.extractOffset()
+        moved.current = false
+      },
+
+      onPanResponderMove: (_, g) => {
+        moved.current = true
+        pos.setValue({ x: g.dx, y: g.dy })
+      },
+
+      onPanResponderRelease: () => {
+        pos.flattenOffset()
+        if (!moved.current) router.push('/(tabs)/chat')
+      },
+    })
+  ).current
+
+  const tabBarH = 60 + (insets.bottom || 0)
+
+  return (
+    <Animated.View
+      style={[fab.btn, {
+        bottom: tabBarH + 16,
+        right:  20,
+        transform: pos.getTranslateTransform(),
+      }]}
+      {...responder.panHandlers}
+    >
+      <Image source={DRAGON_LOGO} style={fab.logo} resizeMode="contain" />
+    </Animated.View>
+  )
+}
+
+const fab = StyleSheet.create({
+  btn:  { position: 'absolute', zIndex: 999,
+          width: 54, height: 54, borderRadius: 27,
+          backgroundColor: '#0d1117',
+          borderWidth: 1.5, borderColor: 'rgba(200,160,60,0.55)',
+          alignItems: 'center', justifyContent: 'center',
+          shadowColor: '#c8a03c', shadowOpacity: 0.35,
+          shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
+          elevation: 10 },
+  logo: { width: 36, height: 36 },
+})
 import { getToken }                        from '../../hooks/apiClient'
 import { prefetchNewsFeed }                from '../../hooks/useNewsFeed'
 import { prefetchSocialFeed }              from '../../hooks/useSocialFeed'
@@ -79,23 +137,26 @@ export default function TabsLayout() {
   }, [])
 
   return (
-    <Tabs
-      tabBar={props => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tabs.Screen name="index"    options={{ title: 'Home' }} />
-      <Tabs.Screen name="tactical" options={{ title: 'Mapa' }} />
-      <Tabs.Screen name="intel"    options={{ title: 'Intel' }} />
-      <Tabs.Screen name="news"     options={{ title: 'Noticias' }} />
-      <Tabs.Screen name="more"     options={{ title: 'Más' }} />
+    <View style={{ flex: 1 }}>
+      <Tabs
+        tabBar={props => <CustomTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tabs.Screen name="index"    options={{ title: 'Home' }} />
+        <Tabs.Screen name="tactical" options={{ title: 'Mapa' }} />
+        <Tabs.Screen name="intel"    options={{ title: 'Intel' }} />
+        <Tabs.Screen name="news"     options={{ title: 'Noticias' }} />
+        <Tabs.Screen name="more"     options={{ title: 'Más' }} />
 
-      <Tabs.Screen name="chat"       options={{ tabBarButton: () => null }} />
-      <Tabs.Screen name="social"     options={{ tabBarButton: () => null }} />
-      <Tabs.Screen name="documents"  options={{ tabBarButton: () => null }} />
-      <Tabs.Screen name="sec"        options={{ tabBarButton: () => null }} />
-      <Tabs.Screen name="markets"    options={{ tabBarButton: () => null }} />
-      <Tabs.Screen name="polymarket" options={{ tabBarButton: () => null }} />
-      <Tabs.Screen name="sentinel"   options={{ tabBarButton: () => null }} />
-    </Tabs>
+        <Tabs.Screen name="chat"       options={{ tabBarButton: () => null }} />
+        <Tabs.Screen name="social"     options={{ tabBarButton: () => null }} />
+        <Tabs.Screen name="documents"  options={{ tabBarButton: () => null }} />
+        <Tabs.Screen name="sec"        options={{ tabBarButton: () => null }} />
+        <Tabs.Screen name="markets"    options={{ tabBarButton: () => null }} />
+        <Tabs.Screen name="polymarket" options={{ tabBarButton: () => null }} />
+        <Tabs.Screen name="sentinel"   options={{ tabBarButton: () => null }} />
+      </Tabs>
+      <FloatingChatButton />
+    </View>
   )
 }

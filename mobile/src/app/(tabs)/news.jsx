@@ -270,7 +270,6 @@ export default function NewsScreen() {
   return (
     <View style={s.root}>
       <PageHeader
-        category="NOTICIAS"
         title={t('news.title')}
         subtitle={t('news.count', { n: filtered.length })}
       />
