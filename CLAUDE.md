@@ -137,6 +137,13 @@ Los endpoints `/news/feed`, `/social/feed` e `/intel/timeline` aceptan `?topics_
 - `DAILY_SPEND_CAP` — cap diario en USD (default 5.00)
 - `SPEND_WARN_THRESHOLD` — fracción de cap que dispara warning (default 0.80)
 - `FORCE_RUN_CYCLE` — `true` dispara un ciclo al arrancar el container (dev)
+- `STRIPE_SECRET_KEY` — clave secreta Stripe (sk_test_... / sk_live_...)
+- `STRIPE_PUBLISHABLE_KEY` — clave pública Stripe (pk_test_... / pk_live_...)
+- `STRIPE_WEBHOOK_SECRET` — secreto de endpoint webhook Stripe (whsec_...). Vacío = sin verificación de firma (solo dev).
+- `STRIPE_PRICE_ANALYST` — Price ID del plan Analyst en Stripe (price_...)
+- `STRIPE_PRICE_COMMAND` — Price ID del plan Command en Stripe (price_...)
+- `STRIPE_SUCCESS_URL` — URL de redirección tras pago exitoso (default: http://178.104.238.122/success?session_id={CHECKOUT_SESSION_ID})
+- `STRIPE_CANCEL_URL` — URL de redirección si el usuario cancela (default: http://178.104.238.122/register)
 
 ## Base de datos
 
@@ -155,7 +162,7 @@ Los endpoints `/news/feed`, `/social/feed` e `/intel/timeline` aceptan `?topics_
 - `social_posts` — posts sociales (topics TEXT[] añadida 2026-04-24)
 - `user_topics` — subscripciones de topics por usuario (PK: user_id + topic_id)
 - `users.telegram_chat_id` — chat ID de Telegram del usuario (añadida 2026-04-24)
-- `users.plan` — plan del usuario: free | scout | analyst | pro (default 'free')
+- `users.plan` — plan del usuario: free | scout | analyst | command | pro (default 'free'). `command` y `pro` son ilimitados (mismo límite de topics). `command` es el nombre actual en frontend/Stripe; `pro` es alias legacy.
 
 Redis keys:
 - `stream:adsb` — stream de posiciones de aeronaves
@@ -283,6 +290,18 @@ El viejo `alert-engine` (reglas heurísticas reactivas) ha sido retirado. El dir
   - La clasificación de subtipo de aeronave se hace en `MapView.jsx → getAircraftIcon()` usando el campo `type_code` del ADS-B
 - **Trayectoria de buques**: al seleccionar un buque en el panel táctico aparece el botón "RUTA — MOSTRAR TRAYECTORIA". Activa/desactiva una línea discontinua ámbar con las últimas N horas de posiciones (default 12h). Hook: `useVesselTrail`. Renderizado: capas `vessel-trail-line-{mmsi}` en MapView.
 - **Trayectoria de aeronaves**: panel TRAYECTORIAS (arriba-izquierda del mapa). Hasta 6 trails simultáneos. Hook: `useAircraftTrail`. Incluye marcadores de bases. Refresco cada 30s.
+
+## Stripe — Pagos y suscripciones
+
+- **Modo**: test (`sk_test_` / `pk_test_`). Productos activos: Analyst (50€/mes, `price_1TRAoK6qqTx6uExBLsteLy0p`) y Command (200€/mes, `price_1TRAyP6qqTx6uExBGaTrBJl0`).
+- **Flujo de checkout**: usuario se registra → API crea Checkout Session → frontend redirige a Stripe → webhook activa plan en DB. El plan queda como `free` hasta que el webhook confirma el pago.
+- **Endpoints**:
+  - `POST /stripe/create-checkout-session` (JWT req.) — recibe `{plan: "analyst"|"command"}`, devuelve `{url}`.
+  - `POST /stripe/webhook` — sin JWT; verifica firma con `STRIPE_WEBHOOK_SECRET` si está configurado.
+- **Webhook en Stripe dashboard**: registrar `http://178.104.238.122/api/stripe/webhook` con evento `checkout.session.completed`. El secreto `whsec_...` generado hay que añadirlo a `.env` como `STRIPE_WEBHOOK_SECRET`.
+- **Librería**: `stripe==10.*` en `services/api/requirements.txt`.
+- **Páginas**: `/success` (redirige a `/app` a los 5s) y `/cancel` (vuelve a `/register`).
+- **Sentinel nav**: oculto del TopBar web hasta que el ingestor esté desplegado con credenciales CDSE.
 
 ### Mejoras planificadas
 - **ENTSO-E**: ingestor de datos de generación eléctrica europea (cortes de luz como indicador geopolítico)
