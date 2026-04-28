@@ -28,9 +28,21 @@ function FloatingChatButton() {
         pos.setValue({ x: g.dx, y: g.dy })
       },
 
-      onPanResponderRelease: () => {
+      onPanResponderRelease: (_, g) => {
+        if (!moved.current) {
+          pos.flattenOffset()
+          router.push('/(tabs)/chat')
+          return
+        }
         pos.flattenOffset()
-        if (!moved.current) router.push('/(tabs)/chat')
+        // Spring to current position with release velocity → subtle overshoot + settle
+        Animated.spring(pos, {
+          toValue:         { x: pos.x._value, y: pos.y._value },
+          useNativeDriver: true,
+          friction:        6,
+          tension:         200,
+          velocity:        { x: g.vx * 0.3, y: g.vy * 0.3 },
+        }).start()
       },
     })
   ).current
