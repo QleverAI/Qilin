@@ -25,23 +25,20 @@ const skipStyle = {
 
 const PLAN_TOPIC_LIMIT = { scout: 5, analyst: 20, command: null }
 
-// Topic IDs that have a corresponding market asset (chart available)
 const MARKET_TOPIC_IDS = new Set([
-  // Sectors
   'energy', 'defense', 'technology', 'semiconductors', 'shipping',
   'mining', 'nuclear', 'aviation', 'food_security',
-  // Commodities
   'oil', 'natural_gas', 'wheat', 'copper', 'lithium', 'gold',
   'aluminum', 'uranium', 'rare_earths', 'corn', 'soybean', 'coffee', 'sugar',
-  // Companies
   'nvidia', 'tsmc', 'lockheed_martin', 'boeing', 'shell', 'rheinmetall',
   'asml', 'bae_systems', 'raytheon', 'northrop_grumman', 'palantir', 'bp', 'chevron',
 ])
 
+// Steps: 1=account, 2=plan, 3=topics, 4=telegram
 function StepIndicator({ step, t }) {
   const steps = [
-    t('register.step.plan'),
     t('register.step.account'),
+    t('register.step.plan'),
     t('register.step.topics'),
     t('register.step.telegram'),
   ]
@@ -98,19 +95,16 @@ function PlanCard({ planId, name, tier, price, priceNote, topics, paid, features
           {t('register.plan_select.paid_badge')}
         </div>
       )}
-
       <div style={{ fontSize: '9px', letterSpacing: '.18em', color: 'rgba(200,160,60,0.5)', fontFamily: "'IBM Plex Mono',monospace", marginBottom: '4px' }}>
         {tier}
       </div>
       <div style={{ fontSize: '16px', fontWeight: '700', color: selected ? '#e8c060' : '#f0f4f8', marginBottom: '8px' }}>
         {name}
       </div>
-
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px', marginBottom: '10px' }}>
         <span style={{ fontSize: '20px', fontWeight: '800', color: '#c8a03c' }}>{price}</span>
         {priceNote && <span style={{ fontSize: '11px', color: 'rgba(200,160,60,0.6)' }}>{priceNote}</span>}
       </div>
-
       <div style={{
         fontSize: '11px', color: selected ? 'rgba(232,192,96,0.9)' : 'rgba(200,160,60,0.6)',
         fontFamily: "'IBM Plex Mono',monospace", marginBottom: '10px',
@@ -119,13 +113,11 @@ function PlanCard({ planId, name, tier, price, priceNote, topics, paid, features
       }}>
         {topics === null ? t('register.plan_select.topics_unlimited') : t('register.plan_select.topics', { n: topics })}
       </div>
-
       <ul style={{ margin: 0, padding: '0 0 0 14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {features.map((f, i) => (
           <li key={i} style={{ fontSize: '12px', color: 'rgba(220,230,245,0.55)', lineHeight: '1.4' }}>{f}</li>
         ))}
       </ul>
-
       {selected && (
         <div style={{
           marginTop: '12px', textAlign: 'center',
@@ -140,25 +132,56 @@ function PlanCard({ planId, name, tier, price, priceNote, topics, paid, features
 
 export default function RegisterPage() {
   const { t } = useLang()
-  const [step,      setStep]      = useState(1)
-  const [username,  setUsername]  = useState('')
-  const [email,     setEmail]     = useState('')
-  const [password,  setPassword]  = useState('')
-  const [password2, setPassword2] = useState('')
-  const [error,     setError]     = useState('')
-  const [loading,   setLoading]   = useState(false)
-  const [catalog,   setCatalog]   = useState([])
-  const [myTopics,  setMyTopics]  = useState([])
-  const [chatId,       setChatId]       = useState('')
-  const [token,        setToken]        = useState('')
-  const [acceptTerms,  setAcceptTerms]  = useState(false)
-  const [acceptMkt,    setAcceptMkt]    = useState(false)
+  const [step,        setStep]        = useState(1)
+  const [verifying,   setVerifying]   = useState(false)
+  const [username,    setUsername]    = useState('')
+  const [email,       setEmail]       = useState('')
+  const [password,    setPassword]    = useState('')
+  const [password2,   setPassword2]   = useState('')
+  const [error,       setError]       = useState('')
+  const [loading,     setLoading]     = useState(false)
+  const [catalog,     setCatalog]     = useState([])
+  const [myTopics,    setMyTopics]    = useState([])
+  const [chatId,      setChatId]      = useState('')
+  const [token,       setToken]       = useState(() => sessionStorage.getItem('qilin_token') || '')
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptMkt,   setAcceptMkt]   = useState(false)
 
   const navigate = useNavigate()
-  const [params]  = useSearchParams()
-  const [selectedPlan, setSelectedPlan] = useState(params.get('plan') || 'scout')
+  const [params] = useSearchParams()
+  const [selectedPlan, setSelectedPlan] = useState(
+    () => sessionStorage.getItem('qilin_pending_plan') || params.get('plan') || 'scout'
+  )
 
   const topicLimit = PLAN_TOPIC_LIMIT[selectedPlan] ?? 5
+
+  // Handle return from Stripe (?after_payment=1)
+  useEffect(() => {
+    if (params.get('after_payment') && sessionStorage.getItem('qilin_token')) {
+      setVerifying(true)
+      setStep(3)
+      pollPlan(sessionStorage.getItem('qilin_token'))
+    }
+  }, [])
+
+  async function pollPlan(tok) {
+    for (let i = 0; i < 12; i++) {
+      try {
+        const res = await fetch('/api/me', { headers: { Authorization: `Bearer ${tok}` } })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.plan === 'analyst' || data.plan === 'command' || data.plan === 'pro') {
+            setSelectedPlan(data.plan)
+            sessionStorage.removeItem('qilin_pending_plan')
+            setVerifying(false)
+            return
+          }
+        }
+      } catch (_) {}
+      await new Promise(r => setTimeout(r, 2500))
+    }
+    setVerifying(false)
+  }
 
   useEffect(() => {
     fetch('/api/topics')
@@ -167,7 +190,8 @@ export default function RegisterPage() {
       .catch(() => {})
   }, [])
 
-  async function handleStep2(e) {
+  // Step 1 — Account creation
+  async function handleStep1(e) {
     e.preventDefault()
     setError('')
     if (password !== password2) { setError(t('register.err.mismatch')); return }
@@ -189,27 +213,39 @@ export default function RegisterPage() {
       sessionStorage.setItem('qilin_token', access_token)
       sessionStorage.setItem('qilin_user', username.toLowerCase())
       setToken(access_token)
-
-      if (selectedPlan === 'analyst' || selectedPlan === 'command') {
-        try {
-          const chkRes = await fetch('/api/stripe/create-checkout-session', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan: selectedPlan }),
-          })
-          if (chkRes.ok) {
-            const { url } = await chkRes.json()
-            window.location.href = url
-            return
-          }
-        } catch (_) {}
-      }
-
-      setStep(3)
+      setStep(2)
     } catch (_) {
       setError(t('register.err.connection'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Step 2 — Plan selection
+  async function handleStep2Continue() {
+    if (selectedPlan === 'analyst' || selectedPlan === 'command') {
+      setLoading(true)
+      try {
+        const chkRes = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: selectedPlan }),
+        })
+        if (chkRes.ok) {
+          const { url } = await chkRes.json()
+          sessionStorage.setItem('qilin_pending_plan', selectedPlan)
+          window.location.href = url
+          return
+        }
+        setError('Error al conectar con el sistema de pagos. Inténtalo de nuevo.')
+      } catch (_) {
+        setError('Error al conectar con el sistema de pagos. Inténtalo de nuevo.')
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      sessionStorage.removeItem('qilin_pending_plan')
+      setStep(3)
     }
   }
 
@@ -257,7 +293,7 @@ export default function RegisterPage() {
     },
   ]
 
-  const maxWidth = step === 1 ? '720px' : step === 3 ? '640px' : '420px'
+  const maxWidth = step === 2 ? '720px' : step === 3 ? '640px' : '420px'
 
   return (
     <div style={{ minHeight: '100vh', background: '#02060e', display: 'flex',
@@ -276,32 +312,9 @@ export default function RegisterPage() {
 
         <StepIndicator step={step} t={t} />
 
-        {/* Step 1 — Plan selection */}
+        {/* Step 1 — Account */}
         {step === 1 && (
-          <div>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '15px', color: 'rgba(220,230,245,0.7)', marginBottom: '4px' }}>
-                {t('register.plan_select.title')}
-              </div>
-              <div style={{ fontSize: '12px', color: 'rgba(220,230,245,0.35)' }}>
-                {t('register.plan_select.subtitle')}
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-              {plans.map(p => (
-                <PlanCard key={p.id} {...p} planId={p.id} selected={selectedPlan === p.id} onSelect={setSelectedPlan} t={t} />
-              ))}
-            </div>
-            <button onClick={() => setStep(2)} style={stepBtn}>
-              {t('register.plan_select.btn_continue', { plan: plans.find(p => p.id === selectedPlan)?.name || '' })}
-            </button>
-            <button onClick={() => navigate('/')} style={skipStyle}>← {t('register.back_home')}</button>
-          </div>
-        )}
-
-        {/* Step 2 — Account */}
-        {step === 2 && (
-          <form onSubmit={handleStep2} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <form onSubmit={handleStep1} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>{t('register.field.username')}</label>
               <input value={username} onChange={e => setUsername(e.target.value)} placeholder={t('register.placeholder.user')} required autoFocus style={inputStyle} />
@@ -318,72 +331,108 @@ export default function RegisterPage() {
               <label style={{ display: 'block', fontSize: '12px', color: 'rgba(220,230,245,0.5)', marginBottom: '6px' }}>{t('register.field.password2')}</label>
               <input type="password" value={password2} onChange={e => setPassword2(e.target.value)} placeholder={t('register.placeholder.pass2')} required style={inputStyle} />
             </div>
-            {/* Checkboxes */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={acceptTerms}
-                  onChange={e => setAcceptTerms(e.target.checked)}
-                  style={{ marginTop: '2px', accentColor: '#c8a03c', flexShrink: 0 }}
-                />
+                <input type="checkbox" checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)}
+                  style={{ marginTop: '2px', accentColor: '#c8a03c', flexShrink: 0 }} />
                 <span style={{ fontSize: '12px', color: 'rgba(220,230,245,0.55)', lineHeight: 1.5 }}>
                   {t('register.terms.accept')}{' '}
                   <a href="/terms" target="_blank" rel="noopener noreferrer"
                     style={{ color: 'rgba(200,160,60,0.8)', textDecoration: 'underline' }}>
                     {t('register.terms.link')}
-                  </a>
-                  {' *'}
+                  </a>{' *'}
                 </span>
               </label>
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={acceptMkt}
-                  onChange={e => setAcceptMkt(e.target.checked)}
-                  style={{ marginTop: '2px', accentColor: '#c8a03c', flexShrink: 0 }}
-                />
+                <input type="checkbox" checked={acceptMkt} onChange={e => setAcceptMkt(e.target.checked)}
+                  style={{ marginTop: '2px', accentColor: '#c8a03c', flexShrink: 0 }} />
                 <span style={{ fontSize: '12px', color: 'rgba(220,230,245,0.55)', lineHeight: 1.5 }}>
                   {t('register.marketing')}
                 </span>
               </label>
             </div>
-
             {error && (
               <div style={{ fontSize: '13px', color: '#ff453a', background: 'rgba(255,69,58,0.08)',
                 border: '1px solid rgba(255,69,58,0.2)', borderRadius: '6px', padding: '10px 14px', textAlign: 'center' }}>{error}</div>
             )}
-            <button type="submit" disabled={loading || !acceptTerms} style={{ ...stepBtn, opacity: (loading || !acceptTerms) ? 0.7 : 1, cursor: (loading || !acceptTerms) ? 'default' : 'pointer' }}>
+            <button type="submit" disabled={loading || !acceptTerms}
+              style={{ ...stepBtn, opacity: (loading || !acceptTerms) ? 0.7 : 1, cursor: (loading || !acceptTerms) ? 'default' : 'pointer' }}>
               {loading ? t('register.btn.creating') : t('register.btn.continue')}
             </button>
-            <button type="button" onClick={() => setStep(1)} style={skipStyle}>{t('register.btn.back')}</button>
+            <button type="button" onClick={() => navigate('/')} style={skipStyle}>← {t('register.back_home')}</button>
           </form>
         )}
 
-        {/* Step 3 — Topics */}
+        {/* Step 2 — Plan selection */}
+        {step === 2 && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '15px', color: 'rgba(220,230,245,0.7)', marginBottom: '4px' }}>
+                {t('register.plan_select.title')}
+              </div>
+              <div style={{ fontSize: '12px', color: 'rgba(220,230,245,0.35)' }}>
+                {t('register.plan_select.subtitle')}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              {plans.map(p => (
+                <PlanCard key={p.id} {...p} planId={p.id} selected={selectedPlan === p.id} onSelect={setSelectedPlan} t={t} />
+              ))}
+            </div>
+            {error && (
+              <div style={{ fontSize: '13px', color: '#ff453a', background: 'rgba(255,69,58,0.08)',
+                border: '1px solid rgba(255,69,58,0.2)', borderRadius: '6px', padding: '10px 14px',
+                textAlign: 'center', marginBottom: '12px' }}>{error}</div>
+            )}
+            <button onClick={handleStep2Continue} disabled={loading}
+              style={{ ...stepBtn, opacity: loading ? 0.7 : 1, cursor: loading ? 'default' : 'pointer' }}>
+              {loading
+                ? 'Redirigiendo a Stripe...'
+                : t('register.plan_select.btn_continue', { plan: plans.find(p => p.id === selectedPlan)?.name || '' })}
+            </button>
+            <button onClick={() => setStep(1)} style={skipStyle}>{t('register.btn.back')}</button>
+          </div>
+        )}
+
+        {/* Step 3 — Topics (with verifying overlay) */}
         {step === 3 && (
           <div>
-            <div style={{ marginBottom: '16px', fontSize: '14px', color: 'rgba(220,230,245,0.6)', textAlign: 'center' }}>
-              {topicLimit === null
-                ? t('register.topics.hint_unlimited')
-                : t('register.topics.hint', { limit: topicLimit })}
-            </div>
-            <div style={{ maxHeight: '55vh', overflowY: 'auto', padding: '2px 0' }}>
-              <TopicSelector
-                selected={myTopics}
-                limit={topicLimit}
-                onChange={setMyTopics}
-                catalog={catalog.filter(t => MARKET_TOPIC_IDS.has(t.id))}
-                excludeTypes={['zone']}
-              />
-            </div>
-            <button onClick={handleStep3Continue} style={{ ...stepBtn, marginTop: '20px' }}>
-              {myTopics.length > 0
-                ? t(myTopics.length === 1 ? 'register.btn.continue_topics' : 'register.btn.continue_topics_pl', { n: myTopics.length })
-                : t('register.btn.continue')}
-            </button>
-            <button onClick={() => setStep(4)} style={skipStyle}>{t('register.btn.skip')}</button>
-            <button onClick={() => setStep(2)} style={skipStyle}>{t('register.btn.back')}</button>
+            {verifying ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <div style={{
+                  fontSize: '14px', color: 'rgba(200,160,60,0.8)',
+                  fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '.08em', marginBottom: '12px',
+                }}>
+                  VERIFICANDO PAGO...
+                </div>
+                <div style={{ fontSize: '12px', color: 'rgba(220,230,245,0.4)' }}>
+                  Confirmando tu suscripción con Stripe
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: '16px', fontSize: '14px', color: 'rgba(220,230,245,0.6)', textAlign: 'center' }}>
+                  {topicLimit === null
+                    ? t('register.topics.hint_unlimited')
+                    : t('register.topics.hint', { limit: topicLimit })}
+                </div>
+                <div style={{ maxHeight: '55vh', overflowY: 'auto', padding: '2px 0' }}>
+                  <TopicSelector
+                    selected={myTopics}
+                    limit={topicLimit}
+                    onChange={setMyTopics}
+                    catalog={catalog.filter(t => MARKET_TOPIC_IDS.has(t.id))}
+                    excludeTypes={['zone']}
+                  />
+                </div>
+                <button onClick={handleStep3Continue} style={{ ...stepBtn, marginTop: '20px' }}>
+                  {myTopics.length > 0
+                    ? t(myTopics.length === 1 ? 'register.btn.continue_topics' : 'register.btn.continue_topics_pl', { n: myTopics.length })
+                    : t('register.btn.continue')}
+                </button>
+                <button onClick={() => setStep(4)} style={skipStyle}>{t('register.btn.skip')}</button>
+              </>
+            )}
           </div>
         )}
 
