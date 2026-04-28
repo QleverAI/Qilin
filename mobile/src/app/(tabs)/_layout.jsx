@@ -74,11 +74,11 @@ import { prefetchMarkets }                 from '../../hooks/useMarkets'
 import { prefetchPolymarket }              from '../../hooks/usePolymarketFeed'
 import { prefetchSentinel }                from '../../hooks/useSentinelData'
 
-const PRIMARY = ['index', 'tactical', 'intel', 'news', 'more']
+const PRIMARY = ['index', 'tactical', 'social', 'news', 'more']
 const ICONS = {
   index:    ['home-outline',        'home'],
   tactical: ['map-outline',         'map'],
-  intel:    ['radio-outline',       'radio'],
+  social:   ['people-outline',      'people'],
   news:     ['newspaper-outline',   'newspaper'],
   more:     ['ellipsis-horizontal', 'ellipsis-horizontal'],
 }
@@ -147,12 +147,12 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="index"    options={{ title: 'Home' }} />
         <Tabs.Screen name="tactical" options={{ title: 'Mapa' }} />
-        <Tabs.Screen name="intel"    options={{ title: 'Intel' }} />
+        <Tabs.Screen name="social"   options={{ title: 'Social' }} />
         <Tabs.Screen name="news"     options={{ title: 'Noticias' }} />
         <Tabs.Screen name="more"     options={{ title: 'Más' }} />
 
         <Tabs.Screen name="chat"       options={{ tabBarButton: () => null }} />
-        <Tabs.Screen name="social"     options={{ tabBarButton: () => null }} />
+        <Tabs.Screen name="intel"      options={{ tabBarButton: () => null }} />
         <Tabs.Screen name="documents"  options={{ tabBarButton: () => null }} />
         <Tabs.Screen name="sec"        options={{ tabBarButton: () => null }} />
         <Tabs.Screen name="markets"    options={{ tabBarButton: () => null }} />
