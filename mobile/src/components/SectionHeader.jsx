@@ -1,5 +1,4 @@
 import { View, Text, StyleSheet } from 'react-native'
-import { C } from '../theme'
 
 export function SectionHeader({ title, count }) {
   return (
@@ -12,8 +11,8 @@ export function SectionHeader({ title, count }) {
 
 const s = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-           paddingHorizontal: 16, paddingTop: 28, paddingBottom: 8 },
-  title: { fontSize: 13, fontWeight: '600', color: 'rgba(235,235,245,0.6)',
-           textTransform: 'uppercase', letterSpacing: 0.5 },
-  count: { fontSize: 13, color: 'rgba(235,235,245,0.3)' },
+           paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },
+  title: { fontSize: 10, fontWeight: '700', color: 'rgba(235,235,245,0.35)',
+           textTransform: 'uppercase', letterSpacing: 2 },
+  count: { fontSize: 10, color: 'rgba(235,235,245,0.25)' },
 })
