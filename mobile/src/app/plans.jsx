@@ -11,17 +11,19 @@ function buildTiers(t) {
     {
       key: 'scout',
       tier: 'TIER 01',
-      name: t('plans.scout_name'),
-      price: '$0',
+      name: 'SCOUT',
+      price: 'Gratis',
+      period: '',
       tagline: t('plans.scout_tagline'),
       popular: false,
       feats: [
-        { on: true,  t: 'Mapa militar con retraso' },
-        { on: true,  t: 'Feed de noticias — últimas 24h' },
-        { on: true,  t: '5 alertas geopolíticas/día' },
-        { on: false, t: 'Aviones privados' },
-        { on: false, t: 'Tráfico naval' },
-        { on: false, t: 'Análisis IA' },
+        'ADS-B global en tiempo real',
+        'Alertas geopolíticas automáticas',
+        'Feed de noticias (104 medios)',
+        'Feed social (40 cuentas)',
+        'Mapa táctico interactivo',
+        'Hasta 20 aeronaves favoritas',
+        'Hasta 10 fuentes favoritas por tipo',
       ],
       cta: t('plans.cta_free'),
       action: () => router.push('/register?plan=scout'),
@@ -29,43 +31,45 @@ function buildTiers(t) {
     {
       key: 'analyst',
       tier: 'TIER 02',
-      name: t('plans.analyst_name'),
-      price: '$49',
+      name: 'ANALYST',
+      price: 'Próximamente',
+      period: '',
       tagline: t('plans.analyst_tagline'),
       popular: true,
       feats: [
-        { on: true, t: 'Mapa tiempo real (militar + privado)' },
-        { on: true, t: 'Tráfico naval completo' },
-        { on: true, t: '500+ fuentes + 300+ cuentas' },
-        { on: true, t: 'Alertas ilimitadas' },
-        { on: true, t: 'Historial de rutas y bases' },
-        { on: true, t: 'Documentos + mercados predicción' },
+        'Todo lo de Scout',
+        'Informes diarios y semanales en PDF',
+        'Sentinel — datos satelitales NO₂/SO₂',
+        'Hasta 50 aeronaves favoritas',
+        'Señales convergentes avanzadas',
+        'Acceso prioritario a nuevas funciones',
       ],
       cta: t('plans.cta_trial'),
       action: () => router.push('/register?plan=analyst'),
     },
     {
-      key: 'command',
+      key: 'pro',
       tier: 'TIER 03',
-      name: t('plans.command_name'),
-      price: '$199',
+      name: 'PRO',
+      price: 'Próximamente',
+      period: '',
       tagline: t('plans.command_tagline'),
       popular: false,
       feats: [
-        { on: true, t: 'Todo de Analyst' },
-        { on: true, t: 'Datos satelitales (Sentinel)' },
-        { on: true, t: 'Informes semanales IA' },
-        { on: true, t: 'Acceso API REST' },
-        { on: true, t: 'Hasta 5 usuarios' },
-        { on: true, t: 'Historial ilimitado' },
+        'Todo lo de Analyst',
+        'Acceso a la API REST',
+        'Mercados de predicción (Polymarket)',
+        'Filings SEC relevantes',
+        'Sin límite de favoritos',
+        'Soporte directo',
       ],
       cta: t('plans.cta_contact'),
-      action: () => Linking.openURL('mailto:ventas@qilin.app?subject=Plan%20Command').catch(() => {}),
+      action: () => Linking.openURL('mailto:ventas@qilin.app?subject=Plan%20Pro').catch(() => {}),
     },
   ]
 }
 
-function PlanCard({ plan, popularLabel, periodLabel }) {
+function PlanCard({ plan, popularLabel }) {
   return (
     <View style={[s.card, plan.popular && s.cardFeatured]}>
       {plan.popular ? (
@@ -75,19 +79,14 @@ function PlanCard({ plan, popularLabel, periodLabel }) {
       ) : null}
       <Text style={s.tier}>{plan.tier}</Text>
       <Text style={s.name}>{plan.name}</Text>
-      <View style={s.priceRow}>
-        <Text style={s.price}>{plan.price}</Text>
-        <Text style={s.period}>{periodLabel}</Text>
-      </View>
+      <Text style={s.price}>{plan.price}</Text>
       <Text style={s.tagline}>{plan.tagline}</Text>
       <View style={s.divider} />
       <View style={s.featList}>
-        {plan.feats.map((f, i) => (
+        {plan.feats.map((feat, i) => (
           <View key={i} style={s.featRow}>
-            <Text style={[s.featMark, { color: f.on ? C.green : C.txt3 }]}>
-              {f.on ? '✓' : '✗'}
-            </Text>
-            <Text style={[s.featText, !f.on && { color: C.txt3 }]}>{f.t}</Text>
+            <Text style={[s.featMark, { color: C.green }]}>✓</Text>
+            <Text style={s.featText}>{feat}</Text>
           </View>
         ))}
       </View>
@@ -122,7 +121,7 @@ export default function PlansScreen() {
         <View style={columns >= 2 ? s.gridRow : s.column}>
           {tiers.map(p => (
             <View key={p.key} style={columns >= 2 ? { flex: 1 } : undefined}>
-              <PlanCard plan={p} popularLabel={t('plans.popular')} periodLabel={t('plans.month')} />
+              <PlanCard plan={p} popularLabel={t('plans.popular')} />
             </View>
           ))}
         </View>
@@ -146,9 +145,7 @@ const s = StyleSheet.create({
   tier:          { fontSize: 10, fontWeight: '700', color: C.txt3,
                    letterSpacing: 0.7, fontFamily: 'SpaceMono' },
   name:          { fontSize: 24, fontWeight: '700', color: '#ffffff' },
-  priceRow:      { flexDirection: 'row', alignItems: 'baseline', gap: 4, marginTop: 4 },
-  price:         { fontSize: 36, fontWeight: '800', color: '#ffffff' },
-  period:        { fontSize: 14, color: C.txt3 },
+  price:         { fontSize: 22, fontWeight: '800', color: '#ffffff', marginTop: 4 },
   tagline:       { fontSize: 14, color: C.txt2, lineHeight: 20, marginTop: 4 },
   divider:       { height: StyleSheet.hairlineWidth, backgroundColor: C.separator, marginVertical: 10 },
   featList:      { gap: 8 },
