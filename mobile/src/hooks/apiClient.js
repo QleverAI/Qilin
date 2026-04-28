@@ -23,9 +23,16 @@ export function getToken() {
   return _token
 }
 
+// Prepend /api/ for paths that go through nginx proxy.
+// Paths starting with /auth/ or already with /api/ are left as-is.
+function resolvedPath(path) {
+  if (path.startsWith('/api/') || path.startsWith('/auth/')) return path
+  return `/api${path}`
+}
+
 export async function authFetch(path) {
   const headers = _token ? { Authorization: `Bearer ${_token}` } : {}
-  const res = await fetch(`${API_BASE}${path}`, { headers })
+  const res = await fetch(`${API_BASE}${resolvedPath(path)}`, { headers })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
