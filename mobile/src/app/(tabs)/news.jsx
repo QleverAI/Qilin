@@ -89,7 +89,7 @@ function ArticleModal({ article, onClose }) {
           {!article.image_url && (
             <Text style={am.meta}>{article.source} · {fmt(article.time)}</Text>
           )}
-          <Text style={am.title}>{article.title}</Text>
+          <Text style={am.title}>{stripHtml(article.title)}</Text>
 
           {article.image_url && (
             <Text style={am.meta}>{fmt(article.time)}</Text>
@@ -179,7 +179,7 @@ function NewsListItem({ article, onPress }) {
       onPress={onPress}
     >
       <View style={{ flex: 1 }}>
-        <Text style={s.listTitle} numberOfLines={2}>{article.title}</Text>
+        <Text style={s.listTitle} numberOfLines={2}>{stripHtml(article.title)}</Text>
         <Text style={s.listMeta}>{article.source} · {fmt(article.time)}</Text>
       </View>
       {article.image_url ? (
@@ -200,7 +200,7 @@ function HeroCard({ article, onPress }) {
           <SeverityBadge severity={article.severity} />
           <Text style={s.heroPub} numberOfLines={1}>{article.source} · {fmt(article.time)}</Text>
         </View>
-        <Text style={s.heroTitle} numberOfLines={3}>{article.title}</Text>
+        <Text style={s.heroTitle} numberOfLines={3}>{stripHtml(article.title)}</Text>
       </View>
     </Pressable>
   )
