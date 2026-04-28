@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback }         from 'react'
 import { View, Text, TextInput, Pressable, StyleSheet,
-         FlatList, Modal, ScrollView,
+         FlatList, Modal, ScrollView, Image,
          RefreshControl, Linking }                from 'react-native'
 import Ionicons                                   from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets }                      from 'react-native-safe-area-context'
@@ -41,6 +41,8 @@ function PostModal({ post, onClose, t }) {
   if (!post) return null
   const eng = engagement(post)
 
+  const hasPhoto = post.media_url && post.media_type === 'photo'
+
   return (
     <Modal
       visible
@@ -48,26 +50,50 @@ function PostModal({ post, onClose, t }) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={[pm.root, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 16 }]}>
-        {/* Header */}
-        <View style={pm.header}>
-          <View style={pm.avatar}>
-            <Text style={pm.avatarText}>{(post.handle || '?')[0].toUpperCase()}</Text>
+      <View style={[pm.root, { backgroundColor: C.bg0 }]}>
+        {/* Image header (if photo) */}
+        {hasPhoto ? (
+          <View style={pm.imgWrap}>
+            <Image source={{ uri: post.media_url }} style={pm.img} resizeMode="cover" />
+            <View style={pm.imgGrad} />
+            <Pressable
+              style={[pm.closeAbsolute, { top: insets.top + 10 }]}
+              onPress={onClose} hitSlop={8}
+            >
+              <Ionicons name="close-circle" size={28} color="rgba(255,255,255,0.75)" />
+            </Pressable>
+            <View style={pm.imgFooter}>
+              <View style={pm.avatarSm}>
+                <Text style={pm.avatarSmText}>{(post.handle || '?')[0].toUpperCase()}</Text>
+              </View>
+              <Text style={pm.imgHandle}>@{post.handle}</Text>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={pm.handle}>@{post.handle}</Text>
-            {post.display ? <Text style={pm.display} numberOfLines={1}>{post.display}</Text> : null}
+        ) : (
+          <View style={[pm.plainHeader, { paddingTop: insets.top + 10 }]}>
+            <View style={pm.avatar}>
+              <Text style={pm.avatarText}>{(post.handle || '?')[0].toUpperCase()}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={pm.handle}>@{post.handle}</Text>
+              {post.display ? <Text style={pm.display} numberOfLines={1}>{post.display}</Text> : null}
+            </View>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <Ionicons name="close" size={22} color={C.txt2} />
+            </Pressable>
           </View>
-          <Pressable onPress={onClose} hitSlop={8}>
-            <Ionicons name="close" size={22} color={C.txt2} />
-          </Pressable>
-        </View>
+        )}
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={pm.body}
+          contentContainerStyle={[pm.body, { paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}
         >
+          {/* Handle row below image */}
+          {hasPhoto && post.display && (
+            <Text style={pm.display}>{post.display}</Text>
+          )}
+
           {/* Content */}
           <Text style={pm.content}>{post.content}</Text>
 
@@ -120,28 +146,40 @@ function PostModal({ post, onClose, t }) {
 }
 
 const pm = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: C.bg0, paddingHorizontal: 18 },
-  header:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
-  avatar:    { width: 46, height: 46, borderRadius: 23, backgroundColor: C.bg2,
-               alignItems: 'center', justifyContent: 'center' },
-  avatarText:{ fontSize: 20, fontWeight: '700', color: '#ffffff' },
-  handle:    { fontSize: 16, fontWeight: '700', color: '#ffffff' },
-  display:   { fontSize: 13, color: C.txt3 },
-  body:      { gap: 14, paddingBottom: 24 },
-  content:   { fontSize: 17, color: '#ffffff', lineHeight: 25 },
-  time:      { fontSize: 12, color: C.txt3 },
-  tags:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag:       { flexDirection: 'row', alignItems: 'center', gap: 4,
-               backgroundColor: C.bg2, paddingHorizontal: 10, paddingVertical: 5,
-               borderRadius: 8 },
-  tagText:   { fontSize: 12, color: C.txt2, fontWeight: '500' },
-  engRow:    { flexDirection: 'row', gap: 20 },
-  engItem:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  engVal:    { fontSize: 14, color: C.txt2, fontWeight: '600' },
-  openBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-               gap: 8, backgroundColor: C.gold, borderRadius: 10,
-               paddingVertical: 13, marginTop: 4 },
-  openText:  { fontSize: 14, fontWeight: '700', color: '#02060e' },
+  root:          { flex: 1 },
+  imgWrap:       { height: 220, position: 'relative' },
+  img:           { width: '100%', height: '100%' },
+  imgGrad:       { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                   backgroundColor: 'rgba(8,9,13,0.45)' },
+  closeAbsolute: { position: 'absolute', right: 14 },
+  imgFooter:     { position: 'absolute', bottom: 12, left: 14,
+                   flexDirection: 'row', alignItems: 'center', gap: 8 },
+  avatarSm:      { width: 28, height: 28, borderRadius: 14, backgroundColor: C.bg2,
+                   alignItems: 'center', justifyContent: 'center' },
+  avatarSmText:  { fontSize: 13, fontWeight: '700', color: '#ffffff' },
+  imgHandle:     { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
+  plainHeader:   { flexDirection: 'row', alignItems: 'center', gap: 12,
+                   paddingHorizontal: 18, paddingBottom: 14 },
+  avatar:        { width: 46, height: 46, borderRadius: 23, backgroundColor: C.bg2,
+                   alignItems: 'center', justifyContent: 'center' },
+  avatarText:    { fontSize: 20, fontWeight: '700', color: '#ffffff' },
+  handle:        { fontSize: 16, fontWeight: '700', color: '#ffffff' },
+  display:       { fontSize: 13, color: C.txt3 },
+  body:          { paddingHorizontal: 18, paddingTop: 16, gap: 14 },
+  content:       { fontSize: 17, color: '#ffffff', lineHeight: 25 },
+  time:          { fontSize: 12, color: C.txt3 },
+  tags:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tag:           { flexDirection: 'row', alignItems: 'center', gap: 4,
+                   backgroundColor: C.bg2, paddingHorizontal: 10, paddingVertical: 5,
+                   borderRadius: 8 },
+  tagText:       { fontSize: 12, color: C.txt2, fontWeight: '500' },
+  engRow:        { flexDirection: 'row', gap: 20 },
+  engItem:       { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  engVal:        { fontSize: 14, color: C.txt2, fontWeight: '600' },
+  openBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                   gap: 8, backgroundColor: C.gold, borderRadius: 10,
+                   paddingVertical: 13, marginTop: 4 },
+  openText:      { fontSize: 14, fontWeight: '700', color: '#02060e' },
 })
 
 // ── Bottom sheet ──────────────────────────────────────────────────────────────
@@ -199,7 +237,12 @@ function PostCard({ post, onPress, t }) {
         ) : null}
       </View>
 
-      <Text style={s.content} numberOfLines={4}>{post.content}</Text>
+      <View style={s.contentRow}>
+        <Text style={[s.content, { flex: 1 }]} numberOfLines={4}>{post.content}</Text>
+        {post.media_url && post.media_type === 'photo' ? (
+          <Image source={{ uri: post.media_url }} style={s.thumb} resizeMode="cover" />
+        ) : null}
+      </View>
 
       {eng > 0 ? (
         <Text style={s.engagement}>{t('social.interactions', { n: eng })}</Text>
@@ -471,7 +514,9 @@ const s = StyleSheet.create({
   zone:           { fontSize: 11, color: C.blue, fontWeight: '500' },
   catPill:        { backgroundColor: C.bg2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   catText:        { fontSize: 11, color: C.txt2, fontWeight: '500' },
-  content:        { fontSize: 15, color: '#ffffff', lineHeight: 22, marginLeft: 52 },
+  contentRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginLeft: 52 },
+  content:        { fontSize: 15, color: '#ffffff', lineHeight: 22 },
+  thumb:          { width: 64, height: 64, borderRadius: 8, flexShrink: 0 },
   engagement:     { fontSize: 12, color: C.txt3, marginLeft: 52 },
   sep:            { height: StyleSheet.hairlineWidth, backgroundColor: C.separator, marginLeft: 70 },
 

@@ -44,7 +44,9 @@ export default function ChatScreen() {
         body: JSON.stringify({ messages: next }),
       })
       const data = await res.json().catch(() => ({}))
-      const reply = res.ok ? (data.reply || '…') : t('chat.error')
+      const reply = res.ok
+        ? (data.reply || '…')
+        : (data.detail || t('chat.error'))
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: t('chat.error') }])

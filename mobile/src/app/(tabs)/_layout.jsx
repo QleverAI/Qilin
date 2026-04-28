@@ -13,8 +13,6 @@ function FloatingChatButton() {
   const pos      = useRef(new Animated.ValueXY()).current
   const moved    = useRef(false)
 
-  if (pathname.includes('chat')) return null
-
   const responder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -36,6 +34,8 @@ function FloatingChatButton() {
       },
     })
   ).current
+
+  if (pathname.includes('chat')) return null
 
   const tabBarH = 60 + (insets.bottom || 0)
 
