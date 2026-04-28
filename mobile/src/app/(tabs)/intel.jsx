@@ -51,6 +51,9 @@ function MasterCard({ item }) {
         </View>
         <Text style={s.cardTime}>{fmtTime(item.time)}</Text>
       </View>
+      {item.event_type ? (
+        <Text style={s.domainLabel}>{item.event_type.toUpperCase()}</Text>
+      ) : null}
       {item.headline ? (
         <Text style={s.headline}>{item.headline}</Text>
       ) : null}
@@ -85,15 +88,14 @@ function MasterCard({ item }) {
 }
 
 function FindingCard({ item }) {
-  const color = agentColor(item.agent_name)
-  const score = item.anomaly_score || 0
+  const color  = agentColor(item.agent_name)
+  const score  = item.anomaly_score || 0
+  const domain = (item.agent_name || '').replace('_agent', '').toUpperCase()
   return (
     <View style={[s.card, { borderLeftColor: color }]}>
       <View style={s.cardTop}>
         <View style={[s.badge, { borderColor: color }]}>
-          <Text style={[s.badgeText, { color }]}>
-            {(item.agent_name || 'agent').toUpperCase().replace('_AGENT', '')}
-          </Text>
+          <Text style={[s.badgeText, { color }]}>{domain || 'AGENT'}</Text>
         </View>
         <Text style={s.scoreLabel}>Score</Text>
         <Text style={[s.scoreValue, { color: sevColor(score) }]}>{score}</Text>
@@ -155,11 +157,20 @@ export default function IntelScreen() {
   const spendPct = spend.cap_usd > 0 ? Math.min(100, (spend.spent_usd / spend.cap_usd) * 100) : 0
   const spendColor = spendPct >= 80 ? C.red : spendPct >= 50 ? C.amber : C.green
 
+  const liveBadge = (
+    <View style={s.liveBadge}>
+      <View style={s.liveDot} />
+      <Text style={s.liveText}>LIVE</Text>
+    </View>
+  )
+
   return (
     <View style={s.root}>
       <PageHeader
+        category="INTEL"
         title={t('intel.title')}
         subtitle={`${t('intel.count', { n: filtered.length })} · 24h: ${stats24h.masters}M / ${stats24h.findings7}F≥7`}
+        right={liveBadge}
       />
 
       <View style={[s.spendBar, { paddingHorizontal: hPad }]}>
@@ -301,4 +312,11 @@ const s = StyleSheet.create({
   recoBody:        { fontSize: 14, color: '#ffffff', lineHeight: 20 },
   tagsRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
   tag:             { fontSize: 12, color: C.cyan, fontFamily: 'SpaceMono' },
+  liveBadge:       { flexDirection: 'row', alignItems: 'center', gap: 5,
+                     backgroundColor: C.goldFill, borderWidth: 1, borderColor: C.goldBorder,
+                     borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  liveDot:         { width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.gold },
+  liveText:        { fontSize: 10, fontWeight: '700', color: C.gold, letterSpacing: 1 },
+  domainLabel:     { fontSize: 9, fontWeight: '700', color: C.teal, letterSpacing: 1.5,
+                     textTransform: 'uppercase', marginBottom: -2 },
 })
