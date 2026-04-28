@@ -3,6 +3,8 @@ import { View, Text, TextInput, Pressable, StyleSheet,
          FlatList, KeyboardAvoidingView, Platform,
          ActivityIndicator, SafeAreaView }                 from 'react-native'
 import * as Haptics                                        from 'expo-haptics'
+import Ionicons                                            from '@expo/vector-icons/Ionicons'
+import { router }                                          from 'expo-router'
 import { useLang }                                         from '../../hooks/useLanguage'
 import { getToken }                                        from '../../hooks/apiClient'
 import { PageHeader }                                      from '../../components/PageHeader'
@@ -72,12 +74,18 @@ export default function ChatScreen() {
     <SafeAreaView style={s.safe}>
       <PageHeader
         title={t('chat.title')}
-        subtitle={messages.length > 0 ? undefined : undefined}
-        right={messages.length > 0 ? (
-          <Pressable onPress={handleClear} hitSlop={8}>
-            <Text style={s.clearBtn}>{t('chat.clear')}</Text>
-          </Pressable>
-        ) : undefined}
+        right={
+          <View style={s.headerRight}>
+            {messages.length > 0 && (
+              <Pressable onPress={handleClear} hitSlop={8}>
+                <Text style={s.clearBtn}>{t('chat.clear')}</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="close" size={22} color={C.txt2} />
+            </Pressable>
+          </View>
+        }
       />
 
       <KeyboardAvoidingView
@@ -153,6 +161,7 @@ const s = StyleSheet.create({
   bubbleTextUser:    { color: '#ffffff' },
   bubbleTextAssistant: { color: C.txt2 },
   typingBubble:      { paddingVertical: 12 },
+  headerRight:       { flexDirection: 'row', alignItems: 'center', gap: 14 },
   clearBtn:          { fontSize: 14, color: C.txt3 },
   inputBar:          { flexDirection: 'row', alignItems: 'flex-end', gap: 10,
                        paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth,

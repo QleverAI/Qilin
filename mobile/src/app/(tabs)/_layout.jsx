@@ -1,16 +1,19 @@
 import { View, Pressable, StyleSheet,
          Animated, PanResponder, Image }   from 'react-native'
 import { useEffect, useRef }               from 'react'
-import { Tabs, router }                    from 'expo-router'
+import { Tabs, router, usePathname }       from 'expo-router'
 import Ionicons                            from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets }               from 'react-native-safe-area-context'
 
 const DRAGON_LOGO = require('../../../assets/qilin-dragon.png')
 
 function FloatingChatButton() {
-  const insets  = useSafeAreaInsets()
-  const pos     = useRef(new Animated.ValueXY()).current
-  const moved   = useRef(false)
+  const insets   = useSafeAreaInsets()
+  const pathname = usePathname()
+  const pos      = useRef(new Animated.ValueXY()).current
+  const moved    = useRef(false)
+
+  if (pathname.includes('chat')) return null
 
   const responder = useRef(
     PanResponder.create({

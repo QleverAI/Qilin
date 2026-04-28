@@ -89,6 +89,16 @@ export default {
     interactions: ({ n }) => n >= 1000 ? `${(n/1000).toFixed(1)}K interactions` : `${n} interactions`,
     topics_empty: 'No posts for your topics',
     my_feed:      'MY FEED',
+    search:       'Search posts...',
+    filter:       'Filters',
+    filter_zone:  'Zone',
+    filter_cat:   'Category',
+    filter_apply: 'Apply',
+    sort:         'Sort',
+    sort_newest:  'Newest first',
+    sort_interactions: 'Most interactions',
+    sort_oldest:  'Oldest first',
+    open_post:    'View on X ↗',
   },
 
   docs: {
