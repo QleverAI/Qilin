@@ -18,6 +18,21 @@ const SEV_FILTERS = ['all', 'high', 'medium', 'low']
 const SORT_KEYS   = ['newest', 'severity', 'oldest']
 const SEV_ORDER   = { high: 0, medium: 1, low: 2 }
 
+function stripHtml(html) {
+  if (!html) return ''
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\[.*?\]/g, '')        // quita [video], [image], [gallery], etc.
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
 function fmt(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('es-ES', {
@@ -81,7 +96,7 @@ function ArticleModal({ article, onClose }) {
           )}
 
           {article.summary ? (
-            <Text style={am.summary}>{article.summary}</Text>
+            <Text style={am.summary}>{stripHtml(article.summary)}</Text>
           ) : null}
 
           {article.url ? (
