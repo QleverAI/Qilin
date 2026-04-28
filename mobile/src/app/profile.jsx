@@ -1,9 +1,12 @@
 import { useState, useEffect }                        from 'react'
 import { View, Text, Pressable, StyleSheet, ScrollView,
-         SafeAreaView, Alert, TextInput,
+         SafeAreaView, Alert, TextInput, Image,
          ActivityIndicator }                          from 'react-native'
 import { router, Stack }                               from 'expo-router'
 import * as Haptics                                    from 'expo-haptics'
+import * as ImagePicker                                from 'expo-image-picker'
+import AsyncStorage                                    from '@react-native-async-storage/async-storage'
+import Ionicons                                        from '@expo/vector-icons/Ionicons'
 import { useProfile, clearProfileCache }               from '../hooks/useProfile'
 import { useLang }                                     from '../hooks/useLanguage'
 import { clearFeedCache }                              from '../hooks/feedCache'
@@ -11,6 +14,8 @@ import { setToken, getToken }                          from '../hooks/apiClient'
 import TopicSelector                                   from '../components/TopicSelector'
 import { C, T }                                        from '../theme'
 import { useBreakpoint }                               from '../theme/responsive'
+
+const AVATAR_KEY = 'qilin_avatar_uri'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -68,6 +73,7 @@ export default function ProfileScreen() {
   const { lang, switchLang, t } = useLang()
   const { maxContentWidth } = useBreakpoint()
 
+  const [avatarUri,   setAvatarUri]   = useState(null)
   const [catalog,     setCatalog]     = useState([])
   const [myTopics,    setMyTopics]    = useState([])
   const [topicLimit,  setTopicLimit]  = useState(2)
@@ -79,6 +85,30 @@ export default function ProfileScreen() {
   const [tgTesting, setTgTesting] = useState(false)
   const [tgMsg,     setTgMsg]     = useState('')
   const [tgTestMsg, setTgTestMsg] = useState('')
+
+  useEffect(() => {
+    AsyncStorage.getItem(AVATAR_KEY).then(uri => { if (uri) setAvatarUri(uri) })
+  }, [])
+
+  async function pickAvatar() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galería para cambiar la foto.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    })
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      const uri = result.assets[0].uri
+      setAvatarUri(uri)
+      AsyncStorage.setItem(AVATAR_KEY, uri)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -191,16 +221,26 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <Stack.Screen options={{ title: t('profile.title'), headerShown: true,
-        headerStyle: { backgroundColor: C.bg0 }, headerTintColor: '#ffffff' }} />
+        headerStyle: { backgroundColor: C.bg0 }, headerTintColor: '#ffffff',
+        headerBackTitle: '' }} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 24, alignSelf: 'center', width: '100%', maxWidth: maxContentWidth }}>
 
         {/* Avatar */}
         <View style={s.avatarBlock}>
-          <View style={s.avatar}>
-            <Text style={s.avatarText}>
-              {(profile?.username || '?')[0].toUpperCase()}
-            </Text>
-          </View>
+          <Pressable onPress={pickAvatar} style={s.avatarWrap}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={s.avatar} />
+            ) : (
+              <View style={[s.avatar, s.avatarPlaceholder]}>
+                <Text style={s.avatarText}>
+                  {(profile?.username || '?')[0].toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={s.cameraBtn}>
+              <Ionicons name="camera" size={14} color="#ffffff" />
+            </View>
+          </Pressable>
           <Text style={s.name}>{profile?.username || (loading ? t('common.loading') : '—')}</Text>
           {profile?.email ? <Text style={s.email}>{profile.email}</Text> : null}
         </View>
@@ -305,10 +345,15 @@ export default function ProfileScreen() {
 
 const s = StyleSheet.create({
   safe:          { flex: 1, backgroundColor: C.bg0 },
-  avatarBlock:   { alignItems: 'center', gap: 8, paddingTop: 16 },
-  avatar:        { width: 80, height: 80, borderRadius: 40, backgroundColor: C.bg2,
-                   alignItems: 'center', justifyContent: 'center' },
-  avatarText:    { fontSize: 34, fontWeight: '700', color: '#ffffff' },
+  avatarBlock:       { alignItems: 'center', gap: 8, paddingTop: 16 },
+  avatarWrap:        { position: 'relative' },
+  avatar:            { width: 80, height: 80, borderRadius: 40 },
+  avatarPlaceholder: { backgroundColor: C.bg2, alignItems: 'center', justifyContent: 'center' },
+  avatarText:        { fontSize: 34, fontWeight: '700', color: '#ffffff' },
+  cameraBtn:         { position: 'absolute', bottom: 0, right: 0,
+                       width: 26, height: 26, borderRadius: 13,
+                       backgroundColor: C.blue, borderWidth: 2, borderColor: C.bg0,
+                       alignItems: 'center', justifyContent: 'center' },
   name:          { fontSize: 22, fontWeight: '700', color: '#ffffff' },
   email:         { fontSize: 14, color: C.txt3 },
   section:       { gap: 6 },

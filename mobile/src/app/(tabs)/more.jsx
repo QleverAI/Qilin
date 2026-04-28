@@ -69,28 +69,28 @@ export default function MoreScreen() {
         }}
       >
         <Section title="FEEDS">
-          <MenuItem icon="chatbubble-ellipses-outline" color={C.teal}   fill={C.tealFill}
-            label={t('chat.title')}   onPress={go('/(tabs)/chat')} />
+          <MenuItem icon="newspaper-outline"     color={C.blue}   fill="rgba(10,132,255,0.10)"
+            label={t('news.title')}   onPress={go('/(tabs)/news')} />
           <View style={s.sep} />
-          <MenuItem icon="people-outline"              color={C.indigo} fill="rgba(94,92,230,0.10)"
+          <MenuItem icon="people-outline"        color={C.indigo} fill="rgba(94,92,230,0.10)"
             label={t('social.title')} onPress={go('/(tabs)/social')} />
           <View style={s.sep} />
-          <MenuItem icon="document-text-outline"       color={C.teal}   fill={C.tealFill}
+          <MenuItem icon="document-text-outline" color={C.teal}   fill={C.tealFill}
             label={t('docs.title')}   onPress={go('/(tabs)/documents')} />
         </Section>
 
         <Section title="MERCADOS">
-          <MenuItem icon="trending-up-outline" color={C.green}  fill="rgba(48,209,88,0.10)"
+          <MenuItem icon="trending-up-outline" color={C.green} fill="rgba(48,209,88,0.10)"
             label={t('markets.title')}    onPress={go('/(tabs)/markets')} />
           <View style={s.sep} />
-          <MenuItem icon="pie-chart-outline"   color={C.amber}  fill={C.amberFill}
+          <MenuItem icon="pie-chart-outline"   color={C.amber} fill={C.amberFill}
             label={t('polymarket.title')} onPress={go('/(tabs)/polymarket')} />
-          <View style={s.sep} />
-          <MenuItem icon="bar-chart-outline"   color={C.red}    fill={C.redFill}
-            label={t('sec.title')}        onPress={go('/(tabs)/sec')} />
         </Section>
 
         <Section title="OBSERVACIÓN">
+          <MenuItem icon="map-outline"    color={C.blue} fill="rgba(10,132,255,0.10)"
+            label={t('tabs.tactical')} onPress={go('/(tabs)/tactical')} />
+          <View style={s.sep} />
           <MenuItem icon="planet-outline" color={C.teal} fill={C.tealFill}
             label={t('sentinel.title')} onPress={go('/(tabs)/sentinel')} />
         </Section>
