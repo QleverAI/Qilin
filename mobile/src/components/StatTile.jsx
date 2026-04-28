@@ -1,9 +1,13 @@
 import { View, Text, StyleSheet } from 'react-native'
-import { C } from '../theme'
 
-export function StatTile({ value, label, color, style }) {
+export function StatTile({ value, label, color, colorFill, colorBorder, style }) {
   return (
-    <View style={[s.tile, style]}>
+    <View style={[
+      s.tile,
+      colorFill   && { backgroundColor: colorFill },
+      colorBorder && { borderColor: colorBorder },
+      style,
+    ]}>
       <Text style={[s.value, color && { color }]}>{value ?? '—'}</Text>
       <Text style={s.label}>{label}</Text>
     </View>
@@ -11,7 +15,10 @@ export function StatTile({ value, label, color, style }) {
 }
 
 const s = StyleSheet.create({
-  tile:  { flex: 1, backgroundColor: C.bg1, borderRadius: 12, padding: 16, alignItems: 'center', gap: 4 },
-  value: { fontSize: 34, fontWeight: '700', color: '#ffffff', lineHeight: 40 },
-  label: { fontSize: 12, fontWeight: '500', color: 'rgba(235,235,245,0.6)', textAlign: 'center' },
+  tile:  { flex: 1, borderRadius: 10, padding: 8, alignItems: 'center', gap: 3,
+           borderWidth: 1, borderColor: 'transparent',
+           backgroundColor: 'rgba(255,255,255,0.04)' },
+  value: { fontSize: 20, fontWeight: '900', color: '#ffffff', lineHeight: 24 },
+  label: { fontSize: 8, fontWeight: '600', color: 'rgba(235,235,245,0.35)',
+           textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 },
 })
